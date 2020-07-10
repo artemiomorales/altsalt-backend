@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'graphene_django',
+    'catalog'
 ]
 
 MIDDLEWARE = [
@@ -76,12 +78,7 @@ WSGI_APPLICATION = 'altsalt_backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": os.environ.get("DATABASE_NAME"),
-        "USER": os.environ.get("DATABASE_USER"),
-        "PASSWORD": os.environ.get("DATABASE_PASSWORD"),
-        "HOST": os.environ.get("DATABASE_HOST"),
-        "PORT": os.environ.get("DATABASE_PORT"),
+        # Use settings_local.py
     }
 }
 
@@ -129,3 +126,35 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = "/static/"
 
 django_heroku.settings(locals())
+
+
+# AltSalt
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
+AUTH_USER_MODEL = 'catalog.User'
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'graphql_jwt.backends.JSONWebTokenBackend',
+    'catalog.authentication.EmailBackend'
+]
+
+STORAGE_LOCATION = os.environ.get("DATABASE_NAME")
+
+# Graphene
+GRAPHENE = {
+    'SCHEMA' : 'altsalt_backend.schema.schema',
+    'MIDDLEWARE': [
+        'django.middleware.csrf.CsrfViewMiddleware',
+        'graphql_jwt.middleware.JSONWebTokenMiddleware',
+    ],
+}
+
+GRAPHENE = {
+    'SCHEMA': 'altsalt_backend.schema.schema',
+
+}
+
+from .settings_local import *

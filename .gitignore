@@ -1,5 +1,8 @@
 # AltSalt #
 .env
+local_config.json
+*/settings_local.py
+.idea/
 
 # Django #
 *.log
