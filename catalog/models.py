@@ -4,8 +4,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 
-PROJECT_PREFIX = settings.PROJECT_PREFIX;
-TABLE_PREFIX = 'catalog_';
+PROJECT_PREFIX = settings.PROJECT_PREFIX
+TABLE_PREFIX = 'catalog_'
 
 
 class User(AbstractUser):
@@ -18,45 +18,50 @@ class User(AbstractUser):
 
 def profile_directory_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
-    return 'catalog/user_{0}/{1}'.format(instance.user_id, filename)
+    return 'catalog/user_{0}/{1}'.format(instance.user, filename)
 
 
 class UserProfile(models.Model):
-    user_id = models.OneToOneField(
+    user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         primary_key=True,
         on_delete=models.CASCADE,
     )
     display_name = models.CharField(max_length=150)
-    profile_image = models.FileField(upload_to=profile_directory_path)
-    profile_description = models.CharField(max_length=255)
-    profile_location = models.CharField(max_length=50)
+    image = models.ImageField(upload_to=profile_directory_path)
+    description = models.CharField(max_length=255)
+    location = models.CharField(max_length=50)
     pronouns = models.CharField(max_length=50)
     occupation = models.CharField(max_length=50)
     is_organization = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
 
     def __str__(self):
-        return User.objects.get(self.user_id).username
+        return User.objects.get(id=self.user.id).username
 
     class Meta:
         db_table = TABLE_PREFIX + 'user_profile'
 
 
 class Listing(models.Model):
-    listing_id = models.AutoField(primary_key=True)
-    listing_title = models.CharField(max_length=100)
-    date_added = models.DateField()
-    listing_description = models.TextField()
-    listing_publication_date = models.DateField()
-    listing_slug = models.SlugField()
-    is_approved = models.BooleanField()
-    is_published = models.BooleanField()
-    listing_cover_image = models.ForeignKey(
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=100)
+    slug = models.SlugField()
+    cover_image = models.ForeignKey(
         'Image',
         on_delete=models.SET_NULL,
         null=True,
+        related_name='cover_image'
     )
+    description = models.TextField()
+    preview_images = models.ManyToManyField(
+        "Image",
+        through='ListingPreviewImage'
+    )
+    publication_date = models.DateField()
+    date_added = models.DateField()
+    is_approved = models.BooleanField()
+    is_published = models.BooleanField()
 
     # length_id = models.ForeignKey(
     #     'Length'
@@ -66,7 +71,7 @@ class Listing(models.Model):
     # )
 
     def __str__(self):
-        return self.listing_title
+        return self.title
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing'
@@ -79,19 +84,31 @@ def listing_directory_path(instance, filename):
 
 
 class Image(models.Model):
-    image_id = models.AutoField(primary_key=True)
-    image_name = models.CharField(max_length=50)
-    image_src = models.FileField(upload_to=listing_directory_path)
-    image_caption = models.CharField(max_length=300)
-    image_alttext = models.CharField(max_length=300)
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=50, blank=True)
+    url = models.ImageField(upload_to=listing_directory_path)
+    caption = models.CharField(max_length=300, blank=True)
+    alttext = models.CharField(max_length=300)
 
     def __str__(self):
-        return self.image_name
+        return self.url.__str__()
 
     class Meta:
         db_table = TABLE_PREFIX + 'image'
 
-# class Length(models.Model);
+
+class ListingPreviewImage(models.Model):
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    image = models.ForeignKey(Image, on_delete=models.CASCADE)
+    priority = models.IntegerField()
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'listing_preview_image'
+        constraints = [
+            models.UniqueConstraint(fields=['listing', 'image'], name='listing_preview_image_link')
+        ]
+
+    # class Length(models.Model);
 #     length_id = models.AutoField(primary_key=True)
 #     length_name = models.CharField(max_length=50)
 #     length_slug = models.SlugField()

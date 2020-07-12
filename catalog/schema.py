@@ -1,9 +1,11 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from catalog.models import UserProfile, Listing, Image
 
 import graphene
 from graphene_django.types import DjangoObjectType
 
+MEDIA_URL = settings.MEDIA_URL
 
 class UserType(DjangoObjectType):
     class Meta:
@@ -19,6 +21,11 @@ class ImageType(DjangoObjectType):
     class Meta:
         model = Image
 
+    storage_url = graphene.String()
+
+    def resolve_storage_url(self, info):
+        return f"{MEDIA_URL}{self.url}"
+
 
 def resolve_me(info):
     user = info.context.user
@@ -28,17 +35,30 @@ def resolve_me(info):
     return user
 
 
-class Query(object):
+class Query(graphene.ObjectType):
     me = graphene.Field(UserType)
     users = graphene.List(UserType)
-    listings = graphene.List(ListingType)
+    listing_collection = graphene.List(ListingType)
+    listing = graphene.Field(ListingType, id=graphene.Int(), slug=graphene.String())
     image = graphene.Field(ImageType, id=graphene.Int())
 
     def resolve_users(self, info):
         return get_user_model().objects.all()
 
-    def resolve_listings(self, info):
+    def resolve_listing_collection(self, info):
         return Listing.objects.all()
+
+    def resolve_listing(self, info, **kwargs):
+        id = kwargs.get('id')
+        slug = kwargs.get('slug')
+
+        if id is not None:
+            return Listing.objects.get(id=id)
+
+        if slug is not None:
+            return Listing.objects.get(slug=slug)
+
+        return None
 
     def resolve_image(self, info, **kwargs):
         id = kwargs.get('id')
@@ -46,7 +66,7 @@ class Query(object):
         if id is not None:
             return Image.objects.get(id=id)
 
-        return None;
+        return None
 
 
 class CreateUser(graphene.Mutation):

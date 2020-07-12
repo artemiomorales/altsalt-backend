@@ -24,7 +24,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '%i#z6hcz2(9b_k*ye(!co2u4-u#lsory!+m42ushi=rmr25k8*'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = []
 
@@ -154,7 +154,6 @@ GRAPHENE = {
 
 GRAPHENE = {
     'SCHEMA': 'altsalt_backend.schema.schema',
-
 }
 
 from .settings_local import *

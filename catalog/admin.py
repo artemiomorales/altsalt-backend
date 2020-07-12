@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, UserProfile, Listing, Image
+from .models import User, UserProfile, Listing, Image, ListingPreviewImage
+from django_reverse_admin import ReverseModelAdmin
+
 
 class UserProfileAdmin(admin.ModelAdmin):
     pass
@@ -14,16 +16,23 @@ class UserProfileAdmin(admin.ModelAdmin):
     # search_fields = ['question_text']
 
 
-# class ImageInLine(admin.TabularInline):
-#     model = Image
+class ImageInline(admin.StackedInline):
+    model = Image
 
 
-class ImageAdmin(admin.ModelAdmin):
+class ListingPreviewImageInline(admin.TabularInline):
+    model = ListingPreviewImage
     pass
 
 
-class ListingAdmin(admin.ModelAdmin):
-    # inlines = [ImageInLine]
+class ListingAdmin(ReverseModelAdmin):
+    inline_type = 'tabular'
+    inline_reverse = ['cover_image', 'preview_images']
+    inlines = [ListingPreviewImageInline]
+    pass
+
+
+class ImageAdmin(admin.ModelAdmin):
     pass
 
 
