@@ -47,12 +47,6 @@ class Listing(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=100)
     slug = models.SlugField()
-    cover_image = models.ForeignKey(
-        'Image',
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='cover_image'
-    )
     description = models.TextField()
     preview_images = models.ManyToManyField(
         "Image",
@@ -95,6 +89,18 @@ class Image(models.Model):
 
     class Meta:
         db_table = TABLE_PREFIX + 'image'
+
+
+class ListingCoverImage(models.Model):
+    listing = models.OneToOneField(
+        Listing,
+        primary_key=True,
+        on_delete=models.CASCADE,
+    )
+    image = models.ForeignKey(Image, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'listing_cover_image'
 
 
 class ListingPreviewImage(models.Model):

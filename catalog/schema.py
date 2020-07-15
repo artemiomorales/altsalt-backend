@@ -1,20 +1,21 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from catalog.models import UserProfile, Listing, Image
+from catalog.models import UserProfile, Listing, Image, ListingCoverImage
 
 import graphene
 from graphene_django.types import DjangoObjectType
 
 MEDIA_URL = settings.MEDIA_URL
 
+
 class UserType(DjangoObjectType):
     class Meta:
         model = get_user_model()
 
 
-class ListingType(DjangoObjectType):
+class ListingCoverImageType(DjangoObjectType):
     class Meta:
-        model = Listing
+        model = ListingCoverImage
 
 
 class ImageType(DjangoObjectType):
@@ -25,6 +26,17 @@ class ImageType(DjangoObjectType):
 
     def resolve_storage_url(self, info):
         return f"{MEDIA_URL}{self.url}"
+
+
+class ListingType(DjangoObjectType):
+    class Meta:
+        model = Listing
+
+    cover_image = graphene.Field(ImageType)
+
+    def resolve_cover_image(self, info):
+        listing_cover_image = ListingCoverImage.objects.get(listing_id=self.id)
+        return Image.objects.get(id=listing_cover_image.image_id)
 
 
 def resolve_me(info):
@@ -40,6 +52,7 @@ class Query(graphene.ObjectType):
     users = graphene.List(UserType)
     listing_collection = graphene.List(ListingType)
     listing = graphene.Field(ListingType, id=graphene.Int(), slug=graphene.String())
+    cover_image = graphene.Field(ImageType, listing_id=graphene.Int())
     image = graphene.Field(ImageType, id=graphene.Int())
 
     def resolve_users(self, info):
@@ -57,6 +70,16 @@ class Query(graphene.ObjectType):
 
         if slug is not None:
             return Listing.objects.get(slug=slug)
+
+        return None
+
+    def resolve_cover_image(self, info, **kwargs):
+
+        listing_id = kwargs.get('listing_id')
+
+        if listing_id is not None:
+            listingCoverImage = ListingCoverImage.objects.get(listing_id=listing_id)
+            return Image.objects.get(id=listingCoverImage.image_id)
 
         return None
 
