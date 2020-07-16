@@ -50,7 +50,7 @@ def resolve_me(info):
 class Query(graphene.ObjectType):
     me = graphene.Field(UserType)
     users = graphene.List(UserType)
-    listing_collection = graphene.List(ListingType)
+    listing_bundle = graphene.List(ListingType)
     listing = graphene.Field(ListingType, id=graphene.Int(), slug=graphene.String())
     cover_image = graphene.Field(ImageType, listing_id=graphene.Int())
     image = graphene.Field(ImageType, id=graphene.Int())
@@ -58,7 +58,7 @@ class Query(graphene.ObjectType):
     def resolve_users(self, info):
         return get_user_model().objects.all()
 
-    def resolve_listing_collection(self, info):
+    def resolve_listing_bundle(self, info):
         return Listing.objects.all()
 
     def resolve_listing(self, info, **kwargs):
