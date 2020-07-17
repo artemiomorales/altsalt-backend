@@ -2,51 +2,46 @@ import datetime
 from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.template.defaultfilters import slugify
 from django.core.exceptions import ValidationError
 
 PROJECT_PREFIX = settings.PROJECT_PREFIX
 TABLE_PREFIX = 'catalog_'
 
 
+def profile_directory_path(instance, filename):
+    # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
+    return 'catalog/user_{0}/{1}'.format(instance, filename)
+
+
 class User(AbstractUser):
     email = models.EmailField(unique=True)
-    date_of_birth = models.DateField()
+    display_name = models.CharField(max_length=150, blank=True)
+    image = models.ImageField(upload_to=profile_directory_path, blank=True)
+    description = models.CharField(max_length=255, blank=True)
+    location = models.CharField(max_length=50, blank=True)
+    pronouns = models.CharField(max_length=50, blank=True)
+    occupation = models.CharField(max_length=50, blank=True)
+    date_of_birth = models.DateField(blank=True)
+    is_organization = models.BooleanField(default=False)
+    is_banned = models.BooleanField(default=False)
+
+    listing_creation_bylines = models.ManyToManyField(
+        "Listing",
+        through='ListingCreationByline'
+    )
+
+    def __str__(self):
+        return self.username
 
     class Meta:
         db_table = PROJECT_PREFIX + 'user'
 
 
-def profile_directory_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
-    return 'catalog/user_{0}/{1}'.format(instance.user, filename)
-
-
-class UserProfile(models.Model):
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        primary_key=True,
-        on_delete=models.CASCADE,
-    )
-    display_name = models.CharField(max_length=150)
-    image = models.ImageField(upload_to=profile_directory_path)
-    description = models.CharField(max_length=255)
-    location = models.CharField(max_length=50)
-    pronouns = models.CharField(max_length=50)
-    occupation = models.CharField(max_length=50)
-    is_organization = models.BooleanField(default=False)
-    is_banned = models.BooleanField(default=False)
-
-    def __str__(self):
-        return User.objects.get(id=self.user.id).username
-
-    class Meta:
-        db_table = TABLE_PREFIX + 'user_profile'
-
-
 class Listing(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=100)
-    slug = models.SlugField()
+    slug = models.SlugField(default=title)
     description = models.TextField()
     preview_images = models.ManyToManyField(
         "Image",
@@ -57,6 +52,11 @@ class Listing(models.Model):
     is_approved = models.BooleanField()
     is_published = models.BooleanField()
 
+    # listing_creation_bylines = models.ManyToManyField(
+    #     "User",
+    #     through='ListingCreationByline'
+    # )
+
     # length_id = models.ForeignKey(
     #     'Length'
     # )
@@ -64,11 +64,31 @@ class Listing(models.Model):
     #     'Price'
     # )
 
+    def save(self, *args, **kwargs):
+        if not self.id:
+            # Newly created object, so set slug
+            self.slug = slugify(self.title)
+
+        super(Listing, self).save(*args, **kwargs)
+
     def __str__(self):
         return self.title
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing'
+
+
+class ListingCreationByline(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    user_priority = models.IntegerField(default=0)
+    listing_priority = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'listing_creation_byline'
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'listing'], name='user_listing_creation_link')
+        ]
 
 
 def listing_directory_path(instance, filename):
@@ -104,9 +124,9 @@ class ListingCoverImage(models.Model):
 
 
 class ListingPreviewImage(models.Model):
-    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="listings")
     image = models.ForeignKey(Image, on_delete=models.CASCADE)
-    priority = models.IntegerField()
+    priority = models.IntegerField(default=0)
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing_preview_image'

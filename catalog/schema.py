@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from catalog.models import UserProfile, Listing, Image, ListingCoverImage
+from catalog.models import *
 
 import graphene
 from graphene_django.types import DjangoObjectType
@@ -8,14 +8,14 @@ from graphene_django.types import DjangoObjectType
 MEDIA_URL = settings.MEDIA_URL
 
 
-class UserType(DjangoObjectType):
-    class Meta:
-        model = get_user_model()
-
-
 class ListingCoverImageType(DjangoObjectType):
     class Meta:
         model = ListingCoverImage
+
+
+class ListingCreationBylineType(DjangoObjectType):
+    class Meta:
+        model = ListingCreationByline
 
 
 class ImageType(DjangoObjectType):
@@ -28,15 +28,29 @@ class ImageType(DjangoObjectType):
         return f"{MEDIA_URL}{self.url}"
 
 
+class UserType(DjangoObjectType):
+    class Meta:
+        model = get_user_model()
+
+    listing_creation_bylines = graphene.List(ListingCreationBylineType)
+
+    def resolve_listing_creation_bylines(self, info):
+        return ListingCreationByline.objects.filter(user_id=self.id)
+
+
 class ListingType(DjangoObjectType):
     class Meta:
         model = Listing
 
     cover_image = graphene.Field(ImageType)
+    creation_bylines = graphene.List(ListingCreationBylineType)
 
     def resolve_cover_image(self, info):
         listing_cover_image = ListingCoverImage.objects.get(listing_id=self.id)
         return Image.objects.get(id=listing_cover_image.image_id)
+
+    def resolve_creation_bylines(self, info):
+        return ListingCreationByline.objects.filter(listing_id=self.id)
 
 
 def resolve_me(info):
@@ -52,6 +66,8 @@ class Query(graphene.ObjectType):
     users = graphene.List(UserType)
     listing_bundle = graphene.List(ListingType)
     listing = graphene.Field(ListingType, id=graphene.Int(), slug=graphene.String())
+    listing_creation_byline = graphene.Field(ListingCreationBylineType)
+    listing_creation_bylines = graphene.List(ListingCreationBylineType, user_id=graphene.Int(), listing_id=graphene.Int())
     cover_image = graphene.Field(ImageType, listing_id=graphene.Int())
     image = graphene.Field(ImageType, id=graphene.Int())
 
@@ -70,6 +86,18 @@ class Query(graphene.ObjectType):
 
         if slug is not None:
             return Listing.objects.get(slug=slug)
+
+        return None
+
+    def resolve_listing_creation_bylines(self, info, **kwargs):
+        listing_id = kwargs.get('listing_id')
+        user_id = kwargs.get('user_id')
+
+        if (user_id is not None):
+            return ListingCreationByline.objects.filter(user_id=user_id)
+
+        if (listing_id is not None):
+            return ListingCreationByline.objects.filter(listing_id=listing_id)
 
         return None
 

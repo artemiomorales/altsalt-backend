@@ -1,11 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, UserProfile, Listing, Image, ListingCoverImage, ListingPreviewImage
+from .models import *
 from django_reverse_admin import ReverseModelAdmin
 
 
-class UserProfileAdmin(admin.ModelAdmin):
-    pass
     # fieldsets = [
     #     (None,  {'fields': ['question_text']}),
     #     ('Date information', {'fields': ['pub_date'], 'classes': ['collapse']}),
@@ -15,14 +13,8 @@ class UserProfileAdmin(admin.ModelAdmin):
     # list_filter = ['pub_date']
     # search_fields = ['question_text']
 
-
-class ListinCoverImageInline(admin.TabularInline):
+class ListingCoverImageInline(admin.TabularInline):
     model = ListingCoverImage
-    pass
-
-
-class ListingPreviewImageAdmin(admin.ModelAdmin):
-    model = ListingPreviewImage
     pass
 
 
@@ -31,10 +23,39 @@ class ListingPreviewImageInline(admin.TabularInline):
     pass
 
 
+class ListingCreationBylineInline(admin.TabularInline):
+    model = ListingCreationByline
+    pass
+
+
+class CustomUserAdmin(UserAdmin):
+    model = User
+
+    fieldsets = UserAdmin.fieldsets + ((None,
+            {'fields':
+                (
+                    'display_name',
+                    'image',
+                    'description',
+                    'location',
+                    'pronouns',
+                    'occupation',
+                    'date_of_birth',
+                    'is_organization',
+                    'is_banned',
+                )
+            }),
+         )
+
+    inline_type = 'tabular'
+    inline_reverse = ['listing_creation_bylines']
+    inlines = [ListingCreationBylineInline]
+
+
 class ListingAdmin(ReverseModelAdmin):
     inline_type = 'tabular'
     inline_reverse = ['preview_images']
-    inlines = [ListinCoverImageInline, ListingPreviewImageInline]
+    inlines = [ListingCoverImageInline, ListingPreviewImageInline, ListingCreationBylineInline]
     pass
 
 
@@ -42,8 +63,6 @@ class ImageAdmin(admin.ModelAdmin):
     pass
 
 
-admin.site.register(User, UserAdmin)
-admin.site.register(UserProfile, UserProfileAdmin)
+admin.site.register(User, CustomUserAdmin)
 admin.site.register(Listing, ListingAdmin)
-admin.site.register(ListingPreviewImage, ListingPreviewImageAdmin)
 admin.site.register(Image, ImageAdmin)
