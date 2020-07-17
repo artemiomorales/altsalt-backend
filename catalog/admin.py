@@ -13,22 +13,27 @@ from django_reverse_admin import ReverseModelAdmin
     # list_filter = ['pub_date']
     # search_fields = ['question_text']
 
-class ListingCoverImageInline(admin.TabularInline):
+class ListingInline(admin.TabularInline):
+    extra = 1
+    pass
+
+
+class ListingCoverImageInline(ListingInline):
     model = ListingCoverImage
     pass
 
 
-class ListingPreviewImageInline(admin.TabularInline):
+class ListingPreviewImageInline(ListingInline):
     model = ListingPreviewImage
     pass
 
 
-class ListingCreationBylineInline(admin.TabularInline):
+class ListingCreationBylineInline(ListingInline):
     model = ListingCreationByline
     pass
 
 
-class ListingCollaboratorBylineInline(admin.TabularInline):
+class ListingCollaboratorBylineInline(ListingInline):
     model = ListingCollaboratorByline
     pass
 
@@ -57,20 +62,69 @@ class CustomUserAdmin(UserAdmin):
     inlines = [ListingCreationBylineInline, ListingCollaboratorBylineInline]
 
 
+class ListingFormatInline(ListingInline):
+    model = ListingFormat
+    pass
+
+
+class ListingDistributionTypeInline(ListingInline):
+    model = ListingDistributionType
+    pass
+
+
+class ListingGenreInline(ListingInline):
+    model = ListingGenre
+    pass
+
+
+class ListingLanguageInline(ListingInline):
+    model = ListingLanguage
+    pass
+
+
+@admin.register(Listing)
 class ListingAdmin(ReverseModelAdmin):
     inline_type = 'tabular'
     inline_reverse = ['preview_images']
     inlines = [ListingCoverImageInline,
                ListingPreviewImageInline,
                ListingCreationBylineInline,
-               ListingCollaboratorBylineInline]
+               ListingCollaboratorBylineInline,
+               ListingFormatInline,
+               ListingDistributionTypeInline,
+               ListingGenreInline,
+               ListingLanguageInline]
     pass
 
 
+@admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
     pass
 
 
+@admin.register(Format)
+class FormatAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(DistributionType)
+class DistributionTypeAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Length)
+class LengthAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Genre)
+class GenreAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Language)
+class LanguageAdmin(admin.ModelAdmin):
+    pass
+
+
 admin.site.register(User, CustomUserAdmin)
-admin.site.register(Listing, ListingAdmin)
-admin.site.register(Image, ImageAdmin)
