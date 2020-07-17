@@ -5,7 +5,6 @@ from django.conf import settings
 import django.contrib.auth.models
 import django.contrib.auth.validators
 from django.db import migrations, models
-import django.db.models.deletion
 import django.utils.timezone
 
 
@@ -48,7 +47,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('profile_id', models.AutoField(primary_key=True, serialize=False)),
                 ('display_name', models.CharField(max_length=150)),
-                ('profile_image', models.FileField(upload_to=catalog.models.profile_directory_path)),
+                ('profile_image', models.FileField(upload_to=catalog.models.models.profile_directory_path)),
                 ('profile_description', models.CharField(max_length=255)),
                 ('profile_location', models.CharField(max_length=50)),
                 ('pronouns', models.CharField(max_length=50)),

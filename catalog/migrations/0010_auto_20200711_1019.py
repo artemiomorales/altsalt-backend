@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='image',
             name='src',
-            field=models.ImageField(upload_to=catalog.models.listing_directory_path),
+            field=models.ImageField(upload_to=catalog.models.models.listing_directory_path),
         ),
         migrations.AlterField(
             model_name='listing',
@@ -24,6 +24,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='userprofile',
             name='image',
-            field=models.ImageField(upload_to=catalog.models.profile_directory_path),
+            field=models.ImageField(upload_to=catalog.models.models.profile_directory_path),
         ),
     ]

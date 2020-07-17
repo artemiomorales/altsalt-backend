@@ -1,8 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import *
-from django_reverse_admin import ReverseModelAdmin
+from catalog.models.models import User
+from catalog.models.image import *
+from catalog.models.listing import *
 
+from django_reverse_admin import ReverseModelAdmin
 
     # fieldsets = [
     #     (None,  {'fields': ['question_text']}),
