@@ -18,6 +18,11 @@ class ListingCreationBylineType(DjangoObjectType):
         model = ListingCreationByline
 
 
+class ListingCollaboratorBylineType(DjangoObjectType):
+    class Meta:
+        model = ListingCollaboratorByline
+
+
 class ImageType(DjangoObjectType):
     class Meta:
         model = Image
@@ -44,6 +49,7 @@ class ListingType(DjangoObjectType):
 
     cover_image = graphene.Field(ImageType)
     creation_bylines = graphene.List(ListingCreationBylineType)
+    collaborator_bylines = graphene.List(ListingCollaboratorBylineType)
 
     def resolve_cover_image(self, info):
         listing_cover_image = ListingCoverImage.objects.get(listing_id=self.id)
@@ -51,6 +57,9 @@ class ListingType(DjangoObjectType):
 
     def resolve_creation_bylines(self, info):
         return ListingCreationByline.objects.filter(listing_id=self.id)
+
+    def resolve_collaborator_bylines(self, info):
+        return ListingCollaboratorByline.objects.filter(listing_id=self.id)
 
 
 def resolve_me(info):

@@ -28,6 +28,11 @@ class ListingCreationBylineInline(admin.TabularInline):
     pass
 
 
+class ListingCollaboratorBylineInline(admin.TabularInline):
+    model = ListingCollaboratorByline
+    pass
+
+
 class CustomUserAdmin(UserAdmin):
     model = User
 
@@ -48,14 +53,17 @@ class CustomUserAdmin(UserAdmin):
          )
 
     inline_type = 'tabular'
-    inline_reverse = ['listing_creation_bylines']
-    inlines = [ListingCreationBylineInline]
+    inline_reverse = ['listing_creation_bylines', 'listing_collaborator_bylines']
+    inlines = [ListingCreationBylineInline, ListingCollaboratorBylineInline]
 
 
 class ListingAdmin(ReverseModelAdmin):
     inline_type = 'tabular'
     inline_reverse = ['preview_images']
-    inlines = [ListingCoverImageInline, ListingPreviewImageInline, ListingCreationBylineInline]
+    inlines = [ListingCoverImageInline,
+               ListingPreviewImageInline,
+               ListingCreationBylineInline,
+               ListingCollaboratorBylineInline]
     pass
 
 

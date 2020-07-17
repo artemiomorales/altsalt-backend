@@ -28,7 +28,14 @@ class User(AbstractUser):
 
     listing_creation_bylines = models.ManyToManyField(
         "Listing",
-        through='ListingCreationByline'
+        through='ListingCreationByline',
+        related_name="creationBylines"
+    )
+
+    listing_collaborator_bylines = models.ManyToManyField(
+        "Listing",
+        through='ListingCollaboratorByline',
+        related_name="collaboratorBylines"
     )
 
     def __str__(self):
@@ -88,6 +95,19 @@ class ListingCreationByline(models.Model):
         db_table = TABLE_PREFIX + 'listing_creation_byline'
         constraints = [
             models.UniqueConstraint(fields=['user', 'listing'], name='user_listing_creation_link')
+        ]
+
+
+class ListingCollaboratorByline(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    user_priority = models.IntegerField(default=0)
+    listing_priority = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'listing_collaborator_byline'
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'listing'], name='user_listing_collaborator_link')
         ]
 
 
