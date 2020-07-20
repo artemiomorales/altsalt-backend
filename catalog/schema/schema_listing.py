@@ -15,9 +15,14 @@ class ListingCollaboratorBylineType(DjangoObjectType):
         model = ListingCollaboratorByline
 
 
-class ListingCollaboratorBylineType(DjangoObjectType):
+class ListingAvailabilityLinkType(DjangoObjectType):
     class Meta:
-        model = ListingCollaboratorByline
+        model = ListingAvailabilityLink
+
+
+class ListingAdditionalLinkType(DjangoObjectType):
+    class Meta:
+        model = ListingAdditionalLink
 
 
 class FormatType(DjangoObjectType):
@@ -96,6 +101,8 @@ class ListingType(DjangoObjectType):
     cover_image = graphene.Field(ImageType)
     creation_bylines = graphene.List(ListingCreationBylineType)
     collaborator_bylines = graphene.List(ListingCollaboratorBylineType)
+    availability = graphene.List(ListingAvailabilityLinkType)
+    additional_links = graphene.List(ListingAdditionalLinkType)
     format_set = graphene.List(ListingFormatType)
     distribution_type_set = graphene.List(ListingDistributionTypeType)
     genre_set = graphene.List(ListingGenreType)
@@ -113,6 +120,12 @@ class ListingType(DjangoObjectType):
 
     def resolve_collaborator_bylines(self, info):
         return ListingCollaboratorByline.objects.filter(listing_id=self.id)
+
+    def resolve_availability(self, info):
+        return ListingAvailabilityLink.objects.filter(listing_id=self.id)
+
+    def resolve_additional_links(self, info):
+        return ListingAdditionalLink.objects.filter(listing_id=self.id)
 
     def resolve_format_set(self, info):
         return ListingFormat.objects.filter(listing_id=self.id)

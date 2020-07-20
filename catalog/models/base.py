@@ -1,8 +1,22 @@
+from django.db import models
 from django.conf import settings
 import datetime
 
 PROJECT_PREFIX = settings.PROJECT_PREFIX
 TABLE_PREFIX = 'catalog_'
+
+
+class Link(models.Model):
+    name = models.CharField(max_length=55)
+    url = models.URLField()
+    priority = models.IntegerField(default=0)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        abstract = True
+        ordering = ['-priority']
 
 
 def profile_directory_path(instance, filename):

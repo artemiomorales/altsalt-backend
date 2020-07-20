@@ -1,6 +1,7 @@
 from .base import PROJECT_PREFIX, TABLE_PREFIX
 
 from .base import profile_directory_path, listing_directory_path
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 

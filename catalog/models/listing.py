@@ -1,10 +1,10 @@
 from .base import PROJECT_PREFIX, TABLE_PREFIX
 from .user import *
+from .base import Link
 from .image import *
 
 from django.db import models
 from django.template.defaultfilters import slugify
-
 
 class Listing(models.Model):
     id = models.AutoField(primary_key=True)
@@ -49,6 +49,25 @@ class Listing(models.Model):
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing'
+
+
+class ListingLink(Link):
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+
+    class Meta(Link.Meta):
+        abstract = True
+
+
+class ListingAvailabilityLink(ListingLink):
+
+    class Meta(ListingLink.Meta):
+        db_table = TABLE_PREFIX + 'listing_availability_link'
+
+
+class ListingAdditionalLink(ListingLink):
+
+    class Meta(ListingLink.Meta):
+        db_table = TABLE_PREFIX + 'listing_additional_link'
 
 
 class ListingCreationByline(models.Model):

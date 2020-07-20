@@ -64,6 +64,16 @@ class CustomUserAdmin(UserAdmin):
     inlines = [ListingCreationBylineInline, ListingCollaboratorBylineInline]
 
 
+class ListingAvailabilityLinkInline(ListingInline):
+    model = ListingAvailabilityLink
+    pass
+
+
+class ListingAdditionalLinkInline(ListingInline):
+    model = ListingAdditionalLink
+    pass
+
+
 class ListingFormatInline(ListingInline):
     model = ListingFormat
     pass
@@ -92,6 +102,8 @@ class ListingAdmin(ReverseModelAdmin):
                ListingPreviewImageInline,
                ListingCreationBylineInline,
                ListingCollaboratorBylineInline,
+               ListingAvailabilityLinkInline,
+               ListingAdditionalLinkInline,
                ListingFormatInline,
                ListingDistributionTypeInline,
                ListingGenreInline,
