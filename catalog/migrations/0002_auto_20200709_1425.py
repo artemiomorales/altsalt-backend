@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('image_id', models.AutoField(primary_key=True, serialize=False)),
                 ('image_name', models.CharField(max_length=50)),
-                ('image_src', models.FileField(upload_to=catalog.models.models.listing_directory_path)),
+                ('image_src', models.FileField(upload_to=catalog.models.user.listing_directory_path)),
                 ('image_caption', models.CharField(max_length=300)),
                 ('image_alttext', models.CharField(max_length=300)),
             ],

@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='user',
             name='image',
-            field=models.ImageField(blank=True, upload_to=catalog.models.models.profile_directory_path),
+            field=models.ImageField(blank=True, upload_to=catalog.models.user.profile_directory_path),
         ),
         migrations.AlterField(
             model_name='user',

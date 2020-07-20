@@ -1,4 +1,5 @@
-from .models import PROJECT_PREFIX, TABLE_PREFIX, User
+from .base import PROJECT_PREFIX, TABLE_PREFIX
+from .user import *
 from .image import *
 
 from django.db import models
@@ -100,12 +101,13 @@ class Format(ListingInfo):
 
 
 class ListingFormat(models.Model):
-    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="listing")
     format = models.ForeignKey(Format, on_delete=models.CASCADE)
     priority = models.IntegerField(default=0)
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing_format'
+        ordering = ['-priority']
         constraints = [
             models.UniqueConstraint(fields=['listing', 'format'], name='listing_format_link')
         ]
@@ -144,6 +146,7 @@ class ListingGenre(models.Model):
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing_genre'
+        ordering = ['-priority']
         constraints = [
             models.UniqueConstraint(fields=['listing', 'genre'], name='listing_genre_link')
         ]
@@ -161,6 +164,7 @@ class ListingLanguage(models.Model):
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing_language'
+        ordering = ['-priority']
         constraints = [
             models.UniqueConstraint(fields=['listing', 'language'], name='listing_language_link')
         ]

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from catalog.models.models import User
+from catalog.models.user import User
 from catalog.models.image import *
 from catalog.models.listing import *
 

@@ -1,4 +1,5 @@
-from .models import PROJECT_PREFIX, TABLE_PREFIX, User, listing_directory_path
+from .base import PROJECT_PREFIX, TABLE_PREFIX, listing_directory_path
+from .user import *
 from django.db import models
 
 
