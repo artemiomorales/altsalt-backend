@@ -1,6 +1,9 @@
+import os
+import datetime
+
 from django.db import models
 from django.conf import settings
-import datetime
+from django.template.defaultfilters import slugify
 
 PROJECT_PREFIX = settings.PROJECT_PREFIX
 TABLE_PREFIX = 'catalog_'
@@ -19,12 +22,46 @@ class Link(models.Model):
         ordering = ['-priority']
 
 
-def profile_directory_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
-    return 'catalog/user_{0}/{1}'.format(instance, filename)
+class NameSlug(models.Model):
+    name = models.CharField(max_length=55, unique=True)
+    slug = models.SlugField(unique=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            # Newly created object, so set slug
+            self.slug = slugify(self.name)
+
+        super(NameSlug, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        abstract = True
 
 
-def listing_directory_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
+class Continent(NameSlug):
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'continent'
+
+
+class Culture(NameSlug):
+    continent = models.ForeignKey(Continent, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'culture'
+
+
+def user_media_path(user_id):
+    return 'catalog/user/{0}'.format(user_id)
+
+
+def profile_image_path(instance, filename):
+    filename, file_extension = os.path.splitext(filename)
+    return user_media_path(instance.id) + "/profile-image" + file_extension
+
+
+def media_upload_path(instance, filename):
     date = datetime.datetime.now()
-    return 'catalog/images/{0}/{1}-{2}'. format(date.strftime("%m%d%y"), date.strftime("%f"), filename)
+    return (user_media_path(instance.user_id) + "/uploads/{0}-{1}") .format(date.strftime("%f"), filename)

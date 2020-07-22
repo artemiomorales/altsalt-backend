@@ -1,10 +1,11 @@
 from .base import PROJECT_PREFIX, TABLE_PREFIX
 from .user import *
-from .base import Link
+from .base import Link, NameSlug, Culture
 from .image import *
 
 from django.db import models
 from django.template.defaultfilters import slugify
+
 
 class Listing(models.Model):
     id = models.AutoField(primary_key=True)
@@ -36,6 +37,10 @@ class Listing(models.Model):
     date_added = models.DateField()
     is_approved = models.BooleanField()
     is_published = models.BooleanField()
+    culture_represented = models.ManyToManyField(
+        "Culture",
+        through='ListingCultureRepresented'
+    )
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -70,16 +75,16 @@ class ListingAdditionalLink(ListingLink):
         db_table = TABLE_PREFIX + 'listing_additional_link'
 
 
-class ListingCreationByline(models.Model):
+class ListingCreatorByline(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
     user_priority = models.IntegerField(default=0)
     listing_priority = models.IntegerField(default=0)
 
     class Meta:
-        db_table = TABLE_PREFIX + 'listing_creation_byline'
+        db_table = TABLE_PREFIX + 'listing_creator_byline'
         constraints = [
-            models.UniqueConstraint(fields=['user', 'listing'], name='user_listing_creation_link')
+            models.UniqueConstraint(fields=['user', 'listing'], name='user_listing_creator_link')
         ]
 
 
@@ -96,25 +101,7 @@ class ListingCollaboratorByline(models.Model):
         ]
 
 
-class ListingInfo(models.Model):
-    name = models.CharField(max_length=55, unique=True)
-    slug = models.SlugField(unique=True, blank=True)
-
-    def save(self, *args, **kwargs):
-        if not self.id:
-            # Newly created object, so set slug
-            self.slug = slugify(self.name)
-
-        super(ListingInfo, self).save(*args, **kwargs)
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        abstract = True
-
-
-class Format(ListingInfo):
+class Format(NameSlug):
     class Meta:
         db_table = TABLE_PREFIX + 'format'
 
@@ -132,7 +119,7 @@ class ListingFormat(models.Model):
         ]
 
 
-class DistributionType(ListingInfo):
+class DistributionType(NameSlug):
     class Meta:
         db_table = TABLE_PREFIX + 'distribution_type'
 
@@ -148,12 +135,12 @@ class ListingDistributionType(models.Model):
         ]
 
 
-class Length(ListingInfo):
+class Length(NameSlug):
     class Meta:
         db_table = TABLE_PREFIX + 'length'
 
 
-class Genre(ListingInfo):
+class Genre(NameSlug):
     class Meta:
         db_table = TABLE_PREFIX + 'genre'
 
@@ -171,7 +158,7 @@ class ListingGenre(models.Model):
         ]
 
 
-class Language(ListingInfo):
+class Language(NameSlug):
     class Meta:
         db_table = TABLE_PREFIX + 'language'
 
@@ -186,4 +173,17 @@ class ListingLanguage(models.Model):
         ordering = ['-priority']
         constraints = [
             models.UniqueConstraint(fields=['listing', 'language'], name='listing_language_link')
+        ]
+
+
+class ListingCultureRepresented(models.Model):
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    culture = models.ForeignKey(Culture, on_delete=models.CASCADE)
+    priority = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'listing_culture_represented'
+        ordering = ['-priority']
+        constraints = [
+            models.UniqueConstraint(fields=['listing', 'culture'], name='listing_culture_link')
         ]

@@ -2,12 +2,13 @@ from catalog.models import *
 
 import graphene
 from graphene_django.types import DjangoObjectType
+from .schema_base import CultureType
 from .schema_image import ImageType
 
 
-class ListingCreationBylineType(DjangoObjectType):
+class ListingCreatorBylineType(DjangoObjectType):
     class Meta:
-        model = ListingCreationByline
+        model = ListingCreatorByline
 
 
 class ListingCollaboratorBylineType(DjangoObjectType):
@@ -39,6 +40,7 @@ class ListingFormatType(DjangoObjectType):
 
     def resolve_item(self, info):
         return Format.objects.get(id=self.format_id)
+
 
 class DistributionTypeType(DjangoObjectType):
     class Meta:
@@ -93,13 +95,24 @@ class ListingLanguageType(DjangoObjectType):
         return Language.objects.get(id=self.language_id)
 
 
+class ListingCultureRepresentedType(DjangoObjectType):
+    class Meta:
+        model = ListingCultureRepresented
+        exclude = ('culture',)
+
+    item = graphene.Field(CultureType)
+
+    def resolve_item(self, info):
+        return Culture.objects.get(id=self.culture_id)
+
+
 class ListingType(DjangoObjectType):
     class Meta:
         model = Listing
         fields = ('id', 'title', 'slug', 'description', 'preview_images', 'length',)
 
     cover_image = graphene.Field(ImageType)
-    creation_bylines = graphene.List(ListingCreationBylineType)
+    creator_bylines = graphene.List(ListingCreatorBylineType)
     collaborator_bylines = graphene.List(ListingCollaboratorBylineType)
     availability = graphene.List(ListingAvailabilityLinkType)
     additional_links = graphene.List(ListingAdditionalLinkType)
@@ -107,13 +120,14 @@ class ListingType(DjangoObjectType):
     distribution_type_set = graphene.List(ListingDistributionTypeType)
     genre_set = graphene.List(ListingGenreType)
     language_set = graphene.List(ListingLanguageType)
+    culture_represented = graphene.List(ListingCultureRepresentedType)
 
     def resolve_cover_image(self, info):
         listing_cover_image = ListingCoverImage.objects.get(listing_id=self.id)
         return Image.objects.get(id=listing_cover_image.image_id)
 
-    def resolve_creation_bylines(self, info):
-        return ListingCreationByline.objects.filter(listing_id=self.id)
+    def resolve_creator_bylines(self, info):
+        return ListingCreatorByline.objects.filter(listing_id=self.id)
 
     def resolve_collaborator_bylines(self, info):
         return ListingCollaboratorByline.objects.filter(listing_id=self.id)
@@ -146,11 +160,14 @@ class ListingType(DjangoObjectType):
     def resolve_language_set(self, info):
         return ListingLanguage.objects.filter(listing_id=self.id)
 
+    def resolve_culture_represented(self, info):
+        return ListingCultureRepresented.objects.filter(listing_id=self.id)
+
 
 class ListingQuery(graphene.ObjectType):
     listing_bundle = graphene.List(ListingType)
     listing = graphene.Field(ListingType, id=graphene.Int(), slug=graphene.String())
-    listing_creation_bylines = graphene.List(ListingCreationBylineType, user_id=graphene.Int(), listing_id=graphene.Int())
+    listing_creation_bylines = graphene.List(ListingCreatorBylineType, user_id=graphene.Int(), listing_id=graphene.Int())
 
     def resolve_listing_bundle(self, info):
         return Listing.objects.all()
@@ -172,10 +189,10 @@ class ListingQuery(graphene.ObjectType):
         user_id = kwargs.get('user_id')
 
         if (user_id is not None):
-            return ListingCreationByline.objects.filter(user_id=user_id)
+            return ListingCreatorByline.objects.filter(user_id=user_id)
 
         if (listing_id is not None):
-            return ListingCreationByline.objects.filter(listing_id=listing_id)
+            return ListingCreatorByline.objects.filter(listing_id=listing_id)
 
         return None
 

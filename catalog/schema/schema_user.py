@@ -4,7 +4,9 @@ from catalog.models import *
 
 import graphene
 from graphene_django.types import DjangoObjectType
-from .schema_listing import ListingCreationBylineType
+from .schema_base import CultureType
+from .schema_listing import ListingCreatorBylineType
+from .schema_image import ImageType
 
 
 def resolve_me(info):
@@ -15,14 +17,32 @@ def resolve_me(info):
     return user
 
 
+class UserCultureType(DjangoObjectType):
+    class Meta:
+        model = UserCulture
+        exclude = ('culture',)
+
+    item = graphene.Field(CultureType)
+
+    def resolve_item(self, info):
+        return Culture.objects.get(id=self.culture_id)
+
+
 class UserType(DjangoObjectType):
     class Meta:
         model = get_user_model()
 
-    listing_creation_bylines = graphene.List(ListingCreationBylineType)
+    listing_creation_bylines = graphene.List(ListingCreatorBylineType)
+    culture = graphene.List(UserCultureType)
 
     def resolve_listing_creation_bylines(self, info):
-        return ListingCreationByline.objects.filter(user_id=self.id)
+        return ListingCreatorByline.objects.filter(user_id=self.id)
+
+    def resolve_culture(self, info):
+        return UserCulture.objects.filter(user_id=self.id)
+
+    def resolve_profile_image(self, info):
+        return self.profile_image.url
 
 
 class UserQuery(graphene.ObjectType):

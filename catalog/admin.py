@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from catalog.models.user import User
 from catalog.models.image import *
+from catalog.models.base import *
 from catalog.models.listing import *
 
 from django_reverse_admin import ReverseModelAdmin
@@ -15,30 +16,39 @@ from django_reverse_admin import ReverseModelAdmin
     # list_filter = ['pub_date']
     # search_fields = ['question_text']
 
-class ListingInline(admin.TabularInline):
+
+class SingleInline(admin.TabularInline):
     extra = 1
     pass
 
 
-class ListingCoverImageInline(ListingInline):
+class UserCultureInline(SingleInline):
+    model = UserCulture
+    pass
+
+
+class ListingCoverImageInline(SingleInline):
     model = ListingCoverImage
     pass
 
 
-class ListingPreviewImageInline(ListingInline):
+class ListingPreviewImageInline(SingleInline):
     model = ListingPreviewImage
     pass
 
 
-class ListingCreationBylineInline(ListingInline):
-    model = ListingCreationByline
+class ListingCreationBylineInline(SingleInline):
+    model = ListingCreatorByline
     pass
 
 
-class ListingCollaboratorBylineInline(ListingInline):
+class ListingCollaboratorBylineInline(SingleInline):
     model = ListingCollaboratorByline
     pass
 
+class ImageInline(SingleInline):
+    model = Image
+    pass
 
 class CustomUserAdmin(UserAdmin):
     model = User
@@ -47,7 +57,7 @@ class CustomUserAdmin(UserAdmin):
             {'fields':
                 (
                     'display_name',
-                    'image',
+                    'profile_image',
                     'description',
                     'location',
                     'pronouns',
@@ -60,37 +70,42 @@ class CustomUserAdmin(UserAdmin):
          )
 
     inline_type = 'tabular'
-    inline_reverse = ['listing_creation_bylines', 'listing_collaborator_bylines']
-    inlines = [ListingCreationBylineInline, ListingCollaboratorBylineInline]
+    inline_reverse = ['listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture']
+    inlines = [ListingCreationBylineInline, ListingCollaboratorBylineInline, UserCultureInline, ImageInline]
 
 
-class ListingAvailabilityLinkInline(ListingInline):
+class ListingAvailabilityLinkInline(SingleInline):
     model = ListingAvailabilityLink
     pass
 
 
-class ListingAdditionalLinkInline(ListingInline):
+class ListingAdditionalLinkInline(SingleInline):
     model = ListingAdditionalLink
     pass
 
 
-class ListingFormatInline(ListingInline):
+class ListingFormatInline(SingleInline):
     model = ListingFormat
     pass
 
 
-class ListingDistributionTypeInline(ListingInline):
+class ListingDistributionTypeInline(SingleInline):
     model = ListingDistributionType
     pass
 
 
-class ListingGenreInline(ListingInline):
+class ListingGenreInline(SingleInline):
     model = ListingGenre
     pass
 
 
-class ListingLanguageInline(ListingInline):
+class ListingLanguageInline(SingleInline):
     model = ListingLanguage
+    pass
+
+
+class ListingCultureRepresentedInline(SingleInline):
+    model = ListingCultureRepresented
     pass
 
 
@@ -107,7 +122,8 @@ class ListingAdmin(ReverseModelAdmin):
                ListingFormatInline,
                ListingDistributionTypeInline,
                ListingGenreInline,
-               ListingLanguageInline]
+               ListingLanguageInline,
+               ListingCultureRepresentedInline]
     pass
 
 
@@ -138,6 +154,16 @@ class GenreAdmin(admin.ModelAdmin):
 
 @admin.register(Language)
 class LanguageAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Culture)
+class Culture(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Continent)
+class Continent(admin.ModelAdmin):
     pass
 
 

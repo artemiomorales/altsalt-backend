@@ -1,6 +1,4 @@
-from .base import PROJECT_PREFIX, TABLE_PREFIX
-
-from .base import profile_directory_path, listing_directory_path
+from .base import PROJECT_PREFIX, TABLE_PREFIX, profile_image_path, media_upload_path, Culture
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -9,7 +7,7 @@ from django.contrib.auth.models import AbstractUser
 class User(AbstractUser):
     email = models.EmailField(unique=True)
     display_name = models.CharField(max_length=150, blank=True)
-    image = models.ImageField(upload_to=profile_directory_path, blank=True)
+    profile_image = models.ImageField(upload_to=profile_image_path, blank=True)
     description = models.CharField(max_length=255, blank=True)
     location = models.CharField(max_length=50, blank=True)
     pronouns = models.CharField(max_length=50, blank=True)
@@ -17,11 +15,15 @@ class User(AbstractUser):
     date_of_birth = models.DateField(blank=True)
     is_organization = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
+    culture = models.ManyToManyField(
+        "Culture",
+        through='UserCulture'
+    )
 
-    listing_creation_bylines = models.ManyToManyField(
+    listing_creator_bylines = models.ManyToManyField(
         "Listing",
-        through='ListingCreationByline',
-        related_name="creationBylines"
+        through='ListingCreatorByline',
+        related_name="creatorBylines"
     )
 
     listing_collaborator_bylines = models.ManyToManyField(
@@ -37,3 +39,14 @@ class User(AbstractUser):
         db_table = PROJECT_PREFIX + 'user'
 
 
+class UserCulture(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    culture = models.ForeignKey(Culture, on_delete=models.CASCADE)
+    priority = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'user_culture'
+        ordering = ['-priority']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'culture'], name='user_culture_link')
+        ]
