@@ -132,9 +132,6 @@ class ListingType(DjangoObjectType):
     def resolve_collaborator_bylines(self, info):
         return ListingCollaboratorByline.objects.filter(listing_id=self.id)
 
-    def resolve_collaborator_bylines(self, info):
-        return ListingCollaboratorByline.objects.filter(listing_id=self.id)
-
     def resolve_availability(self, info):
         return ListingAvailabilityLink.objects.filter(listing_id=self.id)
 

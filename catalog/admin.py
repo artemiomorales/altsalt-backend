@@ -27,6 +27,11 @@ class UserCultureInline(SingleInline):
     pass
 
 
+class UserLinkInline(SingleInline):
+    model = UserLink
+    pass
+
+
 class ListingCoverImageInline(SingleInline):
     model = ListingCoverImage
     pass
@@ -46,9 +51,11 @@ class ListingCollaboratorBylineInline(SingleInline):
     model = ListingCollaboratorByline
     pass
 
+
 class ImageInline(SingleInline):
     model = Image
     pass
+
 
 class CustomUserAdmin(UserAdmin):
     model = User
@@ -71,7 +78,7 @@ class CustomUserAdmin(UserAdmin):
 
     inline_type = 'tabular'
     inline_reverse = ['listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture']
-    inlines = [ListingCreationBylineInline, ListingCollaboratorBylineInline, UserCultureInline, ImageInline]
+    inlines = [ListingCreationBylineInline, ListingCollaboratorBylineInline, UserCultureInline, UserLinkInline, ImageInline]
 
 
 class ListingAvailabilityLinkInline(SingleInline):
