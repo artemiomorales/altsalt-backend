@@ -6,7 +6,7 @@ from catalog.models import *
 import graphene
 from graphene_django.types import DjangoObjectType
 from .schema_base import CultureType
-from .schema_listing import ListingCreatorBylineType
+from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 from .schema_image import ImageType
 
 
@@ -16,6 +16,17 @@ def resolve_me(info):
         raise Exception('Not logged in!')
 
     return user
+
+
+class OrganizationMemberType(DjangoObjectType):
+    class Meta:
+        model = OrganizationMember
+        exclude = ('member',)
+
+    user = graphene.Field(lambda: UserType)
+
+    def resolve_user(self, info):
+        return get_user_model().objects.get(id=self.member_id)
 
 
 class UserCultureType(DjangoObjectType):
@@ -37,15 +48,39 @@ class UserLinkType(DjangoObjectType):
 class UserType(DjangoObjectType):
     class Meta:
         model = get_user_model()
+        fields = ('id', 'profile_image', 'username', 'display_name', 'short_name', 'occupation',
+                  'description', 'is_organization', 'pronouns', 'location', 'date_joined')
 
-    listing_creation_bylines = graphene.List(ListingCreatorBylineType)
+    listings = graphene.List(ListingCreatorBylineType)
+    collaborations = graphene.List(ListingCollaboratorBylineType)
     culture = graphene.List(UserCultureType)
     age = graphene.Int()
     links = graphene.List(UserLinkType)
     date_joined = graphene.String()
+    organizations = graphene.List(OrganizationMemberType)
+    admins = graphene.List(OrganizationMemberType)
+    members = graphene.List(OrganizationMemberType)
 
-    def resolve_listing_creation_bylines(self, info):
+    def resolve_listings(self, info):
         return ListingCreatorByline.objects.filter(user_id=self.id)
+
+    def resolve_collaborations(self, info):
+        return ListingCollaboratorByline.objects.filter(user_id=self.id)
+
+    def resolve_organizations(self, info):
+        return OrganizationMember.objects.filter(member_id=self.id)
+
+    def resolve_admins(self, info):
+        if self.is_organization is True:
+            return OrganizationMember.objects.filter(organization_id=self.id, is_admin=True)
+
+        return None
+
+    def resolve_members(self, info):
+        if self.is_organization is True:
+            return OrganizationMember.objects.filter(organization_id=self.id, is_admin=False)
+
+        return None
 
     def resolve_culture(self, info):
         return UserCulture.objects.filter(user_id=self.id)
@@ -81,6 +116,7 @@ class UserQuery(graphene.ObjectType):
             return get_user_model().objects.get(username=username)
 
         return None
+
 
 class CreateUser(graphene.Mutation):
     user = graphene.Field(UserType)

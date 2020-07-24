@@ -1,7 +1,7 @@
 from .base import PROJECT_PREFIX, TABLE_PREFIX
 from .user import *
 from .base import Link, NameSlug, Culture
-from .image import *
+from .image import ListingPreviewImage, ListingCoverImage
 
 from django.db import models
 from django.template.defaultfilters import slugify

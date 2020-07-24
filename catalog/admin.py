@@ -1,20 +1,20 @@
+from django import forms
 from django.contrib import admin
+from django.contrib.auth import (
+    authenticate, get_user_model, password_validation,
+)
+from django.utils.translation import gettext, gettext_lazy as _
+
 from django.contrib.auth.admin import UserAdmin
-from catalog.models.user import User
+from django.contrib.auth.forms import UserCreationForm
+
+from catalog.models.user import *
 from catalog.models.image import *
 from catalog.models.base import *
 from catalog.models.listing import *
 
 from django_reverse_admin import ReverseModelAdmin
 
-    # fieldsets = [
-    #     (None,  {'fields': ['question_text']}),
-    #     ('Date information', {'fields': ['pub_date'], 'classes': ['collapse']}),
-    # ]
-    # inlines = [ChoiceInLine]
-    # list_display = ('question_text', 'pub_date', 'was_published_recently')
-    # list_filter = ['pub_date']
-    # search_fields = ['question_text']
 
 
 class SingleInline(admin.TabularInline):
@@ -57,28 +57,70 @@ class ImageInline(SingleInline):
     pass
 
 
+class OrganizationMemberInline(SingleInline):
+    model = OrganizationMember
+    fk_name = "organization"
+    pass
+
+#
+# class CustomUserCreateForm(forms.ModelForm):
+#     password1 = forms.CharField(
+#         label=_("Password"),
+#         strip=False,
+#         widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
+#         help_text=password_validation.password_validators_help_text_html(),
+#     )
+#     password2 = forms.CharField(
+#         label=_("Password confirmation"),
+#         widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
+#         strip=False,
+#         help_text=_("Enter the same password as before, for verification."),
+#     )
+
+
+
+@admin.register(User)
 class CustomUserAdmin(UserAdmin):
     model = User
 
-    fieldsets = UserAdmin.fieldsets + ((None,
+    add_fieldsets = UserAdmin.add_fieldsets + ((None,
             {'fields':
                 (
-                    'display_name',
-                    'profile_image',
-                    'description',
-                    'location',
-                    'pronouns',
-                    'occupation',
+                    'email',
+                    'first_name',
+                    'last_name',
                     'date_of_birth',
-                    'is_organization',
-                    'is_banned',
                 )
             }),
          )
 
+    fieldsets = (
+        (None, {'fields': ('username', 'password', 'email', 'first_name', 'last_name')}),
+        (_('Profile'), {'fields':
+                            ('display_name',
+                             'short_name',
+                             'profile_image',
+                             'description',
+                             'location',
+                             'pronouns',
+                             'occupation',
+                             'date_of_birth',
+                             )}),
+        (_('Permissions'), {
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+        }),
+        (_('Organization Settings'), {
+            'fields': ('is_organization',),
+        }),
+    )
+
     inline_type = 'tabular'
-    inline_reverse = ['listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture']
-    inlines = [ListingCreationBylineInline, ListingCollaboratorBylineInline, UserCultureInline, UserLinkInline, ImageInline]
+    inline_reverse = ['listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture', 'organization_member']
+    inlines = [ OrganizationMemberInline, ListingCreationBylineInline, ListingCollaboratorBylineInline,
+               UserCultureInline, UserLinkInline, ImageInline]
+
+    def get_inline_instances(self, request, obj=None):
+        return obj and super(CustomUserAdmin, self).get_inline_instances(request, obj) or []
 
 
 class ListingAvailabilityLinkInline(SingleInline):
@@ -172,6 +214,3 @@ class Culture(admin.ModelAdmin):
 @admin.register(Continent)
 class Continent(admin.ModelAdmin):
     pass
-
-
-admin.site.register(User, CustomUserAdmin)
