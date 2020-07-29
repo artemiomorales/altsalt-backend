@@ -12,6 +12,8 @@ from catalog.models.user import *
 from catalog.models.image import *
 from catalog.models.base import *
 from catalog.models.listing import *
+from catalog.models.cms import *
+
 
 from django_reverse_admin import ReverseModelAdmin
 
@@ -178,6 +180,17 @@ class ListingAdmin(ReverseModelAdmin):
 
 @admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
+    pass
+
+
+class ArticleBylineInline(SingleInline):
+    model = ArticleByline
+    pass
+
+
+@admin.register(Article)
+class ArticleAdmin(admin.ModelAdmin):
+    inlines = [ArticleBylineInline]
     pass
 
 

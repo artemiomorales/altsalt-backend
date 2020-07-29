@@ -38,8 +38,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # AltSalt
+
     'graphene_django',
-    'catalog'
+    'catalog',
 ]
 
 MIDDLEWARE = [
@@ -122,7 +125,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = "/static/"
 
 django_heroku.settings(locals())
@@ -154,6 +157,20 @@ GRAPHENE = {
 
 GRAPHENE = {
     'SCHEMA': 'altsalt_backend.schema.schema',
+}
+
+
+# Rich Text
+
+DJRICHTEXTFIELD_CONFIG = {
+    'js': ['//cdn.tiny.cloud/1/no-api-key/tinymce/5/tinymce.min.js'],
+    'init_template': 'djrichtextfield/init/tinymce.js',
+    'settings': {
+        'menubar': False,
+        'plugins': 'link image',
+        'toolbar': 'bold italic | link image | removeformat',
+        'width': 700
+    }
 }
 
 from .settings_local import *

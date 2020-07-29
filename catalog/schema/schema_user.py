@@ -8,7 +8,7 @@ from graphene_django.types import DjangoObjectType
 from .schema_base import CultureType
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 from .schema_image import ImageType
-
+from .schema_cms import ArticleBylineType
 
 def resolve_me(info):
     user = info.context.user
@@ -53,6 +53,7 @@ class UserType(DjangoObjectType):
 
     listings = graphene.List(ListingCreatorBylineType)
     collaborations = graphene.List(ListingCollaboratorBylineType)
+    articles = graphene.List(ArticleBylineType)
     culture = graphene.List(UserCultureType)
     age = graphene.Int()
     links = graphene.List(UserLinkType)
@@ -66,6 +67,9 @@ class UserType(DjangoObjectType):
 
     def resolve_collaborations(self, info):
         return ListingCollaboratorByline.objects.filter(user_id=self.id)
+
+    def resolve_articles(self, info):
+        return ArticleByline.objects.filter(user_id=self.id)
 
     def resolve_organizations(self, info):
         return OrganizationMember.objects.filter(member_id=self.id)

@@ -1,6 +1,8 @@
 from .base import PROJECT_PREFIX, TABLE_PREFIX, profile_image_path, media_upload_path, Culture
 
 from .base import Link
+
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Q
@@ -36,6 +38,12 @@ class User(AbstractUser):
         "Listing",
         through='ListingCollaboratorByline',
         related_name="collaboratorBylines"
+    )
+
+    article_bylines = models.ManyToManyField(
+        "Article",
+        through='ArticleByline',
+        related_name="articleBylines"
     )
 
     members = models.ManyToManyField(
