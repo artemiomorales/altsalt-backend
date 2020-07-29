@@ -162,11 +162,20 @@ class ListingType(DjangoObjectType):
 
 
 class ListingQuery(graphene.ObjectType):
-    listing_bundle = graphene.List(ListingType)
+    listing_bundle = graphene.List(ListingType, approved_after_date=graphene.Date(), approved_before_date=graphene.Date())
     listing = graphene.Field(ListingType, id=graphene.Int(), slug=graphene.String())
     listing_creation_bylines = graphene.List(ListingCreatorBylineType, user_id=graphene.Int(), listing_id=graphene.Int())
 
-    def resolve_listing_bundle(self, info):
+    def resolve_listing_bundle(self, info, **kwargs):
+        approved_after_date = kwargs.get('approved_after_date')
+        approved_before_date = kwargs.get('approved_before_date')
+
+        if approved_after_date is not None:
+            return Listing.objects.filter(date_approved__gte=approved_after_date, is_published=True, is_approved=True)
+
+        if approved_before_date is not None:
+            return Listing.objects.filter(date_approved__lt=approved_before_date, is_published=True, is_approved=True)
+
         return Listing.objects.all()
 
     def resolve_listing(self, info, **kwargs):
