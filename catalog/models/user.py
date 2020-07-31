@@ -20,7 +20,7 @@ class User(AbstractUser):
     location = models.CharField(max_length=50, blank=True)
     pronouns = models.CharField(max_length=50, blank=True)
     occupation = models.CharField(max_length=50, blank=True)
-    date_of_birth = models.DateField()
+    date_of_birth = models.DateField(null=True)
     is_organization = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
     culture = models.ManyToManyField(
