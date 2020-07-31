@@ -90,7 +90,10 @@ class UserType(DjangoObjectType):
         return UserCulture.objects.filter(user_id=self.id)
 
     def resolve_profile_image(self, info):
-        return self.profile_image.url
+        if self.profile_image:
+            return self.profile_image.url
+
+        return None
 
     def resolve_age(self, info):
         born = self.date_of_birth
