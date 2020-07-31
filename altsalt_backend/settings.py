@@ -31,7 +31,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS').split(',')
+HOSTS = os.environ.get('ALLOWED_HOSTS')
+ALLOWED_HOSTS = HOSTS if HOSTS is not None else []
 
 
 # Application definition
@@ -174,13 +175,13 @@ MEDIA_ROOT = MEDIA_URL
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # CORS
-CORS_ORIGIN_WHITELIST = os.environ.get('CORS_ORIGIN_WHITELIST').split(',')
+CORS_SITES = os.environ.get('CORS_ORIGIN_WHITELIST')
+CORS_ORIGIN_WHITELIST = CORS_SITES.split(',') if CORS_SITES is not None else []
 
 # Graphene
 GRAPHENE = {
     'SCHEMA' : 'altsalt_backend.schema.schema',
     'MIDDLEWARE': [
-        'django.middleware.csrf.CsrfViewMiddleware',
         'graphql_jwt.middleware.JSONWebTokenMiddleware',
     ],
 }
