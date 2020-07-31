@@ -1,8 +1,10 @@
 # AltSalt #
 .env
 local_config.json
-*/settings_local.py
+altsalt_backend/.env
 .idea/
+staticfiles/**/*
+!staticfiles/staticfiles.txt
 
 # Django #
 *.log

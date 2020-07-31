@@ -1,0 +1,2 @@
+Placeholder file to allow adding this directory to source control,
+which Heroku needs in order to run 'collectstatic' and generate admin files.

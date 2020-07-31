@@ -21,6 +21,7 @@ promise==2.3
 psycopg2==2.8.5
 PyJWT==1.7.1
 python-dateutil==2.8.1
+python-dotenv==0.14.0
 pytz==2020.1
 Rx==1.6.1
 s3transfer==0.3.3

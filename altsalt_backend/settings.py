@@ -12,6 +12,11 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 import django_heroku
+from os.path import join, dirname
+from dotenv import load_dotenv
+
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,12 +26,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '%i#z6hcz2(9b_k*ye(!co2u4-u#lsory!+m42ushi=rmr25k8*'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST')]
 
 
 # Application definition
@@ -81,7 +86,12 @@ WSGI_APPLICATION = 'altsalt_backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        # Use settings_local.py
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': os.environ.get('DATABASE_NAME'),
+        'USER': os.environ.get('DATABASE_USER'),
+        'PASSWORD': os.environ.get('DATABASE_PASSWORD'),
+        'HOST': '',
+        'PORT': '',
     }
 }
 
@@ -131,10 +141,7 @@ STATIC_URL = "/static/"
 django_heroku.settings(locals())
 
 
-# AltSalt
-
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
+# --- AltSalt --- #
 
 AUTH_USER_MODEL = 'catalog.User'
 
@@ -144,7 +151,23 @@ AUTHENTICATION_BACKENDS = [
     'catalog.authentication.EmailBackend'
 ]
 
-STORAGE_LOCATION = os.environ.get("DATABASE_NAME")
+STORAGE_LOCATION = os.environ.get('DATABASE_NAME')
+
+PROJECT_NAME = os.environ.get('PROJECT_NAME')
+PROJECT_PREFIX = PROJECT_NAME + '_'
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+DEFAULT_FILE_STORAGE = os.environ.get('DEFAULT_FILE_STORAGE')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')
+
+MEDIA_URL = '//%s.s3.amazonaws.com/' % AWS_STORAGE_BUCKET_NAME
+MEDIA_ROOT = MEDIA_URL
+
+# For admin files
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Graphene
 GRAPHENE = {
@@ -158,5 +181,3 @@ GRAPHENE = {
 GRAPHENE = {
     'SCHEMA': 'altsalt_backend.schema.schema',
 }
-
-from .settings_local import *
