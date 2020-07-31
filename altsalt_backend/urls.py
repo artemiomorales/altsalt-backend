@@ -21,9 +21,6 @@ from django.conf.urls.static import static
 # Graphene
 from graphene_django.views import GraphQLView
 
-# Rich Text
-from django.urls import include
-
 
 urlpatterns = [
     path('admin/', admin.site.urls),
