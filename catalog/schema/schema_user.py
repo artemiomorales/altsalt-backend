@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from catalog.models import *
 
 import graphene
+import graphql_jwt
 from graphene_django.types import DjangoObjectType
 from .schema_base import CultureType
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
@@ -49,7 +50,7 @@ class UserType(DjangoObjectType):
     class Meta:
         model = get_user_model()
         fields = ('id', 'profile_image', 'username', 'display_name', 'short_name', 'occupation',
-                  'description', 'is_organization', 'pronouns', 'location', 'date_joined')
+                  'description', 'is_organization', 'show_age', 'pronouns', 'location', 'date_joined')
 
     listings = graphene.List(ListingCreatorBylineType)
     collaborations = graphene.List(ListingCollaboratorBylineType)
@@ -142,11 +143,12 @@ class CreateUser(graphene.Mutation):
         )
         user.set_password(password)
         user.save()
-        userProfile = UserProfile(user=user)
-        userProfile.save()
 
         return CreateUser(user=user)
 
 
 class UserMutation(graphene.ObjectType):
     create_user = CreateUser.Field()
+    token_auth = graphql_jwt.ObtainJSONWebToken.Field()
+    verify_token = graphql_jwt.Verify.Field()
+    refresh_token = graphql_jwt.Refresh.Field()

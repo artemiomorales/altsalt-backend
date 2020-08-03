@@ -107,6 +107,7 @@ class CustomUserAdmin(UserAdmin):
                              'pronouns',
                              'occupation',
                              'date_of_birth',
+                             'show_age',
                              )}),
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),

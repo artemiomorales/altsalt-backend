@@ -21,6 +21,7 @@ class User(AbstractUser):
     pronouns = models.CharField(max_length=50, blank=True)
     occupation = models.CharField(max_length=50, blank=True)
     date_of_birth = models.DateField(null=True)
+    show_age = models.BooleanField(default=False)
     is_organization = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
     culture = models.ManyToManyField(
