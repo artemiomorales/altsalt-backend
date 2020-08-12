@@ -10,13 +10,7 @@ from .schema_base import CultureType
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 from .schema_image import ImageType
 from .schema_cms import ArticleBylineType
-
-def resolve_me(info):
-    user = info.context.user
-    if user.is_anonymous:
-        raise Exception('Not logged in!')
-
-    return user
+from django.contrib.auth import authenticate
 
 
 class OrganizationMemberType(DjangoObjectType):
@@ -113,6 +107,14 @@ class UserQuery(graphene.ObjectType):
     users = graphene.List(UserType)
     user = graphene.Field(UserType, username=graphene.String())
 
+    def resolve_me(self, info):
+        print(info.context.user)
+        user = info.context.user
+        if user.is_anonymous:
+            raise Exception('Not logged in!')
+
+        return user
+
     def resolve_users(self, info):
         return get_user_model().objects.all()
 
@@ -146,9 +148,18 @@ class CreateUser(graphene.Mutation):
 
         return CreateUser(user=user)
 
+    def resolve_user(self, info):
+        return User.objects.get()
+
+# class UserWebToken(graphql_jwt.ObtainJSONWebToken):
+#     user = graphene.Field(UserType)
+#
+#     def resolve_user(self, info):
+#         return get_user_model().objects.get(username=info.context.user)
+
 
 class UserMutation(graphene.ObjectType):
     create_user = CreateUser.Field()
-    token_auth = graphql_jwt.ObtainJSONWebToken.Field()
+    log_in = graphql_jwt.ObtainJSONWebToken.Field()
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()

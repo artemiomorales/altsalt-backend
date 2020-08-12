@@ -151,8 +151,8 @@ django_heroku.settings(locals())
 AUTH_USER_MODEL = 'catalog.User'
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
     'graphql_jwt.backends.JSONWebTokenBackend',
+    'django.contrib.auth.backends.ModelBackend',
     'catalog.authentication.EmailBackend'
 ]
 
@@ -176,11 +176,14 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # CORS
 CORS_SITES = os.environ.get('CORS_ORIGIN_WHITELIST')
+CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = CORS_SITES.split(',') if CORS_SITES is not None else []
+CSRF_TRUSTED_ORIGINS = CORS_SITES.split(',') if CORS_SITES is not None else []
 
 # Graphene
+
 GRAPHENE = {
-    'SCHEMA' : 'altsalt_backend.schema.schema',
+    'SCHEMA': 'altsalt_backend.schema.schema',
     'MIDDLEWARE': [
         'graphql_jwt.middleware.JSONWebTokenMiddleware',
     ],
@@ -189,6 +192,11 @@ GRAPHENE = {
 GRAPHENE = {
     'SCHEMA': 'altsalt_backend.schema.schema',
 }
+
+JWT_COOKIE_SECURE = os.environ.get('JWT_COOKIE_SECURE')
+
+JWT_COOKIE_DOMAIN = CORS_SITES.split(',') if CORS_SITES is not None else []
+JWT_HIDE_TOKEN_FIELDS = True
 
 LOGGING = {
     'version': 1,

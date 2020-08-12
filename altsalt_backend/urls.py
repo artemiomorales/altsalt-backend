@@ -18,6 +18,11 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.middleware.csrf import get_token
+from graphql_jwt.decorators import jwt_cookie
+from catalog import views
+
 
 # Graphene
 from graphene_django.views import GraphQLView
@@ -25,6 +30,10 @@ from graphene_django.views import GraphQLView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('graphql/', csrf_exempt(GraphQLView.as_view(graphiql=True))),
+    path('graphql/', jwt_cookie(csrf_exempt(GraphQLView.as_view(graphiql=True)))),
+    # path('graphql/', jwt_cookie(csrf_exempt(GraphQLView.as_view(graphiql=True)))),
+    # path('graphql/', csrf_exempt(GraphQLView.as_view(graphiql=True))),
+    path('csrf/', csrf_exempt(views.csrf)),
+    path('ping/', views.ping),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
