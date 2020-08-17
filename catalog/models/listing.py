@@ -199,7 +199,6 @@ class PriceType(NameSlug):
 class Price(models.Model):
     price_type = models.ForeignKey(PriceType, on_delete=models.PROTECT)
     amount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    hide_amount = models.BooleanField(default=False)
     details = models.CharField(max_length=100, blank=True)
 
     def __str__(self):
