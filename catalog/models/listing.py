@@ -16,6 +16,7 @@ class Listing(models.Model):
         "Image",
         through='ListingPreviewImage'
     )
+    price = models.ForeignKey("Price", null=True, on_delete=models.SET_NULL)
     format = models.ManyToManyField(
         "Format",
         through='ListingFormat'
@@ -188,3 +189,22 @@ class ListingCultureRepresented(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['listing', 'culture'], name='listing_culture_link')
         ]
+
+
+class PriceType(NameSlug):
+    class Meta:
+        db_table = TABLE_PREFIX + 'price_type'
+
+
+class Price(models.Model):
+    price_type = models.ForeignKey(PriceType, on_delete=models.PROTECT)
+    amount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    hide_amount = models.BooleanField(default=False)
+    details = models.CharField(max_length=100, blank=True)
+
+    def __str__(self):
+        return self.price_type.name + ' ' + self.amount.__str__()
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'price'
+

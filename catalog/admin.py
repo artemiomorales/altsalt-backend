@@ -136,6 +136,11 @@ class ListingAdditionalLinkInline(SingleInline):
     pass
 
 
+class PriceInline(SingleInline):
+    model = Price
+    pass
+
+
 class ListingFormatInline(SingleInline):
     model = ListingFormat
     pass
@@ -164,7 +169,7 @@ class ListingCultureRepresentedInline(SingleInline):
 @admin.register(Listing)
 class ListingAdmin(ReverseModelAdmin):
     inline_type = 'tabular'
-    inline_reverse = ['preview_images']
+    inline_reverse = ['preview_images', 'price']
     inlines = [ListingCoverImageInline,
                ListingPreviewImageInline,
                ListingCreationBylineInline,
@@ -197,6 +202,11 @@ class ArticleAdmin(admin.ModelAdmin):
 
 @admin.register(Format)
 class FormatAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(PriceType)
+class PriceTypeAdmin(admin.ModelAdmin):
     pass
 
 

@@ -26,6 +26,16 @@ class ListingAdditionalLinkType(DjangoObjectType):
         model = ListingAdditionalLink
 
 
+class PriceTypeType(DjangoObjectType):
+    class Meta:
+        model = PriceType
+
+
+class PriceType(DjangoObjectType):
+    class Meta:
+        model = Price
+
+
 class FormatType(DjangoObjectType):
     class Meta:
         model = Format
@@ -109,7 +119,7 @@ class ListingCultureRepresentedType(DjangoObjectType):
 class ListingType(DjangoObjectType):
     class Meta:
         model = Listing
-        fields = ('id', 'title', 'slug', 'description', 'preview_images', 'length',)
+        fields = ('id', 'title', 'slug', 'description', 'preview_images', 'length', 'price')
 
     cover_image = graphene.Field(ImageType)
     creator_bylines = graphene.List(ListingCreatorBylineType)
