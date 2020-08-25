@@ -166,6 +166,11 @@ class ListingCultureRepresentedInline(SingleInline):
     pass
 
 
+class SeoCategoryInline(SingleInline):
+    model = SeoCategory
+    pass
+
+
 @admin.register(Listing)
 class ListingAdmin(ReverseModelAdmin):
     inline_type = 'tabular'
@@ -180,7 +185,8 @@ class ListingAdmin(ReverseModelAdmin):
                ListingDistributionTypeInline,
                ListingGenreInline,
                ListingLanguageInline,
-               ListingCultureRepresentedInline]
+               ListingCultureRepresentedInline
+               ]
     pass
 
 
@@ -236,5 +242,10 @@ class Culture(admin.ModelAdmin):
 
 
 @admin.register(Continent)
-class Continent(admin.ModelAdmin):
+class ContinentAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(SeoCategory)
+class SeoCategoryAdmin(admin.ModelAdmin):
     pass

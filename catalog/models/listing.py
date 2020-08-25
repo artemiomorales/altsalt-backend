@@ -43,6 +43,7 @@ class Listing(models.Model):
         "Culture",
         through='ListingCultureRepresented'
     )
+    seo_category = models.ForeignKey("SeoCategory", null=True, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -207,3 +208,12 @@ class Price(models.Model):
     class Meta:
         db_table = TABLE_PREFIX + 'price'
 
+
+class SeoCategory(models.Model):
+    name = models.CharField(max_length=55, unique=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'seo_category'
