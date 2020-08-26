@@ -116,6 +116,11 @@ class ListingCultureRepresentedType(DjangoObjectType):
         return Culture.objects.get(id=self.culture_id)
 
 
+class ContentRatingType(DjangoObjectType):
+    class Meta:
+        model = ContentRating
+
+
 class SeoCategoryType(DjangoObjectType):
     class Meta:
         model = SeoCategory
@@ -124,7 +129,7 @@ class SeoCategoryType(DjangoObjectType):
 class ListingType(DjangoObjectType):
     class Meta:
         model = Listing
-        fields = ('id', 'title', 'slug', 'description', 'preview_images', 'length', 'price, seo_category')
+        fields = ('id', 'title', 'slug', 'description', 'preview_images', 'length', 'price', 'content_rating', 'seo_category')
 
     cover_image = graphene.Field(ImageType)
     creator_bylines = graphene.List(ListingCreatorBylineType)
@@ -137,6 +142,7 @@ class ListingType(DjangoObjectType):
     language_set = graphene.List(ListingLanguageType)
     culture_represented = graphene.List(ListingCultureRepresentedType)
     price = graphene.Field(PriceType)
+    content_rating = graphene.Field(ContentRatingType)
     seo_category = graphene.Field(SeoCategoryType)
 
     def resolve_cover_image(self, info):

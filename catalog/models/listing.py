@@ -43,6 +43,7 @@ class Listing(models.Model):
         "Culture",
         through='ListingCultureRepresented'
     )
+    content_rating = models.ForeignKey("ContentRating", null=True, on_delete=models.PROTECT)
     seo_category = models.ForeignKey("SeoCategory", null=True, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
@@ -217,3 +218,8 @@ class SeoCategory(models.Model):
 
     class Meta:
         db_table = TABLE_PREFIX + 'seo_category'
+
+
+class ContentRating(NameSlug):
+    class Meta:
+        db_table = TABLE_PREFIX + 'content_rating'
