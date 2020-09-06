@@ -14,6 +14,7 @@ import os
 import django_heroku
 from os.path import join, dirname
 from dotenv import load_dotenv
+from datetime import timedelta
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -50,6 +51,7 @@ INSTALLED_APPS = [
     'graphene_django',
     'catalog',
     'corsheaders',
+
 ]
 
 MIDDLEWARE = [
@@ -151,9 +153,9 @@ django_heroku.settings(locals())
 AUTH_USER_MODEL = 'catalog.User'
 
 AUTHENTICATION_BACKENDS = [
-    'graphql_jwt.backends.JSONWebTokenBackend',
     'django.contrib.auth.backends.ModelBackend',
-    'catalog.authentication.EmailBackend'
+    'catalog.authentication.EmailBackend',
+    'graphql_jwt.backends.JSONWebTokenBackend'
 ]
 
 STORAGE_LOCATION = os.environ.get('DATABASE_NAME')
@@ -185,18 +187,19 @@ CSRF_TRUSTED_ORIGINS = CORS_SITES.split(',') if CORS_SITES is not None else []
 GRAPHENE = {
     'SCHEMA': 'altsalt_backend.schema.schema',
     'MIDDLEWARE': [
-        'graphql_jwt.middleware.JSONWebTokenMiddleware',
+        #'graphql_jwt.middleware.JSONWebTokenMiddleware',
+        "catalog.backends.GraphQLAuthBackend",
     ],
 }
 
-GRAPHENE = {
-    'SCHEMA': 'altsalt_backend.schema.schema',
+GRAPHQL_JWT = {
+    'JWT_COOKIE_SECURE': os.environ.get('JWT_COOKIE_SECURE'),
+    'JWT_COOKIE_DOMAIN': CORS_SITES.split(',') if CORS_SITES is not None else [],
+    'JWT_HIDE_TOKEN_FIELDS': False,
+    'JWT_VERIFY_EXPIRATION': True,
+    'JWT_EXPIRATION_DELTA': timedelta(minutes=1),
+    'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=7),
 }
-
-JWT_COOKIE_SECURE = os.environ.get('JWT_COOKIE_SECURE')
-
-JWT_COOKIE_DOMAIN = CORS_SITES.split(',') if CORS_SITES is not None else []
-JWT_HIDE_TOKEN_FIELDS = True
 
 LOGGING = {
     'version': 1,

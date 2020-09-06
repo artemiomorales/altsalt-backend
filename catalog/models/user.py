@@ -16,7 +16,7 @@ class User(AbstractUser):
     display_name = models.CharField(max_length=150, blank=True)
     short_name = models.CharField(max_length=18, blank=True)
     profile_image = models.ImageField(upload_to=profile_image_path, null=True, blank=True)
-    description = models.TextField()
+    description = models.TextField(default="Hi! I'm a new member of AltSalt.")
     location = models.CharField(max_length=50, blank=True)
     pronouns = models.CharField(max_length=50, blank=True)
     occupation = models.CharField(max_length=50, blank=True)
@@ -100,3 +100,15 @@ class OrganizationMember(models.Model):
             models.CheckConstraint(check=~Q(organization_id=models.F("member_id")), name='prevent_self_reference'),
             models.UniqueConstraint(fields=['organization_id', 'member_id'], name='organization_member_link')
         ]
+
+
+class Invitation(models.Model):
+    email = models.CharField(max_length=120)
+    token = models.CharField(max_length=120)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'invitation'
+        constraints = [
+            models.UniqueConstraint(fields=['email', 'token'], name='email_token_pair')
+        ]
+
