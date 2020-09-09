@@ -23,6 +23,13 @@ import string
 from sendgrid.helpers.mail import *
 from bs4 import BeautifulSoup
 from graphql import GraphQLError
+from django.template.defaultfilters import slugify
+import logging
+from django.core.files import File
+import base64
+import PIL.Image as ImageUtils
+from io import StringIO, BytesIO
+from django.core.files.base import ContentFile
 
 
 class OrganizationMemberType(DjangoObjectType):
@@ -34,7 +41,6 @@ class OrganizationMemberType(DjangoObjectType):
 
     def resolve_user(self, info):
         return get_user_model().objects.get(id=self.member_id)
-
 
 class UserCultureType(DjangoObjectType):
     class Meta:
@@ -61,7 +67,7 @@ class UserType(DjangoObjectType):
     class Meta:
         model = get_user_model()
         fields = ('id', 'profile_image', 'username', 'display_name', 'short_name', 'occupation',
-                  'description', 'is_organization', 'show_age', 'pronouns', 'location', 'date_joined')
+                  'description', 'is_organization', 'date_of_birth', 'show_age', 'pronouns', 'location', 'date_joined')
 
     listings = graphene.List(ListingCreatorBylineType)
     collaborations = graphene.List(ListingCollaboratorBylineType)
@@ -212,6 +218,124 @@ class CreateUser(JSONWebTokenMixin, graphene.Mutation):
             return CreateUser(token=context.token, payload=context.payload)
 
 
+class LinkInput(graphene.InputObjectType):
+    name = graphene.String(required=True)
+    url = graphene.String(required=True)
+    priority = graphene.Int(required=True)
+
+
+class CultureInput(graphene.InputObjectType):
+    name = graphene.String(required=True)
+    continent = graphene.String()
+    priority = graphene.Int(required=True)
+
+
+def bitstring_to_bytes(s):
+    v = int(s, 2)
+    b = bytearray()
+    while v:
+        b.append(v & 0xff)
+        v >>= 8
+    return bytes(b[::-1])
+
+class UpdateUser(graphene.Mutation):
+    user = graphene.Field(UserType)
+
+    class Arguments:
+        username = graphene.String(required=True)
+        profile_image_name = graphene.String()
+        profile_image = graphene.String()
+        display_name = graphene.String()
+        occupation = graphene.String()
+        description = graphene.String()
+        date_of_birth = graphene.Date()
+        links = graphene.List(LinkInput)
+        show_age = graphene.Boolean()
+        pronouns = graphene.String()
+        location = graphene.String()
+        background = graphene.List(CultureInput)
+
+    def mutate(self, info, **kwargs):
+        username = kwargs.get('username')
+
+        if get_user_model().objects.filter(username=username).exists() is False:
+            raise GraphQLError("Target user does not exist")
+
+        target_user = get_user_model().objects.get(username=username)
+
+        # authenticated_user = info.context.user
+        #
+        # if authenticated_user is None or authenticated_user.getattr('username') is not target_user.username:
+        #     raise GraphQLError("You are unauthorized to update this user")
+
+        display_name = kwargs.get('display_name')
+        profile_image_name = kwargs.get('profile_image_name')
+        profile_image = kwargs.get('profile_image')
+        occupation = kwargs.get('occupation')
+        description = kwargs.get('description')
+        date_of_birth = kwargs.get('date_of_birth')
+        links = kwargs.get('links')
+        show_age = kwargs.get('show_age')
+        pronouns = kwargs.get('pronouns')
+        location = kwargs.get('location')
+        background = kwargs.get('background')
+
+        if profile_image_name is not None and profile_image is not None:
+            format, imgstr = profile_image.split(';base64,')
+            ext = format.split('/')[-1]
+            opened_image = ImageUtils.open(BytesIO(base64.b64decode(imgstr + "===")))
+            buffer = BytesIO()
+            opened_image.save(fp=buffer, format=ext, optimize=True)
+            data = ContentFile(buffer.getvalue())
+            target_user.profile_image.save(name=profile_image_name, content=data)
+
+        if display_name is not None:
+            target_user.display_name = display_name
+
+        if occupation is not None:
+            target_user.occupation = occupation
+
+        if description is not None:
+            target_user.description = description
+
+        if date_of_birth is not None:
+            target_user.date_of_birth = date_of_birth
+
+        existing_links = UserLink.objects.filter(user=target_user.id)
+        existing_links.delete()
+
+        if links is not None:
+            for link in links:
+                new_link = UserLink(user=target_user, name=link.name, url=link.url, priority=link.priority)
+                new_link.save()
+
+        if show_age is not None:
+            target_user.show_age = show_age
+
+        if pronouns is not None:
+            target_user.pronouns = pronouns
+
+        if location is not None:
+            target_user.location = location
+
+        existing_background = UserCulture.objects.filter(user=target_user.id)
+        existing_background.delete()
+
+        if background is not None:
+            for culture in background:
+                culture_slug = slugify(culture.name)
+                if Culture.objects.filter(slug=culture_slug).exists() is False:
+                    CreateCulture(culture.name, culture_slug, culture.continent)
+
+                culture_object = Culture.objects.get(slug=culture_slug)
+                user_culture = UserCulture(user=target_user, culture=culture_object, priority=culture.priority)
+                user_culture.save()
+
+        target_user.save()
+
+        return UpdateUser(user=target_user)
+
+
 class SendInvitation(graphene.Mutation):
     invitation = graphene.Field(InvitationType)
 
@@ -254,6 +378,19 @@ class SendInvitation(graphene.Mutation):
         return SendInvitation(invitation=new_invitation)
 
 
+def CreateCulture(culture_name, culture_slug, continent_name=None):
+
+    new_culture = Culture(name=culture_name.title(), slug=culture_slug)
+    if continent_name is not None:
+        continent_slug = slugify(continent_name)
+        continent = Continent.objects.get(slug=continent_slug)
+        new_culture.continent = continent
+
+    new_culture.save()
+
+    return new_culture
+
+
 def InvitationValid(invite_email, invite_token):
     invitation = Invitation.objects.get(email=invite_email)
 
@@ -289,6 +426,7 @@ class VerifyInvitation(graphene.Mutation):
 
 class UserMutation(graphene.ObjectType):
     create_user = CreateUser.Field()
+    update_user = UpdateUser.Field()
     log_in = graphql_jwt.ObtainJSONWebToken.Field()
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()

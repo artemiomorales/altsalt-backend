@@ -1,4 +1,4 @@
-from .base import PROJECT_PREFIX, TABLE_PREFIX, profile_image_path, media_upload_path, Culture
+from .base import PROJECT_PREFIX, TABLE_PREFIX, profile_image_path, media_upload_path, Culture, Continent
 
 from .base import Link
 
