@@ -6,8 +6,9 @@ from catalog.models import *
 
 import graphene
 import graphql_jwt
-from graphql_jwt.decorators import jwt_settings, rotate_token, signals, on_token_auth_resolve
-from graphql_jwt.mixins import JSONWebTokenMixin
+from graphql_jwt.decorators import signals,\
+    on_token_auth_resolve, wraps, setup_jwt_cookie, csrf_rotation, refresh_expiration, maybe_thenable
+from graphql_jwt.mixins import JSONWebTokenMixin, ResolveMixin
 from graphene_django.types import DjangoObjectType
 from .schema_base import CultureType
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
@@ -150,18 +151,12 @@ class UserQuery(graphene.ObjectType):
         return None
 
 
-class CreateUser(JSONWebTokenMixin, graphene.Mutation):
-
-    class Arguments:
-        invite_email = graphene.String(required=True)
-        invite_token = graphene.String(required=True)
-        first_name = graphene.String(required=True)
-        last_name = graphene.String(required=True)
-        date_of_birth = graphene.Date(required=True)
-        username = graphene.String(required=True)
-        password = graphene.String(required=True)
-
-    def mutate(self, info, **kwargs):
+def creation_wrapper(f):
+    @wraps(f)
+    @setup_jwt_cookie
+    @csrf_rotation
+    @refresh_expiration
+    def wrapper(cls, root, info, **kwargs):
         invite_email = kwargs.get('invite_email')
         invite_token = kwargs.get('invite_token')
         username = kwargs.get('username')
@@ -191,31 +186,37 @@ class CreateUser(JSONWebTokenMixin, graphene.Mutation):
             new_user.set_password(password)
             new_user.save()
 
-            # Create auth token
+            invitation = Invitation.objects.get(email=invite_email)
+            invitation.delete()
+
             context = info.context
             context._jwt_token_auth = True
-            signals.token_issued.send(sender=self, request=context, user=new_user)
-            on_token_auth_resolve((context, new_user, context))
 
-            # from graphql_jwt.decorators.token_auth
-            info.context.jwt_token = context.token
+            if hasattr(context, 'user'):
+                context.user = new_user
 
-            # from graphql_jwt.decorators.csrf_rotation
-            if jwt_settings.JWT_CSRF_ROTATION:
-                rotate_token(info.context)
+            result = f(cls, root, info, **kwargs)
+            signals.token_issued.send(sender=cls, request=context, user=new_user)
+            return maybe_thenable((context, new_user, result), on_token_auth_resolve)
 
-            # from graphql_jwt.decorators.refresh_expiration
-            context.payload['refresh_expires_in'] = (
-                timegm(datetime.datetime.utcnow().utctimetuple()) +
-                jwt_settings.JWT_REFRESH_EXPIRATION_DELTA.total_seconds()
-            )
+    return wrapper
 
-            context.payload['username'] = username
 
-            # invitation = Invitation.objects.get(email=invite_email)
-            # invitation.delete()
+class CreateUser(ResolveMixin, JSONWebTokenMixin, graphene.Mutation):
 
-            return CreateUser(token=context.token, payload=context.payload)
+    class Arguments:
+        invite_email = graphene.String(required=True)
+        invite_token = graphene.String(required=True)
+        first_name = graphene.String(required=True)
+        last_name = graphene.String(required=True)
+        date_of_birth = graphene.Date(required=True)
+        username = graphene.String(required=True)
+        password = graphene.String(required=True)
+
+    @classmethod
+    @creation_wrapper
+    def mutate(cls, root, info, **kwargs):
+        return cls.resolve(root, info, **kwargs)
 
 
 class LinkInput(graphene.InputObjectType):
@@ -230,13 +231,10 @@ class CultureInput(graphene.InputObjectType):
     priority = graphene.Int(required=True)
 
 
-def bitstring_to_bytes(s):
-    v = int(s, 2)
-    b = bytearray()
-    while v:
-        b.append(v & 0xff)
-        v >>= 8
-    return bytes(b[::-1])
+class ListingInput(graphene.InputObjectType):
+    slug = graphene.String(required=True)
+    priority = graphene.Int(required=True)
+
 
 class UpdateUser(graphene.Mutation):
     user = graphene.Field(UserType)
@@ -254,19 +252,19 @@ class UpdateUser(graphene.Mutation):
         pronouns = graphene.String()
         location = graphene.String()
         background = graphene.List(CultureInput)
+        creator_bylines = graphene.List(ListingInput)
+        collaborator_bylines = graphene.List(ListingInput)
 
     def mutate(self, info, **kwargs):
         username = kwargs.get('username')
 
+        if info.context.user.username != username:
+            raise GraphQLError("You are not authorized to update this user.")
+
         if get_user_model().objects.filter(username=username).exists() is False:
-            raise GraphQLError("Target user does not exist")
+            raise GraphQLError("Target user does not exist.")
 
         target_user = get_user_model().objects.get(username=username)
-
-        # authenticated_user = info.context.user
-        #
-        # if authenticated_user is None or authenticated_user.getattr('username') is not target_user.username:
-        #     raise GraphQLError("You are unauthorized to update this user")
 
         display_name = kwargs.get('display_name')
         profile_image_name = kwargs.get('profile_image_name')
@@ -279,8 +277,10 @@ class UpdateUser(graphene.Mutation):
         pronouns = kwargs.get('pronouns')
         location = kwargs.get('location')
         background = kwargs.get('background')
+        creator_bylines = kwargs.get('creator_bylines')
+        collaborator_bylines = kwargs.get('collaborator_bylines')
 
-        if profile_image_name is not None and profile_image is not None:
+        if profile_image_name is not '' and profile_image is not None:
             format, imgstr = profile_image.split(';base64,')
             ext = format.split('/')[-1]
             opened_image = ImageUtils.open(BytesIO(base64.b64decode(imgstr + "===")))
@@ -330,6 +330,24 @@ class UpdateUser(graphene.Mutation):
                 culture_object = Culture.objects.get(slug=culture_slug)
                 user_culture = UserCulture(user=target_user, culture=culture_object, priority=culture.priority)
                 user_culture.save()
+
+        if creator_bylines is not None:
+            for creator_byline in creator_bylines:
+                if Listing.objects.filter(slug=creator_byline.slug).exists() is True:
+                    target_listing = Listing.objects.get(slug=creator_byline.slug)
+                    if ListingCreatorByline.objects.filter(user=target_user, listing=target_listing).exists() is True:
+                        byline = ListingCreatorByline.objects.get(user=target_user, listing=target_listing)
+                        byline.user_priority = creator_byline.priority
+                        byline.save()
+
+        if collaborator_bylines is not None:
+            for collaborator_byline in collaborator_bylines:
+                if Listing.objects.filter(slug=collaborator_byline.slug).exists() is True:
+                    target_listing = Listing.objects.get(slug=collaborator_byline.slug)
+                    if ListingCollaboratorByline.objects.filter(user=target_user, listing=target_listing).exists() is True:
+                        byline = ListingCollaboratorByline.objects.get(user=target_user, listing=target_listing)
+                        byline.user_priority = collaborator_byline.priority
+                        byline.save()
 
         target_user.save()
 
@@ -417,12 +435,6 @@ class VerifyInvitation(graphene.Mutation):
 
         return VerifyInvitation(success=False)
 
-# class UserWebToken(graphql_jwt.ObtainJSONWebToken):
-#     user = graphene.Field(UserType)
-#
-#     def resolve_user(self, info):
-#         return get_user_model().objects.get(username=info.context.user)
-
 
 class UserMutation(graphene.ObjectType):
     create_user = CreateUser.Field()
@@ -430,9 +442,6 @@ class UserMutation(graphene.ObjectType):
     log_in = graphql_jwt.ObtainJSONWebToken.Field()
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
-    delete_token_cookie = graphql_jwt.DeleteJSONWebTokenCookie.Field()
+    revoke_token = graphql_jwt.Revoke.Field()
     send_invitation = SendInvitation.Field()
     verify_invitation = VerifyInvitation.Field()
-
-    # Long running refresh tokens
-    #delete_refresh_token_cookie = graphql_jwt.DeleteRefreshTokenCookie.Field()

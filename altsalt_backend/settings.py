@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     # AltSalt
 
     'graphene_django',
+    'graphql_jwt.refresh_token.apps.RefreshTokenConfig',
     'catalog',
     'corsheaders',
 
@@ -187,37 +188,36 @@ CSRF_TRUSTED_ORIGINS = CORS_SITES.split(',') if CORS_SITES is not None else []
 GRAPHENE = {
     'SCHEMA': 'altsalt_backend.schema.schema',
     'MIDDLEWARE': [
-        #'graphql_jwt.middleware.JSONWebTokenMiddleware',
+        # 'graphql_jwt.middleware.JSONWebTokenMiddleware',
         "catalog.backends.GraphQLAuthBackend",
     ],
 }
 
 GRAPHQL_JWT = {
-    'JWT_COOKIE_SECURE': os.environ.get('JWT_COOKIE_SECURE'),
-    'JWT_COOKIE_DOMAIN': CORS_SITES.split(',') if CORS_SITES is not None else [],
     'JWT_HIDE_TOKEN_FIELDS': False,
     'JWT_VERIFY_EXPIRATION': True,
-    'JWT_EXPIRATION_DELTA': timedelta(minutes=1),
-    'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=7),
+    'JWT_LONG_RUNNING_REFRESH_TOKEN': True,
+    'JWT_EXPIRATION_DELTA': timedelta(minutes=15),
+    'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=30),
 }
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'WARNING',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
-            'propagate': False,
-        },
-    },
-}
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#         },
+#     },
+#     'root': {
+#         'handlers': ['console'],
+#         'level': 'WARNING',
+#     },
+#     'loggers': {
+#         'django': {
+#             'handlers': ['console'],
+#             'level': os.getenv('DJANGO_LOG_LEVEL', 'ERROR'),
+#             'propagate': False,
+#         },
+#     },
+# }
