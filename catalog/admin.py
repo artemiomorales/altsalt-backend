@@ -54,6 +54,11 @@ class ListingCollaboratorBylineInline(SingleInline):
     pass
 
 
+class UserProfileImageInline(SingleInline):
+    model = UserProfileImage
+    pass
+
+
 class ImageInline(SingleInline):
     model = Image
     pass
@@ -97,11 +102,10 @@ class CustomUserAdmin(UserAdmin):
          )
 
     fieldsets = (
-        (None, {'fields': ('username', 'password', 'email', 'first_name', 'last_name')}),
+        (None, {'fields': ('username', 'password', 'email', 'first_name', 'last_name', 'is_moderator')}),
         (_('Profile'), {'fields':
                             ('display_name',
                              'short_name',
-                             'profile_image',
                              'description',
                              'location',
                              'pronouns',
@@ -118,8 +122,8 @@ class CustomUserAdmin(UserAdmin):
     )
 
     inline_type = 'tabular'
-    inline_reverse = ['listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture', 'organization_member']
-    inlines = [ OrganizationMemberInline, ListingCreationBylineInline, ListingCollaboratorBylineInline,
+    inline_reverse = ['user_profile_image, listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture', 'organization_member']
+    inlines = [UserProfileImageInline, OrganizationMemberInline, ListingCreationBylineInline, ListingCollaboratorBylineInline,
                UserCultureInline, UserLinkInline, ImageInline]
 
     def get_inline_instances(self, request, obj=None):

@@ -1,5 +1,6 @@
 import os
 import datetime
+import logging
 
 from django.db import models
 from django.conf import settings
@@ -58,10 +59,15 @@ def user_media_path(user_id):
 
 
 def profile_image_path(instance, filename):
+    date = datetime.datetime.now()
     filename, file_extension = os.path.splitext(filename)
-    return user_media_path(instance.id) + "/profile-image" + file_extension
+    logging.error(filename)
+    logging.error(file_extension)
+    save_string = (user_media_path(instance.id) + "/profile-image/{0}-{1}{2}").format(filename, date.strftime("%f"), file_extension)
+
+    return save_string
 
 
 def media_upload_path(instance, filename):
     date = datetime.datetime.now()
-    return (user_media_path(instance.user_id) + "/uploads/{0}-{1}") .format(date.strftime("%f"), filename)
+    return (user_media_path(instance.user_id) + "/uploads/{0}-{1}").format(date.strftime("%f"), filename)

@@ -14,7 +14,7 @@ import os
 import django_heroku
 from os.path import join, dirname
 from dotenv import load_dotenv
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -156,7 +156,8 @@ AUTH_USER_MODEL = 'catalog.User'
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'catalog.authentication.EmailBackend',
-    'graphql_jwt.backends.JSONWebTokenBackend'
+    'catalog.backends.GraphQLAuthBackend',
+    # 'graphql_jwt.backends.JSONWebTokenBackend'
 ]
 
 STORAGE_LOCATION = os.environ.get('DATABASE_NAME')
@@ -167,7 +168,7 @@ PROJECT_PREFIX = PROJECT_NAME + '_'
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
-DEFAULT_FILE_STORAGE = os.environ.get('DEFAULT_FILE_STORAGE')
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
 AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')
 
@@ -183,13 +184,17 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = CORS_SITES.split(',') if CORS_SITES is not None else []
 CSRF_TRUSTED_ORIGINS = CORS_SITES.split(',') if CORS_SITES is not None else []
 
+
+# AWS S3
+AWS_QUERYSTRING_AUTH=False
+AWS_DEFAULT_ACL='public-read'
+
 # Graphene
 
 GRAPHENE = {
     'SCHEMA': 'altsalt_backend.schema.schema',
     'MIDDLEWARE': [
-        # 'graphql_jwt.middleware.JSONWebTokenMiddleware',
-        "catalog.backends.GraphQLAuthBackend",
+        'graphql_jwt.middleware.JSONWebTokenMiddleware'
     ],
 }
 
@@ -197,7 +202,7 @@ GRAPHQL_JWT = {
     'JWT_HIDE_TOKEN_FIELDS': False,
     'JWT_VERIFY_EXPIRATION': True,
     'JWT_LONG_RUNNING_REFRESH_TOKEN': True,
-    'JWT_EXPIRATION_DELTA': timedelta(minutes=15),
+    'JWT_EXPIRATION_DELTA': timedelta(seconds=30),
     'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=30),
 }
 

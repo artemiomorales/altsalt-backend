@@ -15,7 +15,6 @@ class User(AbstractUser):
     last_name = models.CharField(_('last name'), max_length=150, blank=False)
     display_name = models.CharField(max_length=150, blank=True)
     short_name = models.CharField(max_length=18, blank=True)
-    profile_image = models.ImageField(upload_to=profile_image_path, null=True, blank=True)
     description = models.TextField(default="Hi! I'm a new member of AltSalt.")
     location = models.CharField(max_length=50, blank=True)
     pronouns = models.CharField(max_length=50, blank=True)
@@ -24,6 +23,7 @@ class User(AbstractUser):
     show_age = models.BooleanField(default=False)
     is_organization = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
+    is_moderator = models.BooleanField(default=False)
     culture = models.ManyToManyField(
         "Culture",
         through='UserCulture'
@@ -65,6 +65,17 @@ class User(AbstractUser):
 
     class Meta:
         db_table = PROJECT_PREFIX + 'user'
+
+
+class UserProfileImage(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    original = models.ImageField(upload_to=profile_image_path, null=True, blank=True)
+    large = models.ImageField(upload_to=profile_image_path, null=True, blank=True)
+    medium = models.ImageField(upload_to=profile_image_path, null=True, blank=True)
+    small = models.ImageField(upload_to=profile_image_path, null=True, blank=True)
+
+    class Meta:
+        db_table = PROJECT_PREFIX + 'user_profile_image'
 
 
 class UserLink(Link):
@@ -112,3 +123,13 @@ class Invitation(models.Model):
             models.UniqueConstraint(fields=['email', 'token'], name='email_token_pair')
         ]
 
+
+class ResetPasswordRequest(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    token = models.CharField(max_length=120)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'reset_password_request'
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'token'], name='user_token_pair')
+        ]
