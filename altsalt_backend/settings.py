@@ -106,6 +106,7 @@ DATABASES = {
     }
 }
 
+logging.error(DEBUG)
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -180,7 +181,7 @@ MEDIA_ROOT = MEDIA_URL
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # CORS
-CORS_ALLOW_CREDENTIALS = False
+CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = os.environ.get('CORS_ORIGIN_WHITELIST').split(',') if\
     os.environ.get('CORS_ORIGIN_WHITELIST') is not None else []
 
