@@ -218,8 +218,8 @@ GRAPHQL_JWT = {
     'JWT_HIDE_TOKEN_FIELDS': False,
     'JWT_VERIFY_EXPIRATION': True,
     'JWT_LONG_RUNNING_REFRESH_TOKEN': True,
-    'JWT_EXPIRATION_DELTA': timedelta(seconds=30),
-    'JWT_REFRESH_EXPIRATION_DELTA': timedelta(minutes=2),
+    'JWT_EXPIRATION_DELTA': timedelta(minutes=50),
+    'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=30),
     'JWT_COOKIE_SECURE': bool(os.environ.get('JWT_COOKIE_SECURE')) if\
     os.environ.get('JWT_COOKIE_SECURE') is not None else True
 }
