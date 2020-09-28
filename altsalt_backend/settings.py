@@ -192,9 +192,18 @@ CSRF_SITES = os.environ.get('ALLOWED_HOSTS')
 
 CSRF_TRUSTED_ORIGINS = CSRF_SITES.split(',') if CSRF_SITES is not None else []
 CSRF_COOKIE_SAMESITE = None
-CSRF_COOKIE_DOMAIN = CSRF_SITES.split(',') if CSRF_SITES is not None else []
+CSRF_COOKIE_SECURE = bool(os.environ.get('CSRF_COOKIE_SECURE')) if\
+    os.environ.get('CSRF_COOKIE_SECURE') is not None else True
+
 SESSION_COOKIE_SAMESITE = None
-SESSION_COOKIE_DOMAIN = CSRF_SITES.split(',') if CSRF_SITES is not None else []
+SESSION_COOKIE_SECURE = bool(os.environ.get('SESSION_COOKIE_SECURE')) if\
+    os.environ.get('SESSION_COOKIE_SECURE') is not None else True
+
+DOMAIN = os.environ.get('DOMAIN')
+CSRF_COOKIE_DOMAIN = DOMAIN if DOMAIN is not None else None
+SESSION_COOKIE_SAMESITE = None
+SESSION_COOKIE_DOMAIN = DOMAIN if DOMAIN is not None else None
+
 
 # AWS S3
 AWS_QUERYSTRING_AUTH=False
