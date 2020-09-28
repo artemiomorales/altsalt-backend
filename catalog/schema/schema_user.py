@@ -1,37 +1,34 @@
-from calendar import timegm
 from datetime import date
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from catalog.models import *
 
 import graphene
-import graphql_jwt
-from graphql_jwt.decorators import signals,\
-    on_token_auth_resolve, wraps, setup_jwt_cookie, csrf_rotation, refresh_expiration, maybe_thenable
-from graphql_jwt.mixins import JSONWebTokenMixin, ResolveMixin
 from graphene_django.types import DjangoObjectType
 from .schema_base import CultureType
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 from .schema_image import ImageType
 from .schema_cms import ArticleBylineType
-from django.contrib.auth import authenticate
-from django.core.management.utils import get_random_secret_key
 from django.contrib.auth.hashers import make_password, check_password
 import sendgrid
 import os
 import random
 import string
 from sendgrid.helpers.mail import *
-from bs4 import BeautifulSoup
 from graphql import GraphQLError
 from django.template.defaultfilters import slugify
 import logging
-from django.core.files import File
 import base64
 import PIL.Image as ImageUtils
-from io import StringIO, BytesIO
+from io import BytesIO
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+
+# jwt
+import graphql_jwt
+from graphql_jwt.decorators import signals,\
+    on_token_auth_resolve, wraps, setup_jwt_cookie, csrf_rotation, refresh_expiration, maybe_thenable
+from graphql_jwt.mixins import JSONWebTokenMixin, ResolveMixin
+from graphql_jwt.refresh_token.models import RefreshToken
 
 
 #########
@@ -641,6 +638,10 @@ class ResetPassword(graphene.Mutation):
 
             request = ResetPasswordRequest.objects.get(user=user)
             request.delete()
+
+            logins = RefreshToken.objects.filter(user=user)
+            for i in logins:
+                i.delete()
 
             return ResetPassword(success=True)
 

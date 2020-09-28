@@ -15,6 +15,9 @@ import django_heroku
 from os.path import join, dirname
 from dotenv import load_dotenv
 from datetime import timedelta, datetime
+from corsheaders.defaults import default_headers
+
+import logging
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -182,8 +185,16 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 CORS_SITES = os.environ.get('CORS_ORIGIN_WHITELIST')
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = CORS_SITES.split(',') if CORS_SITES is not None else []
-CSRF_TRUSTED_ORIGINS = CORS_SITES.split(',') if CORS_SITES is not None else []
+CORS_ALLOWED_ORIGINS = CORS_SITES.split(',') if CORS_SITES is not None else []
 
+# CSRF
+CSRF_SITES = os.environ.get('ALLOWED_HOSTS')
+
+CSRF_TRUSTED_ORIGINS = CSRF_SITES.split(',') if CSRF_SITES is not None else []
+CSRF_COOKIE_SAMESITE = None
+CSRF_COOKIE_DOMAIN = CSRF_SITES.split(',') if CSRF_SITES is not None else []
+SESSION_COOKIE_SAMESITE = None
+SESSION_COOKIE_DOMAIN = CSRF_SITES.split(',') if CSRF_SITES is not None else []
 
 # AWS S3
 AWS_QUERYSTRING_AUTH=False
@@ -203,7 +214,8 @@ GRAPHQL_JWT = {
     'JWT_VERIFY_EXPIRATION': True,
     'JWT_LONG_RUNNING_REFRESH_TOKEN': True,
     'JWT_EXPIRATION_DELTA': timedelta(seconds=30),
-    'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=30),
+    'JWT_REFRESH_EXPIRATION_DELTA': timedelta(minutes=2),
+    'JWT_COOKIE_SECURE': os.environ.get('JWT_COOKIE_SECURE'),
 }
 
 # LOGGING = {
