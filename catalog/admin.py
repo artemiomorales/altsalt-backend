@@ -170,6 +170,10 @@ class ListingCultureRepresentedInline(SingleInline):
     pass
 
 
+@admin.register(UserProfileImage)
+class UserProfileImageAdmin(admin.ModelAdmin):
+    pass
+
 @admin.register(Listing)
 class ListingAdmin(ReverseModelAdmin):
     inline_type = 'tabular'
