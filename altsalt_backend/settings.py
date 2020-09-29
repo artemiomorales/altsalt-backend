@@ -33,10 +33,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = bool(os.environ.get('DEBUG')) if\
-    os.environ.get('DEBUG') is not None else False
+DEBUG = True if os.environ.get('DEBUG') == 'True' else False
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS').split(',') if\
+ALLOWED_HOSTS_LIST = os.environ.get('ALLOWED_HOSTS').split(',')
+ALLOWED_HOSTS = ALLOWED_HOSTS_LIST[:-1] if\
     os.environ.get('ALLOWED_HOSTS') is not None else []
 
 # Application definition
@@ -151,6 +151,10 @@ STATIC_URL = "/static/"
 
 # --- AltSalt --- #
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = False if\
+    os.environ.get('SECURE_SSL_REDIRECT') == 'False' else True
+
 AUTH_USER_MODEL = 'catalog.User'
 
 AUTHENTICATION_BACKENDS = [
@@ -180,20 +184,24 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # CORS
 CORS_ALLOW_CREDENTIALS = True
-CORS_ORIGIN_WHITELIST = os.environ.get('CORS_ORIGIN_WHITELIST').split(',') if\
+CORS_ORIGIN_WHITELIST_LIST = os.environ.get('CORS_ORIGIN_WHITELIST').split(',')
+CORS_ORIGIN_WHITELIST = CORS_ORIGIN_WHITELIST_LIST[:-1] if\
     os.environ.get('CORS_ORIGIN_WHITELIST') is not None else []
 
 # CSRF
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS').split(',') if\
+CSRF_TRUSTED_ORIGINS_LIST = os.environ.get('CSRF_TRUSTED_ORIGINS').split(',')
+CSRF_TRUSTED_ORIGINS = CSRF_TRUSTED_ORIGINS_LIST[:-1] if\
     os.environ.get('CSRF_TRUSTED_ORIGINS') is not None else []
 CSRF_COOKIE_SAMESITE = None
-CSRF_COOKIE_SECURE = bool(os.environ.get('CSRF_COOKIE_SECURE')) if\
-    os.environ.get('CSRF_COOKIE_SECURE') is not None else True
+CSRF_COOKIE_SECURE = False if\
+    os.environ.get('CSRF_COOKIE_SECURE') == 'False' else True
 
+# SESSION
 SESSION_COOKIE_SAMESITE = None
-SESSION_COOKIE_SECURE = bool(os.environ.get('SESSION_COOKIE_SECURE')) if\
-    os.environ.get('SESSION_COOKIE_SECURE') is not None else True
+SESSION_COOKIE_SECURE = False if\
+    os.environ.get('SESSION_COOKIE_SECURE') == 'False' else True
 
+# COOKIE DOMAIN
 DOMAIN = os.environ.get('DOMAIN')
 CSRF_COOKIE_DOMAIN = DOMAIN if DOMAIN is not None else None
 SESSION_COOKIE_DOMAIN = DOMAIN if DOMAIN is not None else None
@@ -218,8 +226,7 @@ GRAPHQL_JWT = {
     'JWT_LONG_RUNNING_REFRESH_TOKEN': True,
     'JWT_EXPIRATION_DELTA': timedelta(minutes=50),
     'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=30),
-    'JWT_COOKIE_SECURE': bool(os.environ.get('JWT_COOKIE_SECURE')) if\
-    os.environ.get('JWT_COOKIE_SECURE') is not None else True
+    'JWT_COOKIE_SECURE': False if os.environ.get('JWT_COOKIE_SECURE') == 'False' else True
 }
 
 # LOGGING = {
