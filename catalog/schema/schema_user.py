@@ -4,7 +4,7 @@ from catalog.models import *
 
 import graphene
 from graphene_django.types import DjangoObjectType
-from .schema_base import CultureType
+from .schema_base import check_csrf, CultureType
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 from .schema_image import ImageType
 from .schema_cms import ArticleBylineType
@@ -22,6 +22,7 @@ import PIL.Image as ImageUtils
 from io import BytesIO
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+
 
 # jwt
 import graphql_jwt
@@ -175,6 +176,7 @@ def GenerateRandomString():
     return ''.join(random.choice(letters) for i in range(12))
 
 
+
 ##########
 # LOG IN #
 ##########
@@ -183,6 +185,7 @@ class LogIn(graphql_jwt.ObtainJSONWebToken):
     user = graphene.Field(UserType)
 
     @classmethod
+    @check_csrf
     def resolve(cls, root, info, **kwargs):
         return cls(user=info.context.user)
 
@@ -255,7 +258,9 @@ class UpdateUser(graphene.Mutation):
         creator_bylines = graphene.List(ListingInput)
         collaborator_bylines = graphene.List(ListingInput)
 
-    def mutate(self, info, **kwargs):
+    @classmethod
+    @check_csrf
+    def mutate(cls, self, info, **kwargs):
         username = kwargs.get('username')
         logging.error(info.context.user)
         if info.context.user.username != username:
@@ -399,7 +404,9 @@ class SendInvitation(graphene.Mutation):
         title = graphene.String()
         message = graphene.String()
 
-    def mutate(self, info, **kwargs):
+    @classmethod
+    @check_csrf
+    def mutate(cls, self, info, **kwargs):
 
         if info.context.user.is_moderator is False:
             raise GraphQLError('You are not authorized to perform this action')
@@ -467,7 +474,9 @@ class VerifyInvitation(graphene.Mutation):
         invite_email = graphene.String(required=True)
         invite_token = graphene.String(required=True)
 
-    def mutate(self, info, invite_email, invite_token):
+    @classmethod
+    @check_csrf
+    def mutate(cls, self, info, invite_email, invite_token):
         if CreateAccountRequestValid(invite_email, invite_token) is True:
             return VerifyInvitation(success=True)
 
@@ -537,6 +546,7 @@ class CreateUser(ResolveMixin, JSONWebTokenMixin, graphene.Mutation):
         password = graphene.String(required=True)
 
     @classmethod
+    @check_csrf
     @creation_user_mutate_wrapper
     def mutate(cls, root, info, **kwargs):
         return cls.resolve(root, info, **kwargs)
@@ -571,7 +581,9 @@ class CreateResetPasswordRequest(graphene.Mutation):
     class Arguments:
         email = graphene.String(required=True)
 
-    def mutate(self, info, email):
+    @classmethod
+    @check_csrf
+    def mutate(cls, self, info, email):
 
         if get_user_model().objects.filter(email=email).exists() is True:
 
@@ -610,7 +622,9 @@ class VerifyResetPasswordRequest(graphene.Mutation):
         email = graphene.String(required=True)
         token = graphene.String(required=True)
 
-    def mutate(self, info, email, token):
+    @classmethod
+    @check_csrf
+    def mutate(cls, self, info, email, token):
 
         if ResetPasswordRequestValid(email, token) is True:
             return VerifyResetPasswordRequest(success=True)
@@ -626,7 +640,9 @@ class ResetPassword(graphene.Mutation):
         token = graphene.String(required=True)
         password = graphene.String(required=True)
 
-    def mutate(self, info, email, token, password):
+    @classmethod
+    @check_csrf
+    def mutate(cls, self, info, email, token, password):
 
         if ResetPasswordRequestValid(email, token) is False:
             raise GraphQLError('Reset password request is invalid')
@@ -644,6 +660,35 @@ class ResetPassword(graphene.Mutation):
                 i.delete()
 
             return ResetPassword(success=True)
+
+
+#######################
+# JWT / REFRESH TOKEN #
+#######################
+
+class CustomVerifyToken(graphql_jwt.Verify):
+
+    @classmethod
+    @check_csrf
+    def mutate(cls, root, info, **kwargs):
+        return cls.verify(root, info, **kwargs)
+
+
+class CustomRefreshToken(graphql_jwt.Refresh):
+
+    @classmethod
+    @check_csrf
+    def mutate(cls, *args, **kwargs):
+        return CustomRefreshToken.refresh(*args, **kwargs)
+
+
+class CustomRevokeToken(graphql_jwt.Revoke):
+
+    @classmethod
+    @check_csrf
+    def mutate(cls, *args, **kwargs):
+        return CustomRevokeToken.revoke(*args, **kwargs)
+
 
 
 ##########
@@ -680,9 +725,9 @@ class UserMutation(graphene.ObjectType):
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
     log_in = LogIn.Field()
-    verify_token = graphql_jwt.Verify.Field()
-    refresh_token = graphql_jwt.Refresh.Field()
-    revoke_token = graphql_jwt.Revoke.Field()
+    verify_token = CustomVerifyToken.Field()
+    refresh_token = CustomRefreshToken.Field()
+    revoke_token = CustomRevokeToken.Field()
     send_invitation = SendInvitation.Field()
     verify_invitation = VerifyInvitation.Field()
     create_reset_password_request = CreateResetPasswordRequest.Field()
