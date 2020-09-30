@@ -15,7 +15,7 @@ class User(AbstractUser):
     last_name = models.CharField(_('last name'), max_length=150, blank=False)
     display_name = models.CharField(max_length=150, blank=True)
     short_name = models.CharField(max_length=18, blank=True)
-    description = models.TextField(default="Hi! I'm a new member of AltSalt.")
+    description = models.TextField(default="Hi! I'm a new member.")
     location = models.CharField(max_length=50, blank=True)
     pronouns = models.CharField(max_length=50, blank=True)
     occupation = models.CharField(max_length=50, blank=True)
