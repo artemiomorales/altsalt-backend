@@ -7,7 +7,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Q
 from django.utils.translation import gettext, gettext_lazy as _
-
+from catalog.backends import ProfileImageStorage
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
@@ -69,10 +69,21 @@ class User(AbstractUser):
 
 class UserProfileImage(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    original = models.ImageField(upload_to=profile_image_path, null=True, blank=True)
-    large = models.ImageField(upload_to=profile_image_path, null=True, blank=True)
-    medium = models.ImageField(upload_to=profile_image_path, null=True, blank=True)
-    small = models.ImageField(upload_to=profile_image_path, null=True, blank=True)
+    original = models.ImageField(storage=
+                                 ProfileImageStorage(target_width=1200, target_height=1200, name_suffix='original'),
+                                 upload_to=profile_image_path, null=True, blank=True)
+
+    large = models.ImageField(storage=
+                              ProfileImageStorage(target_width=137, target_height=137, name_suffix='large', save_thumbnails=True),
+                              upload_to=profile_image_path, null=True, blank=True)
+
+    medium = models.ImageField(storage=
+                               ProfileImageStorage(target_width=112, target_height=112, name_suffix='medium', save_thumbnails=True),
+                               upload_to=profile_image_path, null=True, blank=True)
+
+    small = models.ImageField(storage=
+                              ProfileImageStorage(target_width=40, target_height=40, name_suffix='small', save_thumbnails=True),
+                              upload_to=profile_image_path, null=True, blank=True)
 
     class Meta:
         db_table = PROJECT_PREFIX + 'user_profile_image'

@@ -10,8 +10,6 @@ import logging
 def check_csrf(f):
 
     def wrapper(cls, self, info, **kwargs):
-        logging.error(info.context.COOKIES)
-        logging.error(info.context.headers)
         if settings.CSRF_COOKIE_NAME in info.context.COOKIES and \
                 'X-Csrftoken' in info.context.headers:
 

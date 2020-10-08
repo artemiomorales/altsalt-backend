@@ -10,6 +10,10 @@ class Image(models.Model):
     url = models.ImageField(upload_to=media_upload_path)
     caption = models.CharField(max_length=300, blank=True)
     alttext = models.CharField(max_length=300)
+    original = models.ImageField(upload_to=media_upload_path, null=True, blank=True)
+    large = models.ImageField(upload_to=media_upload_path, null=True, blank=True)
+    medium = models.ImageField(upload_to=media_upload_path, null=True, blank=True)
+    small = models.ImageField(upload_to=media_upload_path, null=True, blank=True)
 
     def __str__(self):
         return self.url.__str__()

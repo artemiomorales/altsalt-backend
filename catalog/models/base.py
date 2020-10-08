@@ -61,9 +61,7 @@ def user_media_path(user_id):
 def profile_image_path(instance, filename):
     date = datetime.datetime.now()
     filename, file_extension = os.path.splitext(filename)
-    logging.error(filename)
-    logging.error(file_extension)
-    save_string = (user_media_path(instance.id) + "/profile-image/{0}-{1}{2}").format(filename, date.strftime("%f"), file_extension)
+    save_string = (user_media_path(instance.user.id) + "/profile-image/{0}-{1}{2}").format(filename, date.strftime("%f"), file_extension)
 
     return save_string
 

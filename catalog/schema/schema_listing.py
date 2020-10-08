@@ -129,7 +129,8 @@ class SeoCategoryType(DjangoObjectType):
 class ListingType(DjangoObjectType):
     class Meta:
         model = Listing
-        fields = ('id', 'title', 'slug', 'description', 'preview_images', 'length', 'price', 'content_rating', 'seo_category')
+        fields = ('id', 'title', 'slug', 'description', 'preview_images',
+                  'length', 'price', 'content_rating', 'seo_category', 'publication_date')
 
     cover_image = graphene.Field(ImageType)
     creator_bylines = graphene.List(ListingCreatorBylineType)
@@ -189,6 +190,10 @@ class ListingQuery(graphene.ObjectType):
     listing = graphene.Field(ListingType, id=graphene.Int(), slug=graphene.String())
     listing_creation_bylines = graphene.List(ListingCreatorBylineType, user_id=graphene.Int(), listing_id=graphene.Int())
     all_cultures = graphene.List(CultureType)
+    all_distribution_types = graphene.List(DistributionTypeType)
+    all_formats = graphene.List(FormatType)
+    all_lengths = graphene.List(LengthType)
+    all_genres = graphene.List(GenreType)
 
     def resolve_listing_bundle(self, info, **kwargs):
         approved_after_date = kwargs.get('approved_after_date')

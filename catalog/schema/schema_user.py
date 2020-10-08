@@ -23,6 +23,8 @@ from io import BytesIO
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 
+from catalog.backends import ProfileImageStorage
+from django.core.files.uploadhandler import InMemoryUploadedFile, TemporaryUploadedFile
 
 # jwt
 import graphql_jwt
@@ -226,16 +228,30 @@ def CreateCulture(culture_name, culture_slug, continent_name=None):
 
 def CreateProfileThumbnail(imgstr, ext, profile_image_name, user_profile_image, size_name, size_dimensions):
     opened_image = ImageUtils.open(BytesIO(base64.b64decode(imgstr + "===")))
-    buffer = BytesIO()
-    resize_image = opened_image.resize((size_dimensions, size_dimensions))
-    resize_image.save(fp=buffer, format=ext, optimize=True)
-    data = ContentFile(buffer.getvalue())
 
-    filename, file_extension = os.path.splitext(profile_image_name)
-    save_name = "{0}-{1}{2}".format(filename, size_name, file_extension)
-    logging.error(save_name);
+    responsive_sizes = [1, 2, 3, 4]
+    for responsive_size in responsive_sizes:
+        buffer = BytesIO()
+        resize_image = opened_image.copy()
+        resize_image.thumbnail((size_dimensions * responsive_size, size_dimensions * responsive_size))
+        resize_image.save(fp=buffer, format=ext, optimize=True)
+        data = ContentFile(buffer.getvalue())
 
-    getattr(user_profile_image, size_name).save(name=save_name, content=data)
+        filename, file_extension = os.path.splitext(profile_image_name)
+
+        save_name = "{0}-{1}-{2}x{3}".format(filename, size_name, responsive_size, file_extension)
+
+        if responsive_size is 1:
+            getattr(user_profile_image, size_name).save(name=save_name, content=data)
+        else:
+            default_storage.save(save_name, data)
+
+
+def DeleteProfileThumbnail(img_name):
+    filename, file_extension = os.path.splitext(img_name)
+    responsive_sizes = [1, 2, 3, 4]
+    for responsive_size in responsive_sizes:
+        default_storage.delete("{0}-{1}x{2}".format(filename, responsive_size, file_extension))
 
 
 class UpdateUser(graphene.Mutation):
@@ -262,7 +278,7 @@ class UpdateUser(graphene.Mutation):
     @check_csrf
     def mutate(cls, self, info, **kwargs):
         username = kwargs.get('username')
-        logging.error(info.context.user)
+
         if info.context.user.username != username:
             raise GraphQLError("You are not authorized to update this user.")
 
@@ -287,25 +303,55 @@ class UpdateUser(graphene.Mutation):
         collaborator_bylines = kwargs.get('collaborator_bylines')
 
         if profile_image_name != '' and profile_image is not None:
-            # current_image = target_user.profile_image
 
             if UserProfileImage.objects.filter(user=target_user).exists() is True:
                 current_image = UserProfileImage.objects.get(user=target_user)
-                default_storage.delete(current_image.original.name)
-                default_storage.delete(current_image.large.name)
-                default_storage.delete(current_image.medium.name)
-                default_storage.delete(current_image.small.name)
+
+                # ProfileImageStorage.delete(current_image.original.name)
+                # ProfileImageStorage.delete(current_image.large.name)
+                # ProfileImageStorage.delete(current_image.medium.name)
+                # ProfileImageStorage.delete(current_image.small.name)
+
+                # default_storage.delete(current_image.original.name)
+                # default_storage.delete(current_image.large.name)
+                # default_storage.delete(current_image.medium.name)
+                # default_storage.delete(current_image.small.name)
             else:
                 current_image = UserProfileImage(user=target_user)
 
             format, imgstr = profile_image.split(';base64,')
             ext = format.split('/')[-1]
+            opened_image = ImageUtils.open(BytesIO(base64.b64decode(imgstr + "===")))
+
+
+            logging.error(opened_image.info.keys())
+
+
+            # data = TemporaryUploadedFile(profile_image_name, 'text/plain', len(temp_file), None)
+            # data.write(buffer.getvalue())
+
+            # data.write(buffer.getvalue())
+            # data = ContentFile(buffer.getvalue())
 
             sizes_names = ['original', 'large', 'medium', 'small']
-            sizes = [320, 275, 225, 80]
+            for size_name in sizes_names:
+                buffer = BytesIO()
+                copied_image = opened_image.copy()
+                copied_image.save(fp=buffer, format=ext, optimize=True)
+                temp_file = ContentFile(buffer.getvalue())
+                data = InMemoryUploadedFile(temp_file, None, profile_image_name, 'text/plain', len(temp_file), None,
+                                            format)
+                getattr(current_image, size_name).save(name=profile_image_name, content=data)
 
-            for i in range(0, len(sizes_names)):
-                CreateProfileThumbnail(imgstr, ext, profile_image_name, current_image, sizes_names[i], sizes[i])
+
+
+
+            #
+            # sizes_names = ['original', 'large', 'medium', 'small']
+            # sizes = [320, 137, 112, 40]
+            #
+            # for i in range(0, len(sizes_names)):
+            #     CreateProfileThumbnail(imgstr, ext, profile_image_name, current_image, sizes_names[i], sizes[i])
 
 
         if display_name is not None:
