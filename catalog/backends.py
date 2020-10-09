@@ -50,19 +50,34 @@ class GraphQLAuthBackend(JSONWebTokenBackend):
         return None
 
 
-class ProfileImageStorage(S3Boto3Storage):
+class CatalogImageStorage(S3Boto3Storage):
     bucket_name = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+    def delete(self, name):
+        name = self._normalize_name(self._clean_name(name))
+        self.bucket.Object(self._encode_name(name)).delete()
+
+        responsive_sizes = [2, 3, 4]
+        for responsive_size in responsive_sizes:
+            thumbnail_name = name.replace('-1x', "-{0}x".format(responsive_size))
+            sanitized_name = self._normalize_name(self._clean_name(thumbnail_name))
+            if self.exists(sanitized_name):
+                self.bucket.Object(self._encode_name(sanitized_name)).delete()
+
+        if name in self._entries:
+            del self._entries[name]
+
+
+class ThumbnailImageStorage(CatalogImageStorage):
     target_width = None
     target_height = None
-    name_suffix = None
     save_thumbnails = False
 
-    def __init__(self, target_width, target_height, name_suffix, save_thumbnails=False):
+    def __init__(self, target_width, target_height, save_thumbnails=False):
         super().__init__()
 
         self.target_width = target_width
         self.target_height = target_height
-        self.name_suffix = name_suffix
         self.save_thumbnails = save_thumbnails
 
     def _save(self, name, content):
@@ -70,12 +85,26 @@ class ProfileImageStorage(S3Boto3Storage):
         logging.error(content.__dict__.keys())
         logging.error(type(content))
 
+        thumbnail_request_valid = False
+
+        if self.save_thumbnails is True:
+
+            if name.find('-1x') == -1:
+                raise Exception("Saved filename must contain string '-1x' when saving thumbnails")
+            else:
+                thumbnail_request_valid = True
+
         cleaned_name = self._clean_name(name)
         name = self._normalize_name(cleaned_name)
         params = self._get_write_parameters(name, content)
 
-        filename, file_extension = os.path.splitext(name)
-
+        # NOTE REGARDING GRAPHQL UPLOADS
+        #
+        # In order to parse image responses from GraphQL, we need to read in the data as 'text/plain'
+        # in the 'content_type' attribute; but we still need to know the image format in order to save
+        # properly. So we store the image format inside of 'content_type_extra' and read it from that
+        # attribute with this if / else statement.
+        #
         if content.content_type_extra is not None and isinstance(content.content_type_extra, str):
             content_type = content.content_type_extra.split('/')[-1]
         else:
@@ -94,37 +123,35 @@ class ProfileImageStorage(S3Boto3Storage):
         opened_image = ImageUtils.open(initial_buffer)
 
 
-        if self.save_thumbnails is False:
+        og_buffer = BytesIO()
+        og_image = opened_image.copy()
+        og_image.thumbnail((self.target_width, self.target_height))
+        og_image.save(fp=og_buffer, format=content_type, optimize=True)
+        og_data = ContentFile(og_buffer.getvalue())
 
-            og_buffer = BytesIO()
-            og_image = opened_image.copy()
-            og_image.thumbnail((self.target_width, self.target_height))
-            og_image.save(fp=og_buffer, format=content_type, optimize=True)
-            og_data = ContentFile(og_buffer.getvalue())
+        if (self.gzip and
+                params['ContentType'] in self.gzip_content_types and
+                'ContentEncoding' not in params):
+            og_data = self._compress_content(content)
+            params['ContentEncoding'] = 'gzip'
 
-            if (self.gzip and
-                    params['ContentType'] in self.gzip_content_types and
-                    'ContentEncoding' not in params):
-                og_data = self._compress_content(content)
-                params['ContentEncoding'] = 'gzip'
+        # Save the original image
+        encoded_name = self._encode_name(name)
+        og_obj = self.bucket.Object(encoded_name)
 
-            # Save the original image
-            encoded_name = self._encode_name('{0}-{1}{2}'.format(filename, self.name_suffix, file_extension))
-            og_obj = self.bucket.Object(encoded_name)
+        if self.preload_metadata:
+            self._entries[encoded_name] = og_obj
 
-            if self.preload_metadata:
-                self._entries[encoded_name] = og_obj
+        og_data.seek(0, os.SEEK_SET)
+        og_obj.upload_fileobj(og_data, ExtraArgs=params)
 
-            og_data.seek(0, os.SEEK_SET)
-            og_obj.upload_fileobj(og_data, ExtraArgs=params)
+        if thumbnail_request_valid is True:
 
-        else:
-
-            responsive_sizes = [1, 2, 3, 4]
+            responsive_sizes = [2, 3, 4]
             for responsive_size in responsive_sizes:
 
                 # Identify the multiplier
-                encoded_name = self._encode_name("{0}-{1}-x{2}{3}".format(filename, self.name_suffix, responsive_size, file_extension))
+                encoded_name = self._encode_name(name.replace('-1x', "-{0}x".format(responsive_size)))
                 tb_obj = self.bucket.Object(encoded_name)
                 if self.preload_metadata:
                     self._entries[encoded_name] = tb_obj
@@ -146,20 +173,4 @@ class ProfileImageStorage(S3Boto3Storage):
                 tb_obj.upload_fileobj(tb_data, ExtraArgs=params)
 
         return cleaned_name
-
-    def delete(self, name):
-        name = self._normalize_name(self._clean_name(name))
-        self.bucket.Object(self._encode_name(name)).delete()
-
-        filename, file_extension = os.path.splitext(name)
-
-        responsive_sizes = [1, 2, 3, 4]
-        for responsive_size in responsive_sizes:
-            thumbnail_name = "{0}-x{1}{2}".format(filename, responsive_size, file_extension)
-            sanitized_name = self._normalize_name(self._clean_name(thumbnail_name))
-            if self.exists(sanitized_name):
-                self.bucket.Object(self._encode_name(sanitized_name)).delete()
-
-        if name in self._entries:
-            del self._entries[name]
 

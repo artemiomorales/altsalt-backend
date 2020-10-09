@@ -35,21 +35,21 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='userprofileimage',
             name='large',
-            field=models.ImageField(blank=True, null=True, storage=catalog.backends.ProfileImageStorage, upload_to=catalog.models.base.profile_image_path),
+            field=models.ImageField(blank=True, null=True, storage=catalog.backends.ThumbnailImageStorage, upload_to=catalog.models.base.profile_image_path),
         ),
         migrations.AlterField(
             model_name='userprofileimage',
             name='medium',
-            field=models.ImageField(blank=True, null=True, storage=catalog.backends.ProfileImageStorage, upload_to=catalog.models.base.profile_image_path),
+            field=models.ImageField(blank=True, null=True, storage=catalog.backends.ThumbnailImageStorage, upload_to=catalog.models.base.profile_image_path),
         ),
         migrations.AlterField(
             model_name='userprofileimage',
             name='original',
-            field=models.ImageField(blank=True, null=True, storage=catalog.backends.ProfileImageStorage, upload_to=catalog.models.base.profile_image_path),
+            field=models.ImageField(blank=True, null=True, storage=catalog.backends.ThumbnailImageStorage, upload_to=catalog.models.base.profile_image_path),
         ),
         migrations.AlterField(
             model_name='userprofileimage',
             name='small',
-            field=models.ImageField(blank=True, null=True, storage=catalog.backends.ProfileImageStorage, upload_to=catalog.models.base.profile_image_path),
+            field=models.ImageField(blank=True, null=True, storage=catalog.backends.ThumbnailImageStorage, upload_to=catalog.models.base.profile_image_path),
         ),
     ]

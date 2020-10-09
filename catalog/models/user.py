@@ -7,7 +7,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Q
 from django.utils.translation import gettext, gettext_lazy as _
-from catalog.backends import ProfileImageStorage
+from catalog.backends import ThumbnailImageStorage
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
@@ -70,19 +70,19 @@ class User(AbstractUser):
 class UserProfileImage(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     original = models.ImageField(storage=
-                                 ProfileImageStorage(target_width=1200, target_height=1200, name_suffix='original'),
+                                 ThumbnailImageStorage(target_width=600, target_height=600),
                                  upload_to=profile_image_path, null=True, blank=True)
 
     large = models.ImageField(storage=
-                              ProfileImageStorage(target_width=137, target_height=137, name_suffix='large', save_thumbnails=True),
+                              ThumbnailImageStorage(target_width=137, target_height=137, save_thumbnails=True),
                               upload_to=profile_image_path, null=True, blank=True)
 
     medium = models.ImageField(storage=
-                               ProfileImageStorage(target_width=112, target_height=112, name_suffix='medium', save_thumbnails=True),
+                               ThumbnailImageStorage(target_width=112, target_height=112, save_thumbnails=True),
                                upload_to=profile_image_path, null=True, blank=True)
 
     small = models.ImageField(storage=
-                              ProfileImageStorage(target_width=40, target_height=40, name_suffix='small', save_thumbnails=True),
+                              ThumbnailImageStorage(target_width=40, target_height=40, save_thumbnails=True),
                               upload_to=profile_image_path, null=True, blank=True)
 
     class Meta:

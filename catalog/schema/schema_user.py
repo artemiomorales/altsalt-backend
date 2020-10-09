@@ -23,8 +23,8 @@ from io import BytesIO
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 
-from catalog.backends import ProfileImageStorage
-from django.core.files.uploadhandler import InMemoryUploadedFile, TemporaryUploadedFile
+from catalog.backends import CatalogImageStorage
+from django.core.files.uploadhandler import InMemoryUploadedFile
 
 # jwt
 import graphql_jwt
@@ -306,16 +306,11 @@ class UpdateUser(graphene.Mutation):
 
             if UserProfileImage.objects.filter(user=target_user).exists() is True:
                 current_image = UserProfileImage.objects.get(user=target_user)
-
-                # ProfileImageStorage.delete(current_image.original.name)
-                # ProfileImageStorage.delete(current_image.large.name)
-                # ProfileImageStorage.delete(current_image.medium.name)
-                # ProfileImageStorage.delete(current_image.small.name)
-
-                # default_storage.delete(current_image.original.name)
-                # default_storage.delete(current_image.large.name)
-                # default_storage.delete(current_image.medium.name)
-                # default_storage.delete(current_image.small.name)
+                storage_delete = CatalogImageStorage()
+                storage_delete.delete(current_image.original.name)
+                storage_delete.delete(current_image.large.name)
+                storage_delete.delete(current_image.medium.name)
+                storage_delete.delete(current_image.small.name)
             else:
                 current_image = UserProfileImage(user=target_user)
 
@@ -333,18 +328,22 @@ class UpdateUser(graphene.Mutation):
             # data.write(buffer.getvalue())
             # data = ContentFile(buffer.getvalue())
 
-            sizes_names = ['original', 'large', 'medium', 'small']
-            for size_name in sizes_names:
+            sizes = [
+                {'attribute': 'original', 'suffix': ''},
+                {'attribute': 'large', 'suffix': '-1x'},
+                {'attribute': 'medium', 'suffix': '-1x'},
+                {'attribute': 'small', 'suffix': '-1x'},
+            ]
+            for size in sizes:
                 buffer = BytesIO()
                 copied_image = opened_image.copy()
                 copied_image.save(fp=buffer, format=ext, optimize=True)
                 temp_file = ContentFile(buffer.getvalue())
                 data = InMemoryUploadedFile(temp_file, None, profile_image_name, 'text/plain', len(temp_file), None,
                                             format)
-                getattr(current_image, size_name).save(name=profile_image_name, content=data)
-
-
-
+                filename, file_extension = os.path.splitext(profile_image_name)
+                getattr(current_image, size['attribute']).save(
+                    name="{0}-{1}{2}{3}".format(filename, size['attribute'], size['suffix'], file_extension), content=data)
 
             #
             # sizes_names = ['original', 'large', 'medium', 'small']
