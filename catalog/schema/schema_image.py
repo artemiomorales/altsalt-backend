@@ -9,11 +9,6 @@ from graphene_django.types import DjangoObjectType
 MEDIA_URL = settings.MEDIA_URL
 
 
-class ListingCoverImageType(DjangoObjectType):
-    class Meta:
-        model = ListingCoverImage
-
-
 class ImageType(DjangoObjectType):
     class Meta:
         model = Image

@@ -1,13 +1,12 @@
 from .base import PROJECT_PREFIX, TABLE_PREFIX, profile_image_path, media_upload_path, Culture, Continent
 
 from .base import Link
-
-
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Q
 from django.utils.translation import gettext, gettext_lazy as _
 from catalog.backends import ThumbnailImageStorage
+
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)

@@ -1,7 +1,6 @@
-from .base import PROJECT_PREFIX, TABLE_PREFIX
+from .base import PROJECT_PREFIX, TABLE_PREFIX, listing_cover_image_path, listing_preview_image_path, Link, NameSlug, Culture
 from .user import *
-from .base import Link, NameSlug, Culture
-from .image import ListingPreviewImage, ListingCoverImage
+from .image import Image
 
 from django.db import models
 from django.template.defaultfilters import slugify
@@ -11,11 +10,7 @@ class Listing(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=100)
     slug = models.SlugField(unique=True, blank=True)
-    description = models.TextField()
-    preview_images = models.ManyToManyField(
-        "Image",
-        through='ListingPreviewImage'
-    )
+    description = models.TextField(default="The author(s) haven't provided a description yet.", null=True)
     price = models.ForeignKey("Price", null=True, on_delete=models.SET_NULL)
     format = models.ManyToManyField(
         "Format",
@@ -25,7 +20,7 @@ class Listing(models.Model):
         "DistributionType",
         through='ListingDistributionType'
     )
-    length = models.ForeignKey("Length", on_delete=models.PROTECT)
+    length = models.ForeignKey("Length", null=True, on_delete=models.PROTECT)
     genre = models.ManyToManyField(
         "Genre",
         through='ListingGenre'
@@ -34,11 +29,11 @@ class Listing(models.Model):
         "Language",
         through='ListingLanguage'
     )
-    publication_date = models.DateField()
+    publication_date = models.DateField(null=True)
     date_added = models.DateField()
-    is_approved = models.BooleanField()
-    date_approved = models.DateField()
-    is_published = models.BooleanField()
+    is_approved = models.BooleanField(null=True)
+    date_approved = models.DateField(null=True)
+    is_published = models.BooleanField(null=True)
     culture_represented = models.ManyToManyField(
         "Culture",
         through='ListingCultureRepresented'
@@ -223,3 +218,49 @@ class SeoCategory(models.Model):
 class ContentRating(NameSlug):
     class Meta:
         db_table = TABLE_PREFIX + 'content_rating'
+
+
+class ListingImage(models.Model):
+    image = models.ForeignKey(Image, null=True, on_delete=models.CASCADE)
+    original = models.ImageField(storage=
+                                 ThumbnailImageStorage(target_width=1588, target_height=2382),
+                                 upload_to=listing_cover_image_path, null=True, blank=True)
+
+    large = models.ImageField(storage=
+                              ThumbnailImageStorage(target_width=767, target_height=555, save_thumbnails=True),
+                              upload_to=listing_cover_image_path, null=True, blank=True)
+
+    medium = models.ImageField(storage=
+                               ThumbnailImageStorage(target_width=767, target_height=275, save_thumbnails=True),
+                               upload_to=listing_cover_image_path, null=True, blank=True)
+
+    small = models.ImageField(storage=
+                              ThumbnailImageStorage(target_width=767, target_height=180, save_thumbnails=True),
+                              upload_to=listing_cover_image_path, null=True, blank=True)
+    alttext = models.CharField(max_length=300, default="Image alttext")
+
+    class Meta:
+        abstract = True
+
+
+class ListingCoverImage(ListingImage):
+    listing = models.OneToOneField(
+        "Listing",
+        primary_key=True,
+        on_delete=models.CASCADE
+    )
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'listing_cover_image'
+
+
+class ListingPreviewImage(ListingImage):
+    listing = models.ForeignKey(
+        "Listing",
+        on_delete=models.CASCADE
+    )
+    index = models.IntegerField(default=0)
+    caption = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'listing_preview_image'

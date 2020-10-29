@@ -6,6 +6,7 @@ from django.db import models
 from django.conf import settings
 from django.template.defaultfilters import slugify
 
+
 PROJECT_PREFIX = settings.PROJECT_PREFIX
 TABLE_PREFIX = 'catalog_'
 
@@ -54,14 +55,30 @@ class Culture(NameSlug):
         db_table = TABLE_PREFIX + 'culture'
 
 
-def user_media_path(user_id):
-    return 'catalog/user/{0}'.format(user_id)
+def user_media_path(media_type, instance_id):
+    return 'catalog/{0}/{1}'.format(media_type, instance_id)
 
 
 def profile_image_path(instance, filename):
     date = datetime.datetime.now()
     filename, file_extension = os.path.splitext(filename)
-    save_string = (user_media_path(instance.user.id) + "/profile-image/{0}-{1}{2}").format(filename, date.strftime("%f"), file_extension)
+    save_string = (user_media_path('user', instance.user.id) + "/profile-image/{0}-{1}{2}").format(filename, date.strftime("%f"), file_extension)
+
+    return save_string
+
+
+def listing_cover_image_path(instance, filename):
+    date = datetime.datetime.now()
+    filename, file_extension = os.path.splitext(filename)
+    save_string = (user_media_path('listing', instance.listing.id) + "/cover/{0}-{1}{2}").format(filename, date.strftime("%f"), file_extension)
+
+    return save_string
+
+
+def listing_preview_image_path(instance, filename):
+    date = datetime.datetime.now()
+    filename, file_extension = os.path.splitext(filename)
+    save_string = (user_media_path('listing', instance.listing.id) + "/{0}/{1}-{2}{3}").format(instance.id, filename, date.strftime("%f"), file_extension)
 
     return save_string
 
@@ -69,3 +86,4 @@ def profile_image_path(instance, filename):
 def media_upload_path(instance, filename):
     date = datetime.datetime.now()
     return (user_media_path(instance.user_id) + "/uploads/{0}-{1}").format(date.strftime("%f"), filename)
+

@@ -1,4 +1,4 @@
-from .base import PROJECT_PREFIX, TABLE_PREFIX, media_upload_path
+from .base import PROJECT_PREFIX, TABLE_PREFIX, media_upload_path, listing_cover_image_path, listing_preview_image_path
 from .user import *
 from django.db import models
 
@@ -20,27 +20,3 @@ class Image(models.Model):
 
     class Meta:
         db_table = TABLE_PREFIX + 'image'
-
-
-class ListingCoverImage(models.Model):
-    listing = models.OneToOneField(
-        "Listing",
-        primary_key=True,
-        on_delete=models.CASCADE,
-    )
-    image = models.ForeignKey(Image, on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = TABLE_PREFIX + 'listing_cover_image'
-
-
-class ListingPreviewImage(models.Model):
-    listing = models.ForeignKey("Listing", on_delete=models.CASCADE, related_name="listings")
-    image = models.ForeignKey(Image, on_delete=models.CASCADE)
-    priority = models.IntegerField(default=0)
-
-    class Meta:
-        db_table = TABLE_PREFIX + 'listing_preview_image'
-        constraints = [
-            models.UniqueConstraint(fields=['listing', 'image'], name='listing_preview_image_link')
-        ]

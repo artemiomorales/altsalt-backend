@@ -177,7 +177,7 @@ class UserProfileImageAdmin(admin.ModelAdmin):
 @admin.register(Listing)
 class ListingAdmin(ReverseModelAdmin):
     inline_type = 'tabular'
-    inline_reverse = ['preview_images', 'price']
+    inline_reverse = ['price']
     inlines = [ListingCoverImageInline,
                ListingPreviewImageInline,
                ListingCreationBylineInline,

@@ -4,9 +4,9 @@ from catalog.models import *
 
 import graphene
 from graphene_django.types import DjangoObjectType
-from .schema_base import check_csrf, CultureType
+from .schema_base import check_csrf, save_image_data, delete_image_data, BaseImageTypeMixin, CultureType, LinkInput, \
+    CultureInput, CreateCulture
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
-from .schema_image import ImageType
 from .schema_cms import ArticleBylineType
 from django.contrib.auth.hashers import make_password, check_password
 import sendgrid
@@ -23,8 +23,6 @@ from io import BytesIO
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 
-from catalog.backends import CatalogImageStorage
-from django.core.files.uploadhandler import InMemoryUploadedFile
 
 # jwt
 import graphql_jwt
@@ -76,33 +74,9 @@ class ResetPasswordRequestType(DjangoObjectType):
         model = ResetPasswordRequest
 
 
-class UserProfileImageType(DjangoObjectType):
+class UserProfileImageType(DjangoObjectType, BaseImageTypeMixin):
     class Meta:
         model = UserProfileImage
-
-    def resolve_original(self, info):
-        if self.original is not None:
-            return self.original.url
-
-        return ''
-
-    def resolve_large(self, info):
-        if self.large is not None:
-            return self.large.url
-
-        return ''
-
-    def resolve_medium(self, info):
-        if self.medium is not None:
-            return self.medium.url
-
-        return ''
-
-    def resolve_small(self, info):
-        if self.small is not None:
-            return self.small.url
-
-        return ''
 
 
 class UserType(DjangoObjectType):
@@ -196,34 +170,9 @@ class LogIn(graphql_jwt.ObtainJSONWebToken):
 # UPDATE USER #
 ###############
 
-class LinkInput(graphene.InputObjectType):
-    name = graphene.String(required=True)
-    url = graphene.String(required=True)
-    priority = graphene.Int(required=True)
-
-
-class CultureInput(graphene.InputObjectType):
-    name = graphene.String(required=True)
-    continent = graphene.String()
-    priority = graphene.Int(required=True)
-
-
 class ListingInput(graphene.InputObjectType):
     slug = graphene.String(required=True)
     priority = graphene.Int(required=True)
-
-
-def CreateCulture(culture_name, culture_slug, continent_name=None):
-
-    new_culture = Culture(name=culture_name.title(), slug=culture_slug)
-    if continent_name is not None:
-        continent_slug = slugify(continent_name)
-        continent = Continent.objects.get(slug=continent_slug)
-        new_culture.continent = continent
-
-    new_culture.save()
-
-    return new_culture
 
 
 def CreateProfileThumbnail(imgstr, ext, profile_image_name, user_profile_image, size_name, size_dimensions):
@@ -306,52 +255,11 @@ class UpdateUser(graphene.Mutation):
 
             if UserProfileImage.objects.filter(user=target_user).exists() is True:
                 current_image = UserProfileImage.objects.get(user=target_user)
-                storage_delete = CatalogImageStorage()
-                storage_delete.delete(current_image.original.name)
-                storage_delete.delete(current_image.large.name)
-                storage_delete.delete(current_image.medium.name)
-                storage_delete.delete(current_image.small.name)
+                delete_image_data(current_image)
             else:
                 current_image = UserProfileImage(user=target_user)
 
-            format, imgstr = profile_image.split(';base64,')
-            ext = format.split('/')[-1]
-            opened_image = ImageUtils.open(BytesIO(base64.b64decode(imgstr + "===")))
-
-
-            logging.error(opened_image.info.keys())
-
-
-            # data = TemporaryUploadedFile(profile_image_name, 'text/plain', len(temp_file), None)
-            # data.write(buffer.getvalue())
-
-            # data.write(buffer.getvalue())
-            # data = ContentFile(buffer.getvalue())
-
-            sizes = [
-                {'attribute': 'original', 'suffix': ''},
-                {'attribute': 'large', 'suffix': '-1x'},
-                {'attribute': 'medium', 'suffix': '-1x'},
-                {'attribute': 'small', 'suffix': '-1x'},
-            ]
-            for size in sizes:
-                buffer = BytesIO()
-                copied_image = opened_image.copy()
-                copied_image.save(fp=buffer, format=ext, optimize=True)
-                temp_file = ContentFile(buffer.getvalue())
-                data = InMemoryUploadedFile(temp_file, None, profile_image_name, 'text/plain', len(temp_file), None,
-                                            format)
-                filename, file_extension = os.path.splitext(profile_image_name)
-                getattr(current_image, size['attribute']).save(
-                    name="{0}-{1}{2}{3}".format(filename, size['attribute'], size['suffix'], file_extension), content=data)
-
-            #
-            # sizes_names = ['original', 'large', 'medium', 'small']
-            # sizes = [320, 137, 112, 40]
-            #
-            # for i in range(0, len(sizes_names)):
-            #     CreateProfileThumbnail(imgstr, ext, profile_image_name, current_image, sizes_names[i], sizes[i])
-
+            save_image_data(current_image, profile_image, profile_image_name)
 
         if display_name is not None:
             target_user.display_name = display_name
@@ -385,7 +293,7 @@ class UpdateUser(graphene.Mutation):
         if location is not None:
             target_user.location = location
 
-        existing_background = UserCulture.objects.filter(user=target_user.id)
+        existing_background = UserCulture.objects.filter(user=target_user)
         existing_background.delete()
 
         if background is not None:
@@ -743,7 +651,7 @@ class CustomRevokeToken(graphql_jwt.Revoke):
 
 class UserQuery(graphene.ObjectType):
     me = graphene.Field(UserType)
-    users = graphene.List(UserType)
+    all_users = graphene.List(UserType)
     user = graphene.Field(UserType, username=graphene.String())
 
     def resolve_me(self, info):
@@ -753,7 +661,7 @@ class UserQuery(graphene.ObjectType):
 
         return authuser
 
-    def resolve_users(self, info):
+    def resolve_all_users(self, info):
         return get_user_model().objects.all()
 
     def resolve_user(self, info, **kwargs):
@@ -777,4 +685,4 @@ class UserMutation(graphene.ObjectType):
     verify_invitation = VerifyInvitation.Field()
     create_reset_password_request = CreateResetPasswordRequest.Field()
     verify_reset_password_request = VerifyResetPasswordRequest.Field()
-    reset_password = ResetPassword().Field()
+    reset_password = ResetPassword.Field()
