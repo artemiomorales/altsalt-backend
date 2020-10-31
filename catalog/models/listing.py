@@ -222,6 +222,19 @@ class ContentRating(NameSlug):
 
 class ListingImage(models.Model):
     image = models.ForeignKey(Image, null=True, on_delete=models.CASCADE)
+    alttext = models.CharField(max_length=300, default="Image alttext")
+
+    class Meta:
+        abstract = True
+
+
+class ListingCoverImage(ListingImage):
+    listing = models.OneToOneField(
+        "Listing",
+        primary_key=True,
+        on_delete=models.CASCADE
+    )
+
     original = models.ImageField(storage=
                                  ThumbnailImageStorage(target_width=1588, target_height=2382),
                                  upload_to=listing_cover_image_path, null=True, blank=True)
@@ -237,18 +250,6 @@ class ListingImage(models.Model):
     small = models.ImageField(storage=
                               ThumbnailImageStorage(target_width=767, target_height=180, save_thumbnails=True),
                               upload_to=listing_cover_image_path, null=True, blank=True)
-    alttext = models.CharField(max_length=300, default="Image alttext")
-
-    class Meta:
-        abstract = True
-
-
-class ListingCoverImage(ListingImage):
-    listing = models.OneToOneField(
-        "Listing",
-        primary_key=True,
-        on_delete=models.CASCADE
-    )
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing_cover_image'
@@ -259,8 +260,26 @@ class ListingPreviewImage(ListingImage):
         "Listing",
         on_delete=models.CASCADE
     )
+
+    original = models.ImageField(storage=
+                                 ThumbnailImageStorage(target_width=1588, target_height=2382),
+                                 upload_to=listing_preview_image_path, null=True, blank=True)
+
+    large = models.ImageField(storage=
+                              ThumbnailImageStorage(target_width=767, target_height=555, save_thumbnails=True),
+                              upload_to=listing_preview_image_path, null=True, blank=True)
+
+    medium = models.ImageField(storage=
+                               ThumbnailImageStorage(target_width=767, target_height=275, save_thumbnails=True),
+                               upload_to=listing_preview_image_path, null=True, blank=True)
+
+    small = models.ImageField(storage=
+                              ThumbnailImageStorage(target_width=767, target_height=180, save_thumbnails=True),
+                              upload_to=listing_preview_image_path, null=True, blank=True)
+
     index = models.IntegerField(default=0)
     caption = models.CharField(max_length=300, blank=True)
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing_preview_image'
+        ordering = ['index']

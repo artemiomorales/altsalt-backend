@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 import graphene
 from graphene_django.types import DjangoObjectType
 from .schema_base import check_csrf, save_image_data, delete_image_data, BaseImageTypeMixin, CultureType, LinkInput, \
-    CultureInput, CreateCulture
+    NameWithPriorityInput, CultureInput, CreateCulture
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
 
@@ -65,17 +65,17 @@ class ListingFormatType(DjangoObjectType):
         return Format.objects.get(id=self.format_id)
 
 
-class DistributionTypeType(DjangoObjectType):
+class DistributionTypeGrapheneType(DjangoObjectType):
     class Meta:
         model = DistributionType
 
 
-class ListingDistributionTypeType(DjangoObjectType):
+class ListingDistributionTypeGrapheneType(DjangoObjectType):
     class Meta:
         model = ListingDistributionType
         exclude = ('distribution_type',)
 
-    item = graphene.Field(DistributionTypeType)
+    item = graphene.Field(DistributionTypeGrapheneType)
 
     def resolve_item(self, info):
         return DistributionType.objects.get(id=self.distribution_type_id)
@@ -152,7 +152,7 @@ class ListingType(DjangoObjectType):
     availability = graphene.List(ListingAvailabilityLinkType)
     additional_links = graphene.List(ListingAdditionalLinkType)
     format_set = graphene.List(ListingFormatType)
-    distribution_type_set = graphene.List(ListingDistributionTypeType)
+    distribution_type_set = graphene.List(ListingDistributionTypeGrapheneType)
     genre_set = graphene.List(ListingGenreType)
     language_set = graphene.List(ListingLanguageType)
     culture_represented = graphene.List(ListingCultureRepresentedType)
@@ -168,7 +168,7 @@ class ListingType(DjangoObjectType):
 
     def resolve_preview_images(self, info):
         if ListingPreviewImage.objects.filter(listing_id=self.id).exists():
-            return ListingPreviewImage.objects.get(listing_id=self.id)
+            return ListingPreviewImage.objects.filter(listing_id=self.id)
         else:
             return None
 
@@ -216,7 +216,7 @@ class ListingQuery(graphene.ObjectType):
     listing = graphene.Field(ListingType, id=graphene.Int(), slug=graphene.String())
     listing_creation_bylines = graphene.List(ListingCreatorBylineType, user_id=graphene.Int(), listing_id=graphene.Int())
     all_cultures = graphene.List(CultureType)
-    all_distribution_types = graphene.List(DistributionTypeType)
+    all_distribution_types = graphene.List(DistributionTypeGrapheneType)
     all_formats = graphene.List(FormatType)
     all_lengths = graphene.List(LengthType)
     all_genres = graphene.List(GenreType)
@@ -257,8 +257,16 @@ class ListingQuery(graphene.ObjectType):
 
         return None
 
-    def resolve_all_cultures(self, info, **kwargs):
+    def resolve_all_formats(self, info, **kwargs):
+        return Format.objects.all()
 
+    def resolve_all_distribution_types(self, info, **kwargs):
+        return DistributionType.objects.all()
+
+    def resolve_all_genres(self, info, **kwargs):
+        return Genre.objects.all()
+
+    def resolve_all_cultures(self, info, **kwargs):
         return Culture.objects.all()
 
 
@@ -266,7 +274,13 @@ class ImageInput(graphene.InputObjectType):
     name = graphene.String(required=True)
     data = graphene.String(required=True)
     alttext = graphene.String(required=True)
+
+
+class PreviewImageInput(ImageInput):
+    id = graphene.Int()
     caption = graphene.String()
+    index = graphene.Int()
+    delete = graphene.Boolean()
 
 
 class CreateListing(graphene.Mutation):
@@ -311,16 +325,19 @@ class UpdateListing(graphene.Mutation):
     listing = graphene.Field(ListingType)
 
     class Arguments:
-        title = graphene.String(required=True)
+        title = graphene.String()
         slug = graphene.String(required=True)
-        cover_image = ImageInput(required=True)
+        cover_image = ImageInput()
         description = graphene.String()
-        preview_images = graphene.List(ImageInput)
+        preview_images = graphene.List(PreviewImageInput)
         availability = graphene.List(LinkInput)
         additional_links = graphene.List(LinkInput)
         publication_date = graphene.Date()
         creators = graphene.List(BylineInput)
         collaborators = graphene.List(BylineInput)
+        format = graphene.List(NameWithPriorityInput)
+        distribution = graphene.List(graphene.String)
+        genre = graphene.List(NameWithPriorityInput)
         culture_represented = graphene.List(CultureInput)
         price = PriceInput()
 
@@ -340,6 +357,9 @@ class UpdateListing(graphene.Mutation):
         publication_date = kwargs.get('publication_date')
         creators = kwargs.get('creators')
         collaborators = kwargs.get('collaborators')
+        format = kwargs.get('format')
+        distribution = kwargs.get('distribution')
+        genre = kwargs.get('genre')
         culture_represented = kwargs.get('culture_represented')
         price = kwargs.get('price')
 
@@ -351,41 +371,75 @@ class UpdateListing(graphene.Mutation):
         if ListingCreatorByline.objects.filter(listing=target_listing, user=info.context.user).exists() is False:
             raise GraphQLError("You are not authorized to update this listing.")
 
+        # Title #
+
         if title is not None:
             target_listing.title = title
 
+        # Slug #
+
         if slug is not None:
             target_listing.slug = slug
+
+        # Description #
+
+        if description is not None:
+            target_listing.description = description
+
+        # Cover Image #
 
         if cover_image is not None:
 
             if ListingCoverImage.objects.filter(listing=target_listing).exists() is True:
                 current_cover = ListingCoverImage.objects.get(listing=target_listing)
+
+                if cover_image.data != '':
+                    delete_image_data(current_cover)
+                    save_image_data(current_cover, cover_image.data, cover_image.name)
+
             else:
                 current_cover = ListingCoverImage(listing=target_listing)
 
-            if cover_image.data != '':
-                delete_image_data(current_cover)
-                save_image_data(current_cover, cover_image.data, cover_image.name)
+                if cover_image.data != '':
+                    save_image_data(current_cover, cover_image.data, cover_image.name)
 
             current_cover.alttext = cover_image.alttext
             current_cover.save()
 
-        if description is not None:
-            target_listing.description = description
+        # Preview Images #
 
         if preview_images is not None:
 
             for preview_image in preview_images:
-                if ListingPreviewImage.objects.filter(listing=target_listing).exists() is True:
-                    current_preview = ListingPreviewImage.objects.get(listing=target_listing)
-                    delete_image_data(current_preview)
-                else:
-                    current_preview = ListingPreviewImage(listing=target_listing)
 
-                save_image_data(current_preview, preview_image.data, preview_image.name)
-                current_preview.alttext = preview_image.alttext
-                current_preview.save()
+                if preview_image.delete is True and preview_image.id is not None:
+
+                    if ListingPreviewImage.objects.filter(listing=target_listing,
+                                                          id=preview_image.id).exists() is True:
+                        current_preview = ListingPreviewImage.objects.get(listing=target_listing,
+                                                                          id=preview_image.id)
+                        delete_image_data(current_preview)
+                        current_preview.delete()
+
+                else:
+                
+                    if ListingPreviewImage.objects.filter(listing=target_listing, id=preview_image.id).exists() is True:
+                        current_preview = ListingPreviewImage.objects.get(listing=target_listing, id=preview_image.id)
+
+                        if preview_image.data != '':
+                            delete_image_data(current_preview)
+                            save_image_data(current_preview, preview_image.data, preview_image.name)
+                    else:
+                        current_preview = ListingPreviewImage(listing=target_listing, index=preview_image.index)
+
+                        if preview_image.data != '':
+                            save_image_data(current_preview, preview_image.data, preview_image.name)
+
+                    current_preview.alttext = preview_image.alttext
+                    current_preview.caption = preview_image.caption
+                    current_preview.save()
+
+        # Availability #
 
         existing_availability = ListingAvailabilityLink.objects.filter(listing=target_listing)
         existing_availability.delete()
@@ -396,6 +450,8 @@ class UpdateListing(graphene.Mutation):
                                                    priority=link.priority)
                 new_link.save()
 
+        # Additional Links #
+
         existing_additional_links = ListingAdditionalLink.objects.filter(listing=target_listing)
         existing_additional_links.delete()
 
@@ -405,8 +461,12 @@ class UpdateListing(graphene.Mutation):
                                                  priority=link.priority)
                 new_link.save()
 
+        # Publication Date #
+
         if publication_date is not None:
             target_listing.publication_date = publication_date
+
+        # Creators #
 
         existing_creators = ListingCreatorByline.objects.filter(listing=target_listing)
         existing_creators.delete()
@@ -421,6 +481,8 @@ class UpdateListing(graphene.Mutation):
                 else:
                     raise GraphQLError('Specified user {0} does not exist'.format(creator.username))
 
+        # Collaborators #
+
         existing_collaborators = ListingCollaboratorByline.objects.filter(listing=target_listing)
         existing_collaborators.delete()
 
@@ -433,6 +495,8 @@ class UpdateListing(graphene.Mutation):
                     collaborator_byline.save()
                 else:
                     raise GraphQLError('Specified user {0} does not exist'.format(creator.username))
+
+        # Price #
 
         if getattr(target_listing, "price") is not None:
             target_listing.price.delete()
@@ -448,18 +512,68 @@ class UpdateListing(graphene.Mutation):
             else:
                 raise GraphQLError("Price must be either free or paid")
 
+        # Format #
+
+        existing_format = ListingFormat.objects.filter(listing=target_listing)
+        existing_format.delete()
+
+        if format is not None:
+            for item in format:
+                item_slug = slugify(item.name)
+                if Format.objects.filter(slug=item_slug).exists() is False:
+                    new_model = Format(name=item.name, slug=item_slug)
+                    new_model.save()
+
+                item_object = Format.objects.get(slug=item_slug)
+                new_item_record = ListingFormat(listing=target_listing, format=item_object,
+                                                priority=item.priority)
+                new_item_record.save()
+
+        # Distribution #
+
+        existing_distribution = ListingDistributionType.objects.filter(listing=target_listing)
+        existing_distribution.delete()
+
+        if distribution is not None:
+            for item in distribution:
+                if DistributionType.objects.filter(slug=item).exists() is False:
+                    raise GraphQLError("Attempted to save Invalid distribution type")
+
+                item_object = DistributionType.objects.get(slug=item)
+                new_item_record = ListingDistributionType(listing=target_listing, distribution_type=item_object)
+                new_item_record.save()
+
+        # Genre #
+
+        existing_genre = ListingGenre.objects.filter(listing=target_listing)
+        existing_genre.delete()
+
+        if genre is not None:
+            for item in genre:
+                item_slug = slugify(item.name)
+                if Genre.objects.filter(slug=item_slug).exists() is False:
+                    new_model = Genre(name=item.name, slug=item_slug)
+                    new_model.save()
+
+                item_object = Genre.objects.get(slug=item_slug)
+                new_item_record = ListingGenre(listing=target_listing, genre=item_object,
+                                               priority=item.priority)
+                new_item_record.save()
+
+        # Culture Represented #
+
         existing_culture_represented = ListingCultureRepresented.objects.filter(listing=target_listing)
         existing_culture_represented.delete()
 
         if culture_represented is not None:
-            for culture in culture_represented:
-                culture_slug = slugify(culture.name)
-                if Culture.objects.filter(slug=culture_slug).exists() is False:
-                    CreateCulture(culture.name, culture_slug, culture.continent)
+            for item in culture_represented:
+                item_slug = slugify(item.name)
+                if Culture.objects.filter(slug=item_slug).exists() is False:
+                    CreateCulture(item.name, item_slug, item.continent)
 
-                culture_object = Culture.objects.get(slug=culture_slug)
-                listing_culture_represented = ListingCultureRepresented(listing=target_listing, culture=culture_object, priority=culture.priority)
-                listing_culture_represented.save()
+                item_object = Culture.objects.get(slug=item_slug)
+                new_item_record = ListingCultureRepresented(listing=target_listing, culture=item_object, priority=item.priority)
+                new_item_record.save()
 
         target_listing.save()
         return UpdateListing(listing=target_listing)

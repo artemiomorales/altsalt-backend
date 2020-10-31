@@ -78,7 +78,7 @@ def listing_cover_image_path(instance, filename):
 def listing_preview_image_path(instance, filename):
     date = datetime.datetime.now()
     filename, file_extension = os.path.splitext(filename)
-    save_string = (user_media_path('listing', instance.listing.id) + "/{0}/{1}-{2}{3}").format(instance.id, filename, date.strftime("%f"), file_extension)
+    save_string = (user_media_path('listing', instance.listing.id) + "/preview-{0}/{1}-{2}{3}").format(instance.id, filename, date.strftime("%f"), file_extension)
 
     return save_string
 

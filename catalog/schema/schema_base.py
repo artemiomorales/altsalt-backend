@@ -14,7 +14,7 @@ from django.core.files.base import ContentFile
 
 from catalog.backends import CatalogImageStorage
 from django.template.defaultfilters import slugify
-
+import logging
 
 class BaseImageTypeMixin:
 
@@ -115,13 +115,14 @@ class CultureType(DjangoObjectType):
         model = Culture
 
 
-class LinkInput(graphene.InputObjectType):
+class NameWithPriorityInput(graphene.InputObjectType):
     name = graphene.String(required=True)
+    priority = graphene.Int(required=True)
+
+
+class LinkInput(NameWithPriorityInput):
     url = graphene.String(required=True)
-    priority = graphene.Int(required=True)
 
 
-class CultureInput(graphene.InputObjectType):
-    name = graphene.String(required=True)
+class CultureInput(NameWithPriorityInput):
     continent = graphene.String()
-    priority = graphene.Int(required=True)
