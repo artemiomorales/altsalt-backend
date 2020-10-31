@@ -9,7 +9,6 @@ from django.template.defaultfilters import slugify
 class Listing(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=100)
-    slug = models.SlugField(unique=True, blank=True)
     description = models.TextField(default="The author(s) haven't provided a description yet.", null=True)
     price = models.ForeignKey("Price", null=True, on_delete=models.SET_NULL)
     format = models.ManyToManyField(

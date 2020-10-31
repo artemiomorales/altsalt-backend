@@ -142,9 +142,10 @@ class SeoCategoryType(DjangoObjectType):
 class ListingType(DjangoObjectType):
     class Meta:
         model = Listing
-        fields = ('id', 'title', 'slug', 'description', 'preview_images',
+        fields = ('id', 'title', 'description', 'preview_images',
                   'length', 'price', 'content_rating', 'seo_category', 'publication_date')
 
+    slug = graphene.String()
     cover_image = graphene.Field(ListingCoverImageType)
     preview_images = graphene.List(ListingPreviewImageType)
     creator_bylines = graphene.List(ListingCreatorBylineType)
@@ -159,6 +160,9 @@ class ListingType(DjangoObjectType):
     price = graphene.Field(PriceGrapheneType)
     content_rating = graphene.Field(ContentRatingType)
     seo_category = graphene.Field(SeoCategoryType)
+
+    def resolve_slug(self, inf):
+        return slugify(self.title)
 
     def resolve_cover_image(self, info):
         if ListingCoverImage.objects.filter(listing_id=self.id).exists():
@@ -213,7 +217,7 @@ class ListingType(DjangoObjectType):
 
 class ListingQuery(graphene.ObjectType):
     listing_bundle = graphene.List(ListingType, approved_after_date=graphene.Date(), approved_before_date=graphene.Date())
-    listing = graphene.Field(ListingType, id=graphene.Int(), slug=graphene.String())
+    listing = graphene.Field(ListingType, id=graphene.String())
     listing_creation_bylines = graphene.List(ListingCreatorBylineType, user_id=graphene.Int(), listing_id=graphene.Int())
     all_cultures = graphene.List(CultureType)
     all_distribution_types = graphene.List(DistributionTypeGrapheneType)
@@ -235,13 +239,9 @@ class ListingQuery(graphene.ObjectType):
 
     def resolve_listing(self, info, **kwargs):
         id = kwargs.get('id')
-        slug = kwargs.get('slug')
 
         if id is not None:
-            return Listing.objects.get(id=id)
-
-        if slug is not None:
-            return Listing.objects.get(slug=slug)
+            return Listing.objects.get(id=int(id))
 
         return None
 
@@ -288,15 +288,14 @@ class CreateListing(graphene.Mutation):
 
     class Arguments:
         title = graphene.String(required=True)
-        slug = graphene.String(required=True)
         cover_image = ImageInput(required=True)
 
     @classmethod
     @check_csrf
     @login_required
-    def mutate(cls, self, info, title, slug, cover_image):
+    def mutate(cls, self, info, title, cover_image):
 
-        new_listing = Listing(title=title, slug=slug, date_added=datetime.date.today())
+        new_listing = Listing(title=title, date_added=datetime.date.today())
         new_listing.save()
 
         listing_cover = ListingCoverImage(listing=new_listing)
