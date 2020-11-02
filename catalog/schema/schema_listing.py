@@ -143,7 +143,8 @@ class ListingType(DjangoObjectType):
     class Meta:
         model = Listing
         fields = ('id', 'title', 'description', 'preview_images',
-                  'length', 'price', 'content_rating', 'seo_category', 'publication_date')
+                  'length', 'price', 'content_rating', 'seo_category', 'publication_date',
+                  'is_published', 'is_approved')
 
     slug = graphene.String()
     cover_image = graphene.Field(ListingCoverImageType)
@@ -219,8 +220,10 @@ class ListingQuery(graphene.ObjectType):
     listing_bundle = graphene.List(ListingType, approved_after_date=graphene.Date(), approved_before_date=graphene.Date())
     listing = graphene.Field(ListingType, id=graphene.String())
     listing_creation_bylines = graphene.List(ListingCreatorBylineType, user_id=graphene.Int(), listing_id=graphene.Int())
+    all_content_ratings = graphene.List(ContentRatingType)
     all_cultures = graphene.List(CultureType)
     all_distribution_types = graphene.List(DistributionTypeGrapheneType)
+    all_lengths = graphene.List(LengthType)
     all_formats = graphene.List(FormatType)
     all_lengths = graphene.List(LengthType)
     all_genres = graphene.List(GenreType)
@@ -230,10 +233,10 @@ class ListingQuery(graphene.ObjectType):
         approved_before_date = kwargs.get('approved_before_date')
 
         if approved_after_date is not None:
-            return Listing.objects.filter(date_approved__gte=approved_after_date, is_published=True, is_approved=True)
+            return Listing.objects.filter(date_approved__gte=approved_after_date)
 
         if approved_before_date is not None:
-            return Listing.objects.filter(date_approved__lt=approved_before_date, is_published=True, is_approved=True)
+            return Listing.objects.filter(date_approved__lt=approved_before_date)
 
         return Listing.objects.all()
 
@@ -257,11 +260,17 @@ class ListingQuery(graphene.ObjectType):
 
         return None
 
+    def resolve_all_content_ratings(self, info, **kwargs):
+        return ContentRating.objects.all()
+
     def resolve_all_formats(self, info, **kwargs):
         return Format.objects.all()
 
     def resolve_all_distribution_types(self, info, **kwargs):
         return DistributionType.objects.all()
+
+    def resolve_all_lengths(self, info, **kwargs):
+        return Length.objects.all()
 
     def resolve_all_genres(self, info, **kwargs):
         return Genre.objects.all()
@@ -324,16 +333,18 @@ class UpdateListing(graphene.Mutation):
     listing = graphene.Field(ListingType)
 
     class Arguments:
+        id = graphene.String(required=True)
         title = graphene.String()
-        slug = graphene.String(required=True)
-        cover_image = ImageInput()
         description = graphene.String()
+        is_published = graphene.Boolean()
+        cover_image = ImageInput()
         preview_images = graphene.List(PreviewImageInput)
         availability = graphene.List(LinkInput)
         additional_links = graphene.List(LinkInput)
         publication_date = graphene.Date()
         creators = graphene.List(BylineInput)
         collaborators = graphene.List(BylineInput)
+        content_rating = graphene.String()
         format = graphene.List(NameWithPriorityInput)
         distribution = graphene.List(graphene.String)
         genre = graphene.List(NameWithPriorityInput)
@@ -346,8 +357,9 @@ class UpdateListing(graphene.Mutation):
     @login_required
     def mutate(cls, self, info, **kwargs):
 
+        id = kwargs.get('id')
         title = kwargs.get('title')
-        slug = kwargs.get('slug')
+        is_published = kwargs.get('is_published')
         cover_image = kwargs.get('cover_image')
         description = kwargs.get('description')
         preview_images = kwargs.get('preview_images')
@@ -356,16 +368,17 @@ class UpdateListing(graphene.Mutation):
         publication_date = kwargs.get('publication_date')
         creators = kwargs.get('creators')
         collaborators = kwargs.get('collaborators')
+        content_rating = kwargs.get('content_rating')
         format = kwargs.get('format')
         distribution = kwargs.get('distribution')
         genre = kwargs.get('genre')
         culture_represented = kwargs.get('culture_represented')
         price = kwargs.get('price')
 
-        if Listing.objects.filter(slug=slug).exists() is False:
+        if Listing.objects.filter(id=id).exists() is False:
             raise GraphQLError("Target listing does not exist! Please refresh or try again later.")
 
-        target_listing = Listing.objects.get(slug=slug)
+        target_listing = Listing.objects.get(id=id)
 
         if ListingCreatorByline.objects.filter(listing=target_listing, user=info.context.user).exists() is False:
             raise GraphQLError("You are not authorized to update this listing.")
@@ -375,15 +388,15 @@ class UpdateListing(graphene.Mutation):
         if title is not None:
             target_listing.title = title
 
-        # Slug #
-
-        if slug is not None:
-            target_listing.slug = slug
-
         # Description #
 
         if description is not None:
             target_listing.description = description
+
+        # Is Published #
+
+        if is_published is not None:
+            target_listing.is_published = is_published
 
         # Cover Image #
 
@@ -510,6 +523,16 @@ class UpdateListing(graphene.Mutation):
 
             else:
                 raise GraphQLError("Price must be either free or paid")
+
+        # Content Rating #
+
+        if content_rating is not None:
+
+            if ContentRating.objects.filter(slug=content_rating).exists() is False:
+                raise GraphQLError("Invalid content rating")
+
+            item_object = ContentRating.objects.get(slug=content_rating)
+            target_listing.content_rating = item_object
 
         # Format #
 

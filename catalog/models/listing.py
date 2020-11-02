@@ -30,9 +30,9 @@ class Listing(models.Model):
     )
     publication_date = models.DateField(null=True)
     date_added = models.DateField()
-    is_approved = models.BooleanField(null=True)
+    is_approved = models.BooleanField(null=True, default=False)
     date_approved = models.DateField(null=True)
-    is_published = models.BooleanField(null=True)
+    is_published = models.BooleanField(null=True, default=False)
     culture_represented = models.ManyToManyField(
         "Culture",
         through='ListingCultureRepresented'
@@ -134,8 +134,11 @@ class ListingDistributionType(models.Model):
 
 
 class Length(NameSlug):
+    priority = models.IntegerField(default=0)
+
     class Meta:
         db_table = TABLE_PREFIX + 'length'
+        ordering = ['-priority']
 
 
 class Genre(NameSlug):
