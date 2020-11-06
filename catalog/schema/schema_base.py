@@ -14,6 +14,10 @@ from django.core.files.base import ContentFile
 
 from catalog.backends import CatalogImageStorage
 from django.template.defaultfilters import slugify
+from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, get_image_buffer
+from catalog.tasks import generate_thumbnails
+import threading
+
 import logging
 
 class BaseImageTypeMixin:
@@ -63,38 +67,34 @@ def check_csrf(f):
     return wrapper
 
 
-DEFAULT_IMAGE_SIZES = [
-    {'attribute': 'original', 'suffix': ''},
-    {'attribute': 'large', 'suffix': '-1x'},
-    {'attribute': 'medium', 'suffix': '-1x'},
-    {'attribute': 'small', 'suffix': '-1x'},
-]
+def delete_image_data(model_instance, attribute_name):
+
+    storage = CatalogImageStorage()
+
+    original_name = getattr(model_instance, attribute_name).name
+    storage.delete(original_name)
+
+    for size in DEFAULT_THUMBNAIL_SIZES:
+        thumbnail_name = getattr(model_instance, size['attribute']).name
+        storage.delete(thumbnail_name)
 
 
-def delete_image_data(image_field):
+def save_image_data(model, model_instance, image_data, image_name):
+    prefix, imgstr = image_data.split(';base64,')
+    mime_type = prefix.split('/')[-1]
+    filename, extension = os.path.splitext(image_name)
 
-    storage_delete = CatalogImageStorage()
-
-    for size in DEFAULT_IMAGE_SIZES:
-        image_name = getattr(image_field, size['attribute']).name
-        storage_delete.delete(image_name)
-
-
-def save_image_data(image_field, image_data, image_name):
-    format, imgstr = image_data.split(';base64,')
-    ext = format.split('/')[-1]
     opened_image = ImageUtils.open(BytesIO(base64.b64decode(imgstr + "===")))
 
-    for size in DEFAULT_IMAGE_SIZES:
-        buffer = BytesIO()
-        copied_image = opened_image.copy()
-        copied_image.save(fp=buffer, format=ext, optimize=True)
-        temp_file = ContentFile(buffer.getvalue())
-        data = InMemoryUploadedFile(temp_file, None, image_name, 'text/plain', len(temp_file), None,
-                                    format)
-        filename, file_extension = os.path.splitext(image_name)
-        getattr(image_field, size['attribute']).save(
-            name="{0}-{1}{2}{3}".format(filename, size['attribute'], size['suffix'], file_extension), content=data)
+    # Save an original image
+    image_buffer = get_image_buffer(opened_image, mime_type)
+    upload_data = InMemoryUploadedFile(image_buffer, None, image_name, 'text/plain', len(image_buffer), None,
+                                       mime_type)
+    getattr(model_instance, DEFAULT_IMAGE_SIZE_NAME).save(
+        name="{0}-{1}{2}".format(filename, DEFAULT_IMAGE_SIZE_NAME, extension),
+        content=upload_data,
+        save=False)
+    model_instance.save(skip_callback=False)
 
 
 def CreateCulture(culture_name, culture_slug, continent_name=None):

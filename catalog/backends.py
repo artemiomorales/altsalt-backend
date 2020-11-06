@@ -3,24 +3,21 @@ from graphql_jwt.shortcuts import get_user_by_token
 from graphql_jwt.utils import get_credentials
 from graphql_jwt.exceptions import JSONWebTokenError
 
-import os
 from os.path import join, dirname
-from storages.backends.s3boto3 import S3Boto3Storage
 from dotenv import load_dotenv
 
-import base64
-from django.core.files.base import ContentFile
+import os
+from storages.backends.s3boto3 import S3Boto3Storage
 import PIL.Image as ImageUtils
 from PIL import ImageFile
-ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 import io
 from io import BytesIO
+from catalog.constants import get_image_buffer
 
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
-
-import logging
 
 
 class GraphQLAuthBackend(JSONWebTokenBackend):
@@ -53,46 +50,18 @@ class GraphQLAuthBackend(JSONWebTokenBackend):
 class CatalogImageStorage(S3Boto3Storage):
     bucket_name = os.environ.get('AWS_STORAGE_BUCKET_NAME')
 
-    def delete(self, name):
-        name = self._normalize_name(self._clean_name(name))
-        self.bucket.Object(self._encode_name(name)).delete()
-
-        responsive_sizes = [2, 3, 4]
-        for responsive_size in responsive_sizes:
-            thumbnail_name = name.replace('-1x', "-{0}x".format(responsive_size))
-            sanitized_name = self._normalize_name(self._clean_name(thumbnail_name))
-            if self.exists(sanitized_name):
-                self.bucket.Object(self._encode_name(sanitized_name)).delete()
-
-        if name in self._entries:
-            del self._entries[name]
-
 
 class ThumbnailImageStorage(CatalogImageStorage):
     target_width = None
     target_height = None
-    save_thumbnails = False
 
-    def __init__(self, target_width, target_height, save_thumbnails=False):
+    def __init__(self, target_width, target_height, **kwargs):
         super().__init__()
 
         self.target_width = target_width
         self.target_height = target_height
-        self.save_thumbnails = save_thumbnails
 
     def _save(self, name, content):
-
-        logging.error(content.__dict__.keys())
-        logging.error(type(content))
-
-        thumbnail_request_valid = False
-
-        if self.save_thumbnails is True:
-
-            if name.find('-1x') == -1:
-                raise Exception("Saved filename must contain string '-1x' when saving thumbnails")
-            else:
-                thumbnail_request_valid = True
 
         cleaned_name = self._clean_name(name)
         name = self._normalize_name(cleaned_name)
@@ -106,12 +75,9 @@ class ThumbnailImageStorage(CatalogImageStorage):
         # attribute with this if / else statement.
         #
         if content.content_type_extra is not None and isinstance(content.content_type_extra, str):
-            content_type = content.content_type_extra.split('/')[-1]
+            mime_type = content.content_type_extra.split('/')[-1]
         else:
-            content_type = content.content_type.split('/')[-1]
-
-        logging.error(content_type)
-
+            mime_type = content.content_type.split('/')[-1]
 
         # Open image
         initial_buffer = io.BufferedRandom(io.BytesIO())
@@ -120,57 +86,25 @@ class ThumbnailImageStorage(CatalogImageStorage):
                 initial_buffer.write(chunk)
         else:
             initial_buffer = BytesIO(content.read())
+
         opened_image = ImageUtils.open(initial_buffer)
-
-
-        og_buffer = BytesIO()
-        og_image = opened_image.copy()
-        og_image.thumbnail((self.target_width, self.target_height))
-        og_image.save(fp=og_buffer, format=content_type, optimize=True)
-        og_data = ContentFile(og_buffer.getvalue())
+        opened_image.thumbnail((self.target_width, self.target_height))
+        image_buffer = get_image_buffer(opened_image, mime_type)
 
         if (self.gzip and
                 params['ContentType'] in self.gzip_content_types and
                 'ContentEncoding' not in params):
-            og_data = self._compress_content(content)
+            image_buffer = self._compress_content(content)
             params['ContentEncoding'] = 'gzip'
 
-        # Save the original image
+        # Save the image
         encoded_name = self._encode_name(name)
         og_obj = self.bucket.Object(encoded_name)
 
         if self.preload_metadata:
             self._entries[encoded_name] = og_obj
 
-        og_data.seek(0, os.SEEK_SET)
-        og_obj.upload_fileobj(og_data, ExtraArgs=params)
-
-        if thumbnail_request_valid is True:
-
-            responsive_sizes = [2, 3, 4]
-            for responsive_size in responsive_sizes:
-
-                # Identify the multiplier
-                encoded_name = self._encode_name(name.replace('-1x', "-{0}x".format(responsive_size)))
-                tb_obj = self.bucket.Object(encoded_name)
-                if self.preload_metadata:
-                    self._entries[encoded_name] = tb_obj
-
-                tb_buffer = BytesIO()
-                tb_image = opened_image.copy()
-                tb_image.thumbnail((self.target_width * responsive_size, self.target_height * responsive_size))
-                tb_image.save(fp=tb_buffer, format=content_type, optimize=True)
-                tb_data = ContentFile(tb_buffer.getvalue())
-
-                if (self.gzip and
-                        params['ContentType'] in self.gzip_content_types and
-                        'ContentEncoding' not in params):
-                    tb_data = self._compress_content(tb_data)
-                    params['ContentEncoding'] = 'gzip'
-
-                # Compress and save resized tb
-                tb_data.seek(0, os.SEEK_SET)
-                tb_obj.upload_fileobj(tb_data, ExtraArgs=params)
+        image_buffer.seek(0, os.SEEK_SET)
+        og_obj.upload_fileobj(image_buffer, ExtraArgs=params)
 
         return cleaned_name
-

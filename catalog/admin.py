@@ -36,6 +36,7 @@ class UserLinkInline(SingleInline):
 
 class ListingCoverImageInline(SingleInline):
     model = ListingCoverImage
+    fields = ('image', 'original', 'alttext')
     pass
 
 

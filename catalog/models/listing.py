@@ -1,10 +1,18 @@
+import os
 from .base import PROJECT_PREFIX, TABLE_PREFIX, listing_cover_image_path, listing_preview_image_path, Link, NameSlug, Culture
 from .user import *
 from .image import Image
 
 from django.db import models
 from django.template.defaultfilters import slugify
+from catalog.backends import CatalogImageStorage, ThumbnailImageStorage
+from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, RESPONSIVE_SIZES
+from django.db.models import DEFERRED
+import PIL.Image as ImageUtils
 
+import logging
+import threading
+from catalog.tasks import generate_thumbnails
 
 class Listing(models.Model):
     id = models.AutoField(primary_key=True)
@@ -225,16 +233,86 @@ class ContentRating(NameSlug):
 class ListingImage(models.Model):
     image = models.ForeignKey(Image, null=True, on_delete=models.CASCADE)
     alttext = models.CharField(max_length=300, default="Image alttext")
+    _loaded_values = None
+    loop_executed = False
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        if len(values) != len(cls._meta.concrete_fields):
+            values_iter = iter(values)
+            values = [
+                next(values_iter) if f.attname in field_names else DEFERRED
+                for f in cls._meta.concrete_fields
+            ]
+        new = cls(*values)
+        new._state.adding = False
+        new._state.db = db
+        # customization to store the original field values on the instance
+        new._loaded_values = dict(zip(field_names, values))
+        return new
+
+    def save(self, skip_callback=False, *args, **kwargs):
+
+        super().save(*args, **kwargs)
+
+        if not self._state.adding and skip_callback is False and self.loop_executed is False:
+
+            self.loop_executed = True
+
+            storage = CatalogImageStorage()
+
+            if self._loaded_values is None or DEFAULT_IMAGE_SIZE_NAME not in self._loaded_values or \
+                    getattr(self, DEFAULT_IMAGE_SIZE_NAME) != self._loaded_values[DEFAULT_IMAGE_SIZE_NAME]:
+
+                # Delete old images
+                if self._loaded_values is not None and DEFAULT_IMAGE_SIZE_NAME in self._loaded_values:
+                    old_default_image_name = self._loaded_values[DEFAULT_IMAGE_SIZE_NAME]
+                    if old_default_image_name is not None and old_default_image_name != '':
+                        storage.delete(old_default_image_name)
+
+                for size in DEFAULT_THUMBNAIL_SIZES:
+                    # Delete the old thumbnails
+                    if self._loaded_values is not None and size['attribute'] in self._loaded_values:
+                        old_thumbnail_name = self._loaded_values[size['attribute']]
+                        if old_thumbnail_name is not None and old_thumbnail_name != '':
+                            storage.delete(old_thumbnail_name)
+                            for responsive_size in RESPONSIVE_SIZES:
+                                old_responsive_name = old_thumbnail_name.replace('-1x', "-{0}x".format(responsive_size))
+                                storage.delete(old_responsive_name)
+
+                # Get a reference to the new image to generate thumbnails
+                new_default_image_attribute = getattr(self, DEFAULT_IMAGE_SIZE_NAME)
+
+                default_image_data = ImageUtils.open(new_default_image_attribute)
+                mime_type = default_image_data.format
+                directory, filepath = os.path.split(new_default_image_attribute.name)
+                filename, extension = filepath.split('.')
+                original_filename = filename.split('-original')[0]
+
+                # Create new thumbnails
+                # Set up another thread to take care of generating thumbnails
+                if skip_callback is False:
+                    thread_args = [
+                        type(self).__name__,
+                        self.id,
+                        mime_type,
+                        original_filename,
+                        ".{0}".format(extension)
+                    ]
+                    generate_thumbnails_thread = threading.Thread(target=generate_thumbnails, args=thread_args)
+                    generate_thumbnails_thread.start()
 
     class Meta:
         abstract = True
 
 
 class ListingCoverImage(ListingImage):
+    id = models.AutoField(primary_key=True)
+
     listing = models.OneToOneField(
         "Listing",
-        primary_key=True,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        null=True
     )
 
     original = models.ImageField(storage=
@@ -242,16 +320,17 @@ class ListingCoverImage(ListingImage):
                                  upload_to=listing_cover_image_path, null=True, blank=True)
 
     large = models.ImageField(storage=
-                              ThumbnailImageStorage(target_width=767, target_height=555, save_thumbnails=True),
+                              ThumbnailImageStorage(target_width=767, target_height=555),
                               upload_to=listing_cover_image_path, null=True, blank=True)
 
     medium = models.ImageField(storage=
-                               ThumbnailImageStorage(target_width=767, target_height=275, save_thumbnails=True),
+                               ThumbnailImageStorage(target_width=767, target_height=275),
                                upload_to=listing_cover_image_path, null=True, blank=True)
 
     small = models.ImageField(storage=
-                              ThumbnailImageStorage(target_width=767, target_height=180, save_thumbnails=True),
+                              ThumbnailImageStorage(target_width=767, target_height=180),
                               upload_to=listing_cover_image_path, null=True, blank=True)
+
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing_cover_image'
@@ -268,19 +347,20 @@ class ListingPreviewImage(ListingImage):
                                  upload_to=listing_preview_image_path, null=True, blank=True)
 
     large = models.ImageField(storage=
-                              ThumbnailImageStorage(target_width=767, target_height=555, save_thumbnails=True),
+                              ThumbnailImageStorage(target_width=767, target_height=555),
                               upload_to=listing_preview_image_path, null=True, blank=True)
 
     medium = models.ImageField(storage=
-                               ThumbnailImageStorage(target_width=767, target_height=275, save_thumbnails=True),
+                               ThumbnailImageStorage(target_width=767, target_height=275),
                                upload_to=listing_preview_image_path, null=True, blank=True)
 
     small = models.ImageField(storage=
-                              ThumbnailImageStorage(target_width=767, target_height=180, save_thumbnails=True),
+                              ThumbnailImageStorage(target_width=767, target_height=180),
                               upload_to=listing_preview_image_path, null=True, blank=True)
 
     index = models.IntegerField(default=0)
     caption = models.CharField(max_length=300, blank=True)
+
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing_preview_image'

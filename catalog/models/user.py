@@ -73,15 +73,15 @@ class UserProfileImage(models.Model):
                                  upload_to=profile_image_path, null=True, blank=True)
 
     large = models.ImageField(storage=
-                              ThumbnailImageStorage(target_width=137, target_height=137, save_thumbnails=True),
+                              ThumbnailImageStorage(target_width=137, target_height=137),
                               upload_to=profile_image_path, null=True, blank=True)
 
     medium = models.ImageField(storage=
-                               ThumbnailImageStorage(target_width=112, target_height=112, save_thumbnails=True),
+                               ThumbnailImageStorage(target_width=112, target_height=112),
                                upload_to=profile_image_path, null=True, blank=True)
 
     small = models.ImageField(storage=
-                              ThumbnailImageStorage(target_width=40, target_height=40, save_thumbnails=True),
+                              ThumbnailImageStorage(target_width=40, target_height=40),
                               upload_to=profile_image_path, null=True, blank=True)
 
     class Meta:

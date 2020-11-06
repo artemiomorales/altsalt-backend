@@ -51,9 +51,10 @@ INSTALLED_APPS = [
 
     # AltSalt
 
+    'django_extensions',
     'graphene_django',
     'graphql_jwt.refresh_token.apps.RefreshTokenConfig',
-    'catalog',
+    'catalog.apps.CatalogConfig',
     'corsheaders',
 
 ]

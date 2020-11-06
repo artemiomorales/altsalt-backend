@@ -5,7 +5,7 @@ import logging
 from django.db import models
 from django.conf import settings
 from django.template.defaultfilters import slugify
-
+from catalog.constants import RESPONSIVE_SIZES
 
 PROJECT_PREFIX = settings.PROJECT_PREFIX
 TABLE_PREFIX = 'catalog_'
@@ -55,35 +55,47 @@ class Culture(NameSlug):
         db_table = TABLE_PREFIX + 'culture'
 
 
-def user_media_path(media_type, instance_id):
+def catalog_media_path(media_type, instance_id):
     return 'catalog/{0}/{1}'.format(media_type, instance_id)
 
 
 def profile_image_path(instance, filename):
     date = datetime.datetime.now()
     filename, file_extension = os.path.splitext(filename)
-    save_string = (user_media_path('user', instance.user.id) + "/profile-image/{0}-{1}{2}").format(filename, date.strftime("%f"), file_extension)
+    save_string = (catalog_media_path('user', instance.user.id) + "/profile-image/{0}-{1}{2}").format(filename, date.strftime("%f"), file_extension)
 
+    return save_string
+
+
+def listing_image_path(instance, filename, image_type):
+    date = datetime.datetime.now()
+    filename, file_extension = os.path.splitext(filename)
+
+    # Replace any responsive string inside the filename
+    # that would interfere with our image handling logic
+    image_sizes = RESPONSIVE_SIZES
+    image_sizes.append('1x')
+    for responsize_size in image_sizes:
+        responsive_string = "{0}x".format(responsize_size)
+        if responsive_string in filename:
+            filename = filename.replace(responsive_string, "00")
+
+    listing_path = catalog_media_path('listing', instance.listing.id)
+    timestamp_id = date.strftime("%f")
+    save_string = "{0}/{1}-{2}/{3}-{4}{5}".format(listing_path, image_type, instance.id,
+                                                  filename, timestamp_id, file_extension)
     return save_string
 
 
 def listing_cover_image_path(instance, filename):
-    date = datetime.datetime.now()
-    filename, file_extension = os.path.splitext(filename)
-    save_string = (user_media_path('listing', instance.listing.id) + "/cover/{0}-{1}{2}").format(filename, date.strftime("%f"), file_extension)
-
-    return save_string
+    return listing_image_path(instance, filename, 'cover')
 
 
 def listing_preview_image_path(instance, filename):
-    date = datetime.datetime.now()
-    filename, file_extension = os.path.splitext(filename)
-    save_string = (user_media_path('listing', instance.listing.id) + "/preview-{0}/{1}-{2}{3}").format(instance.id, filename, date.strftime("%f"), file_extension)
-
-    return save_string
+    return listing_image_path(instance, filename, 'preview')
 
 
 def media_upload_path(instance, filename):
     date = datetime.datetime.now()
-    return (user_media_path(instance.user_id) + "/uploads/{0}-{1}").format(date.strftime("%f"), filename)
+    return (catalog_media_path(instance.user_id) + "/uploads/{0}-{1}").format(date.strftime("%f"), filename)
 

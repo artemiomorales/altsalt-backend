@@ -7,7 +7,7 @@ from .schema_base import check_csrf, save_image_data, delete_image_data, BaseIma
     NameWithPriorityInput, CultureInput, CreateCulture
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
-
+import logging
 
 class ListingCoverImageType(DjangoObjectType, BaseImageTypeMixin):
     class Meta:
@@ -162,7 +162,7 @@ class ListingType(DjangoObjectType):
     content_rating = graphene.Field(ContentRatingType)
     seo_category = graphene.Field(SeoCategoryType)
 
-    def resolve_slug(self, inf):
+    def resolve_slug(self, info):
         return slugify(self.title)
 
     def resolve_cover_image(self, info):
@@ -308,9 +308,10 @@ class CreateListing(graphene.Mutation):
         new_listing.save()
 
         listing_cover = ListingCoverImage(listing=new_listing)
-        save_image_data(listing_cover, cover_image.data, cover_image.name)
+        listing_cover.save(skip_callback=True)
+        save_image_data('ListingCoverImage', listing_cover, cover_image.data, cover_image.name)
         listing_cover.alttext = cover_image.alttext
-        listing_cover.save()
+        listing_cover.save(skip_callback=True)
 
         creator_byline = ListingCreatorByline(user=info.context.user, listing=new_listing)
         creator_byline.save()
@@ -405,18 +406,15 @@ class UpdateListing(graphene.Mutation):
             if ListingCoverImage.objects.filter(listing=target_listing).exists() is True:
                 current_cover = ListingCoverImage.objects.get(listing=target_listing)
 
-                if cover_image.data != '':
-                    delete_image_data(current_cover)
-                    save_image_data(current_cover, cover_image.data, cover_image.name)
-
             else:
                 current_cover = ListingCoverImage(listing=target_listing)
+                current_cover.save(skip_callback=True)
 
-                if cover_image.data != '':
-                    save_image_data(current_cover, cover_image.data, cover_image.name)
+            if cover_image.data != '':
+                save_image_data('ListingCoverImage', current_cover, cover_image.data, cover_image.name)
 
             current_cover.alttext = cover_image.alttext
-            current_cover.save()
+            current_cover.save(skip_callback=True)
 
         # Preview Images #
 
@@ -430,7 +428,7 @@ class UpdateListing(graphene.Mutation):
                                                           id=preview_image.id).exists() is True:
                         current_preview = ListingPreviewImage.objects.get(listing=target_listing,
                                                                           id=preview_image.id)
-                        delete_image_data(current_preview)
+                        # delete_image_data(current_preview)
                         current_preview.delete()
 
                 else:
@@ -438,18 +436,16 @@ class UpdateListing(graphene.Mutation):
                     if ListingPreviewImage.objects.filter(listing=target_listing, id=preview_image.id).exists() is True:
                         current_preview = ListingPreviewImage.objects.get(listing=target_listing, id=preview_image.id)
 
-                        if preview_image.data != '':
-                            delete_image_data(current_preview)
-                            save_image_data(current_preview, preview_image.data, preview_image.name)
                     else:
                         current_preview = ListingPreviewImage(listing=target_listing, index=preview_image.index)
+                        current_preview.save(skip_callback=True)
 
-                        if preview_image.data != '':
-                            save_image_data(current_preview, preview_image.data, preview_image.name)
+                    if preview_image.data != '':
+                        save_image_data('ListingPreviewImage', current_preview, preview_image.data, preview_image.name)
 
                     current_preview.alttext = preview_image.alttext
                     current_preview.caption = preview_image.caption
-                    current_preview.save()
+                    current_preview.save(skip_callback=True)
 
         # Availability #
 
@@ -601,7 +597,30 @@ class UpdateListing(graphene.Mutation):
         return UpdateListing(listing=target_listing)
 
 
+class DeleteListing(graphene.Mutation):
+    success = graphene.Boolean()
+
+    class Arguments:
+        id = graphene.String(required=True)
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, id):
+
+        if Listing.objects.filter(id=id).exists() is False:
+            raise GraphQLError("Target listing does not exist! Please refresh or try again later.")
+
+        target_listing = Listing.objects.get(id=id)
+
+        if ListingCreatorByline.objects.filter(listing=target_listing, user=info.context.user).exists() is False:
+            raise GraphQLError("You are not authorized to update this listing.")
+
+        target_listing.delete()
+        return True
+
 
 class ListingMutation(graphene.ObjectType):
     create_listing = CreateListing.Field()
     update_listing = UpdateListing.Field()
+    delete_listing = DeleteListing.Field()
