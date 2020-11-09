@@ -490,8 +490,6 @@ class UpdateListing(graphene.Mutation):
                 for creator in creators:
                     if get_user_model().objects.filter(username=creator.username).exists():
                         stored_user = get_user_model().objects.get(username=creator.username)
-                        test = User.objects.get(username=creator.username)
-                        test.re
                         creator_byline = ListingCreatorByline(user=stored_user, listing=target_listing,
                                                               listing_priority=creator.priority)
 
