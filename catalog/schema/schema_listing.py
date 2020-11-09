@@ -428,7 +428,6 @@ class UpdateListing(graphene.Mutation):
                                                           id=preview_image.id).exists() is True:
                         current_preview = ListingPreviewImage.objects.get(listing=target_listing,
                                                                           id=preview_image.id)
-                        # delete_image_data(current_preview)
                         current_preview.delete()
 
                 else:
@@ -476,18 +475,32 @@ class UpdateListing(graphene.Mutation):
 
         # Creators #
 
-        existing_creators = ListingCreatorByline.objects.filter(listing=target_listing)
-        existing_creators.delete()
-
         if creators is not None:
+
+            creator_input_valid = False
+
             for creator in creators:
                 if get_user_model().objects.filter(username=creator.username).exists():
-                    stored_user = get_user_model().objects.get(username=creator.username)
-                    creator_byline = ListingCreatorByline(user=stored_user, listing=target_listing,
-                                                          listing_priority=creator.priority)
-                    creator_byline.save()
-                else:
-                    raise GraphQLError('Specified user {0} does not exist'.format(creator.username))
+                    creator_input_valid = True
+
+            if creator_input_valid:
+                existing_creators = ListingCreatorByline.objects.filter(listing=target_listing)
+                existing_creators.delete()
+
+                for creator in creators:
+                    if get_user_model().objects.filter(username=creator.username).exists():
+                        stored_user = get_user_model().objects.get(username=creator.username)
+                        test = User.objects.get(username=creator.username)
+                        test.re
+                        creator_byline = ListingCreatorByline(user=stored_user, listing=target_listing,
+                                                              listing_priority=creator.priority)
+
+                        creator_byline.save()
+                    else:
+                        raise GraphQLError('Specified user {0} does not exist'.format(creator.username))
+            else:
+                raise GraphQLError('Unable to process request. None of the provided creators has a valid username.'
+                                   ' Please refresh and try again.')
 
         # Collaborators #
 
@@ -620,7 +633,46 @@ class DeleteListing(graphene.Mutation):
         return True
 
 
+class ConfirmByline(graphene.Mutation):
+    listing = graphene.Field(ListingType)
+    confirmed = graphene.Boolean()
+
+    class Arguments:
+        id = graphene.String(required=True)
+        target_status = graphene.Boolean(required=True)
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, id, target_status):
+
+        if Listing.objects.filter(id=id).exists() is False:
+            raise GraphQLError("Target listing does not exist! Please refresh or try again later.")
+
+        target_listing = Listing.objects.get(id=id)
+
+        target_byline = None
+
+        if ListingCreatorByline.objects.filter(listing=target_listing, user=info.context.user).exists():
+            target_byline = ListingCreatorByline.objects.get(listing=target_listing, user=info.context.user)
+
+        if ListingCollaboratorByline.objects.filter(listing=target_listing, user=info.context.user).exists():
+            target_byline = ListingCollaboratorByline.objects.get(listing=target_listing, user=info.context.user)
+
+        if target_byline is None:
+            raise GraphQLError("You are not authorized to update this byline.")
+
+        if target_status:
+            target_byline.is_confirmed = True
+            target_byline.save()
+            return ConfirmByline(listing=target_listing, confirmed=True)
+        else:
+            target_byline.delete()
+            return ConfirmByline(listing=target_listing, confirmed=False)
+
+
 class ListingMutation(graphene.ObjectType):
     create_listing = CreateListing.Field()
     update_listing = UpdateListing.Field()
     delete_listing = DeleteListing.Field()
+    confirm_byline = ConfirmByline.Field()

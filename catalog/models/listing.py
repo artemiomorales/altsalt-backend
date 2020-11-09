@@ -81,11 +81,19 @@ class ListingAdditionalLink(ListingLink):
         db_table = TABLE_PREFIX + 'listing_additional_link'
 
 
-class ListingCreatorByline(models.Model):
+class ListingByline(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
     user_priority = models.IntegerField(default=0)
     listing_priority = models.IntegerField(default=0)
+    is_confirmed = models.BooleanField(default=False)
+
+    class Meta:
+        abstract = True
+
+
+class ListingCreatorByline(ListingByline):
+    requester = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="creation_requester", blank=True)
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing_creator_byline'
@@ -94,11 +102,8 @@ class ListingCreatorByline(models.Model):
         ]
 
 
-class ListingCollaboratorByline(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
-    user_priority = models.IntegerField(default=0)
-    listing_priority = models.IntegerField(default=0)
+class ListingCollaboratorByline(ListingByline):
+    requester = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="collaboration_requester", blank=True)
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing_collaborator_byline'

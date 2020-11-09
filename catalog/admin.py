@@ -42,16 +42,31 @@ class ListingCoverImageInline(SingleInline):
 
 class ListingPreviewImageInline(SingleInline):
     model = ListingPreviewImage
+    fields = ('image', 'original', 'alttext')
     pass
 
 
-class ListingCreationBylineInline(SingleInline):
+class ListingCreationBylineInlineForListing(SingleInline):
     model = ListingCreatorByline
+    fk_name = 'listing'
     pass
 
 
-class ListingCollaboratorBylineInline(SingleInline):
+class ListingCollaboratorBylineInlineForListing(SingleInline):
     model = ListingCollaboratorByline
+    fk_name = 'listing'
+    pass
+
+
+class ListingCreationBylineInlineForUser(SingleInline):
+    model = ListingCreatorByline
+    fk_name = 'user'
+    pass
+
+
+class ListingCollaboratorBylineInlineForUser(SingleInline):
+    model = ListingCollaboratorByline
+    fk_name = 'user'
     pass
 
 
@@ -124,7 +139,7 @@ class CustomUserAdmin(UserAdmin):
 
     inline_type = 'tabular'
     inline_reverse = ['user_profile_image, listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture', 'organization_member']
-    inlines = [UserProfileImageInline, OrganizationMemberInline, ListingCreationBylineInline, ListingCollaboratorBylineInline,
+    inlines = [UserProfileImageInline, OrganizationMemberInline, ListingCreationBylineInlineForUser, ListingCollaboratorBylineInlineForUser,
                UserCultureInline, UserLinkInline, ImageInline]
 
     def get_inline_instances(self, request, obj=None):
@@ -181,8 +196,8 @@ class ListingAdmin(ReverseModelAdmin):
     inline_reverse = ['price']
     inlines = [ListingCoverImageInline,
                ListingPreviewImageInline,
-               ListingCreationBylineInline,
-               ListingCollaboratorBylineInline,
+               ListingCreationBylineInlineForListing,
+               ListingCollaboratorBylineInlineForListing,
                ListingAvailabilityLinkInline,
                ListingAdditionalLinkInline,
                ListingFormatInline,

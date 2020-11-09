@@ -31,13 +31,15 @@ class User(AbstractUser):
     listing_creator_bylines = models.ManyToManyField(
         "Listing",
         through='ListingCreatorByline',
-        related_name="creatorBylines"
+        related_name="creatorBylines",
+        through_fields=('user', 'listing'),
     )
 
     listing_collaborator_bylines = models.ManyToManyField(
         "Listing",
         through='ListingCollaboratorByline',
-        related_name="collaboratorBylines"
+        related_name="collaboratorBylines",
+        through_fields=('user', 'listing'),
     )
 
     article_bylines = models.ManyToManyField(
@@ -48,8 +50,7 @@ class User(AbstractUser):
 
     members = models.ManyToManyField(
         "User",
-        through='OrganizationMember',
-        related_name="collaboratorBylines"
+        through='OrganizationMember'
     )
 
     def save(self, *args, **kwargs):
