@@ -484,15 +484,26 @@ class UpdateListing(graphene.Mutation):
                     creator_input_valid = True
 
             if creator_input_valid:
-                existing_creators = ListingCreatorByline.objects.filter(listing=target_listing)
-                existing_creators.delete()
+                existing_creator_bylines = ListingCreatorByline.objects.filter(listing=target_listing)
+
+                for existing_creator_byline in existing_creator_bylines:
+                    delete_existing_byline = True
+                    for creator in creators:
+                        if get_user_model().objects.filter(username=creator.username).exists() and \
+                           existing_creator_byline.user.username == creator.username:
+                            delete_existing_byline = False
+                    if delete_existing_byline:
+                        existing_creator_byline.delete()
 
                 for creator in creators:
                     if get_user_model().objects.filter(username=creator.username).exists():
                         stored_user = get_user_model().objects.get(username=creator.username)
-                        creator_byline = ListingCreatorByline(user=stored_user, listing=target_listing,
-                                                              listing_priority=creator.priority)
-
+                        if ListingCreatorByline.objects.filter(listing=target_listing, user=stored_user).exists():
+                            creator_byline = ListingCreatorByline.objects.get(listing=target_listing, user=stored_user)
+                            creator_byline.listing_priority = creator.priority
+                        else:
+                            creator_byline = ListingCreatorByline(user=stored_user, listing=target_listing,
+                                                                  listing_priority=creator.priority)
                         creator_byline.save()
                     else:
                         raise GraphQLError('Specified user {0} does not exist'.format(creator.username))
@@ -502,18 +513,42 @@ class UpdateListing(graphene.Mutation):
 
         # Collaborators #
 
-        existing_collaborators = ListingCollaboratorByline.objects.filter(listing=target_listing)
-        existing_collaborators.delete()
-
         if collaborators is not None:
-            for collaborator in collaborators:
-                if get_user_model().objects.filter(username=collaborator.username).exists():
-                    stored_user = get_user_model().objects.get(username=collaborator.username)
-                    collaborator_byline = ListingCollaboratorByline(user=stored_user, listing=target_listing,
-                                                          listing_priority=collaborator.priority)
-                    collaborator_byline.save()
-                else:
-                    raise GraphQLError('Specified user {0} does not exist'.format(creator.username))
+
+            collaborator_input_valid = False
+
+            for creator in creators:
+                if get_user_model().objects.filter(username=creator.username).exists():
+                    collaborator_input_valid = True
+
+            if collaborator_input_valid:
+                existing_collaborator_bylines = ListingCollaboratorByline.objects.filter(listing=target_listing)
+
+                for existing_collaborator_byline in existing_collaborator_bylines:
+                    delete_existing_byline = True
+                    for collaborator in collaborators:
+                        if get_user_model().objects.filter(username=collaborator.username).exists() and \
+                           existing_collaborator_byline.user.username == collaborator.username:
+                            delete_existing_byline = False
+                    if delete_existing_byline:
+                        existing_collaborator_byline.delete()
+
+                for collaborator in collaborators:
+                    if get_user_model().objects.filter(username=collaborator.username).exists():
+                        stored_user = get_user_model().objects.get(username=collaborator.username)
+                        if ListingCollaboratorByline.objects.filter(listing=target_listing, user=stored_user).exists():
+                            collaborator_byline = ListingCollaboratorByline.objects.get(listing=target_listing, user=stored_user)
+                            collaborator_byline.listing_priority = collaborator.priority
+                        else:
+                            collaborator_byline = ListingCollaboratorByline(user=stored_user, listing=target_listing,
+                                                                  listing_priority=collaborator.priority)
+                        collaborator_byline.save()
+                    else:
+                        raise GraphQLError('Specified user {0} does not exist'.format(collaborator.username))
+
+            else:
+                raise GraphQLError('Unable to process request. None of the provided collaborators has a valid username.'
+                                   ' Please refresh and try again.')
 
         # Price #
 
