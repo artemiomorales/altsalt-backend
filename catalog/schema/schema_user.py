@@ -1,28 +1,33 @@
 from datetime import date
 from django.contrib.auth import get_user_model
-from catalog.models import *
+from catalog.models.cms import *
+from catalog.models.user import *
+from catalog.models.listing import *
 
 import graphene
 from graphene_django.types import DjangoObjectType
-from .schema_base import check_csrf, save_image_data, delete_image_data, BaseImageTypeMixin, CultureType, LinkInput, \
+from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CultureType, LinkInput, \
     CultureInput, CreateCulture
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 from .schema_cms import ArticleBylineType
 from django.contrib.auth.hashers import make_password, check_password
-import sendgrid
 import os
 import random
 import string
-from sendgrid.helpers.mail import *
 from graphql import GraphQLError
 from django.template.defaultfilters import slugify
-import logging
+
+# Image handling
 import base64
 import PIL.Image as ImageUtils
 from io import BytesIO
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 
+
+# Email
+import sendgrid
+from sendgrid.helpers.mail import *
 
 # jwt
 import graphql_jwt
@@ -171,7 +176,7 @@ class LogIn(graphql_jwt.ObtainJSONWebToken):
 ###############
 
 class ListingInput(graphene.InputObjectType):
-    slug = graphene.String(required=True)
+    id = graphene.String(required=True)
     priority = graphene.Int(required=True)
 
 
@@ -255,9 +260,9 @@ class UpdateUser(graphene.Mutation):
 
             if UserProfileImage.objects.filter(user=target_user).exists() is True:
                 current_image = UserProfileImage.objects.get(user=target_user)
-                delete_image_data(current_image)
             else:
                 current_image = UserProfileImage(user=target_user)
+                current_image.save(skip_callback=True)
 
             save_image_data(current_image, profile_image, profile_image_name)
 
@@ -308,8 +313,8 @@ class UpdateUser(graphene.Mutation):
 
         if creator_bylines is not None:
             for creator_byline in creator_bylines:
-                if Listing.objects.filter(slug=creator_byline.slug).exists() is True:
-                    target_listing = Listing.objects.get(slug=creator_byline.slug)
+                if Listing.objects.filter(id=creator_byline.id).exists() is True:
+                    target_listing = Listing.objects.get(id=creator_byline.id)
                     if ListingCreatorByline.objects.filter(user=target_user, listing=target_listing).exists() is True:
                         byline = ListingCreatorByline.objects.get(user=target_user, listing=target_listing)
                         byline.user_priority = creator_byline.priority
@@ -317,8 +322,8 @@ class UpdateUser(graphene.Mutation):
 
         if collaborator_bylines is not None:
             for collaborator_byline in collaborator_bylines:
-                if Listing.objects.filter(slug=collaborator_byline.slug).exists() is True:
-                    target_listing = Listing.objects.get(slug=collaborator_byline.slug)
+                if Listing.objects.filter(id=collaborator_byline.id).exists() is True:
+                    target_listing = Listing.objects.get(id=collaborator_byline.id)
                     if ListingCollaboratorByline.objects.filter(user=target_user, listing=target_listing).exists() is True:
                         byline = ListingCollaboratorByline.objects.get(user=target_user, listing=target_listing)
                         byline.user_priority = collaborator_byline.priority

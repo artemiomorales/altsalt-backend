@@ -9,14 +9,12 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserCreationForm
 
 from catalog.models.user import *
-from catalog.models.image import *
 from catalog.models.base import *
 from catalog.models.listing import *
 from catalog.models.cms import *
 
 
 from django_reverse_admin import ReverseModelAdmin
-
 
 
 class SingleInline(admin.TabularInline):
@@ -34,15 +32,27 @@ class UserLinkInline(SingleInline):
     pass
 
 
+class UserProfileImageInline(SingleInline):
+    model = UserProfileImage
+    fields = ('original',)
+    pass
+
+
+class ArticleFeaturedImageInline(SingleInline):
+    model = ArticleFeaturedImage
+    fields = ('original', 'alttext', 'caption')
+    pass
+
+
 class ListingCoverImageInline(SingleInline):
     model = ListingCoverImage
-    fields = ('image', 'original', 'alttext')
+    fields = ('original', 'alttext')
     pass
 
 
 class ListingPreviewImageInline(SingleInline):
     model = ListingPreviewImage
-    fields = ('image', 'original', 'alttext')
+    fields = ('original', 'alttext', 'caption')
     pass
 
 
@@ -67,16 +77,6 @@ class ListingCreationBylineInlineForUser(SingleInline):
 class ListingCollaboratorBylineInlineForUser(SingleInline):
     model = ListingCollaboratorByline
     fk_name = 'user'
-    pass
-
-
-class UserProfileImageInline(SingleInline):
-    model = UserProfileImage
-    pass
-
-
-class ImageInline(SingleInline):
-    model = Image
     pass
 
 
@@ -140,7 +140,7 @@ class CustomUserAdmin(UserAdmin):
     inline_type = 'tabular'
     inline_reverse = ['user_profile_image, listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture', 'organization_member']
     inlines = [UserProfileImageInline, OrganizationMemberInline, ListingCreationBylineInlineForUser, ListingCollaboratorBylineInlineForUser,
-               UserCultureInline, UserLinkInline, ImageInline]
+               UserCultureInline, UserLinkInline]
 
     def get_inline_instances(self, request, obj=None):
         return obj and super(CustomUserAdmin, self).get_inline_instances(request, obj) or []
@@ -209,11 +209,6 @@ class ListingAdmin(ReverseModelAdmin):
     pass
 
 
-@admin.register(Image)
-class ImageAdmin(admin.ModelAdmin):
-    pass
-
-
 class ArticleBylineInline(SingleInline):
     model = ArticleByline
     pass
@@ -221,7 +216,7 @@ class ArticleBylineInline(SingleInline):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    inlines = [ArticleBylineInline]
+    inlines = [ArticleBylineInline, ArticleFeaturedImageInline]
     pass
 
 

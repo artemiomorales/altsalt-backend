@@ -1,6 +1,5 @@
-from .base import PROJECT_PREFIX, TABLE_PREFIX, profile_image_path, media_upload_path, Culture, Continent
+from .base import PROJECT_PREFIX, TABLE_PREFIX, profile_image_path, Culture, CustomImage, Link, media_upload_path
 
-from .base import Link
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Q
@@ -67,7 +66,7 @@ class User(AbstractUser):
         db_table = PROJECT_PREFIX + 'user'
 
 
-class UserProfileImage(models.Model):
+class UserProfileImage(CustomImage):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     original = models.ImageField(storage=
                                  ThumbnailImageStorage(target_width=600, target_height=600),

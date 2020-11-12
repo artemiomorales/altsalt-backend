@@ -8,7 +8,6 @@ import boto3
 import os
 from os.path import join, dirname
 from dotenv import load_dotenv
-from catalog.models.base import catalog_media_path
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -20,6 +19,7 @@ def clean_bucket(dry_run=True):
 
     from catalog.models import Listing
     from catalog.models import ListingCoverImage, ListingPreviewImage
+    from catalog.models.base import catalog_media_path
 
     storage = CatalogImageStorage()
     s3 = boto3.client('s3')

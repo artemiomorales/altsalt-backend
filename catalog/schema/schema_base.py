@@ -1,5 +1,5 @@
 import graphene
-from catalog.models import Culture, Continent
+from catalog.models.base import Culture, Continent
 from graphene_django.types import DjangoObjectType
 from django.conf import settings
 from django.middleware.csrf import _sanitize_token, _compare_salted_tokens
@@ -10,15 +10,12 @@ import base64
 import PIL.Image as ImageUtils
 from django.core.files.uploadhandler import InMemoryUploadedFile
 from io import BytesIO
-from django.core.files.base import ContentFile
+
 
 from catalog.backends import CatalogImageStorage
 from django.template.defaultfilters import slugify
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, get_image_buffer
-from catalog.tasks import generate_thumbnails
-import threading
 
-import logging
 
 class BaseImageTypeMixin:
 
@@ -67,21 +64,13 @@ def check_csrf(f):
     return wrapper
 
 
-def delete_image_data(model_instance, attribute_name):
-
-    storage = CatalogImageStorage()
-
-    original_name = getattr(model_instance, attribute_name).name
-    storage.delete(original_name)
-
-    for size in DEFAULT_THUMBNAIL_SIZES:
-        thumbnail_name = getattr(model_instance, size['attribute']).name
-        storage.delete(thumbnail_name)
-
-
-def save_image_data(model, model_instance, image_data, image_name):
+def save_image_data(model_instance, image_data, image_name):
     prefix, imgstr = image_data.split(';base64,')
     mime_type = prefix.split('/')[-1]
+
+    if 'jpeg' not in mime_type is False and 'png' not in mime_type:
+        raise TypeError('Images must be in JPEG or PNG format')
+
     filename, extension = os.path.splitext(image_name)
 
     opened_image = ImageUtils.open(BytesIO(base64.b64decode(imgstr + "===")))

@@ -1,10 +1,10 @@
-import datetime
 from django.db import models
 
-from .base import PROJECT_PREFIX, TABLE_PREFIX
-from .image import Image
-from .user import *
+from .base import TABLE_PREFIX, CustomImageAlttext, article_cover_image_path
+from .user import User
 from django.template.defaultfilters import slugify
+
+from catalog.backends import ThumbnailImageStorage
 
 from django import utils
 
@@ -13,7 +13,6 @@ class Article(models.Model):
     title = models.CharField(max_length=100)
     seo_title = models.CharField(max_length=100, blank=True)
     slug = models.SlugField(unique=True, blank=True)
-    featured_image = models.ForeignKey(Image, on_delete=models.SET_NULL, null=True, blank=True)
     preview_text = models.TextField(max_length=200)
     body = models.TextField()
     creation_date = models.DateField(default=utils.timezone.now)
@@ -46,3 +45,30 @@ class ArticleByline(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['user', 'article'], name='user_article_link')
         ]
+
+
+class ArticleFeaturedImage(CustomImageAlttext):
+
+    article = models.OneToOneField(
+        "Article",
+        on_delete=models.CASCADE,
+        null=True
+    )
+
+    original = models.ImageField(storage=
+                                 ThumbnailImageStorage(target_width=1588, target_height=2382),
+                                 upload_to=article_cover_image_path, null=True, blank=True)
+
+    large = models.ImageField(storage=
+                              ThumbnailImageStorage(target_width=767, target_height=555),
+                              upload_to=article_cover_image_path, null=True, blank=True)
+
+    medium = models.ImageField(storage=
+                               ThumbnailImageStorage(target_width=767, target_height=275),
+                               upload_to=article_cover_image_path, null=True, blank=True)
+
+    small = models.ImageField(storage=
+                              ThumbnailImageStorage(target_width=767, target_height=180),
+                              upload_to=article_cover_image_path, null=True, blank=True)
+
+    caption = models.CharField(max_length=300, blank=True)

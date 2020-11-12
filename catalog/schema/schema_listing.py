@@ -3,11 +3,19 @@ from django.contrib.auth import get_user_model
 
 import graphene
 from graphene_django.types import DjangoObjectType
-from .schema_base import check_csrf, save_image_data, delete_image_data, BaseImageTypeMixin, CultureType, LinkInput, \
+from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CultureType, LinkInput, \
     NameWithPriorityInput, CultureInput, CreateCulture
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
+
+import datetime
+
 import logging
+
+# Email
+
+import sendgrid
+from sendgrid.helpers.mail import *
 
 class ListingCoverImageType(DjangoObjectType, BaseImageTypeMixin):
     class Meta:
@@ -309,11 +317,11 @@ class CreateListing(graphene.Mutation):
 
         listing_cover = ListingCoverImage(listing=new_listing)
         listing_cover.save(skip_callback=True)
-        save_image_data('ListingCoverImage', listing_cover, cover_image.data, cover_image.name)
+        save_image_data(listing_cover, cover_image.data, cover_image.name)
         listing_cover.alttext = cover_image.alttext
         listing_cover.save(skip_callback=True)
 
-        creator_byline = ListingCreatorByline(user=info.context.user, listing=new_listing)
+        creator_byline = ListingCreatorByline(user=info.context.user, listing=new_listing, is_confirmed=True)
         creator_byline.save()
 
         return CreateListing(listing=new_listing)
@@ -328,6 +336,31 @@ class PriceInput(graphene.InputObjectType):
     price_type = graphene.String(required=True)
     amount = graphene.Float()
     details = graphene.String()
+
+
+def send_byline_email(inviter_name, listing_title, invitee_email, invite_type):
+
+    subject = "{0} added you as a {1} on {2}".format(inviter_name, invite_type, listing_title)
+    title = "Confirm a New Byline"
+    message = ("You've been added as a {0} on {1} by {2}. "
+                   "Before this publication displays on your profile, you must confirm it. "
+                   "Please log in to your account to complete this request. If this was made "
+                   "in error, you can also delete the request from within your account.").format(invite_type, listing_title, inviter_name)
+
+    sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+    from_email = Email("info@altsalt.com")
+    to_email = To(invitee_email)
+
+    log_in_url = '{0}/user/login'.format(os.environ.get('BASE_URL'))
+    mail = Mail(from_email, to_email, subject)
+    mail.dynamic_template_data = {
+        'subject': subject,
+        'title': title,
+        'message': message,
+        'log_in_url': log_in_url
+    }
+    mail.template_id = 'd-8937eb33fafb473d9603ef921ba8d184'
+    response = sg.client.mail.send.post(request_body=mail.get())
 
 
 class UpdateListing(graphene.Mutation):
@@ -411,7 +444,7 @@ class UpdateListing(graphene.Mutation):
                 current_cover.save(skip_callback=True)
 
             if cover_image.data != '':
-                save_image_data('ListingCoverImage', current_cover, cover_image.data, cover_image.name)
+                save_image_data(current_cover, cover_image.data, cover_image.name)
 
             current_cover.alttext = cover_image.alttext
             current_cover.save(skip_callback=True)
@@ -440,7 +473,7 @@ class UpdateListing(graphene.Mutation):
                         current_preview.save(skip_callback=True)
 
                     if preview_image.data != '':
-                        save_image_data('ListingPreviewImage', current_preview, preview_image.data, preview_image.name)
+                        save_image_data(current_preview, preview_image.data, preview_image.name)
 
                     current_preview.alttext = preview_image.alttext
                     current_preview.caption = preview_image.caption
@@ -504,6 +537,8 @@ class UpdateListing(graphene.Mutation):
                         else:
                             creator_byline = ListingCreatorByline(user=stored_user, listing=target_listing,
                                                                   listing_priority=creator.priority)
+                            send_byline_email(info.context.user.display_name, target_listing.title, stored_user.email,
+                                              'creator')
                         creator_byline.save()
                     else:
                         raise GraphQLError('Specified user {0} does not exist'.format(creator.username))
@@ -542,6 +577,7 @@ class UpdateListing(graphene.Mutation):
                         else:
                             collaborator_byline = ListingCollaboratorByline(user=stored_user, listing=target_listing,
                                                                   listing_priority=collaborator.priority)
+                            send_byline_email(info.context.user.display_name, target_listing.title, stored_user.email, 'collaborator')
                         collaborator_byline.save()
                     else:
                         raise GraphQLError('Specified user {0} does not exist'.format(collaborator.username))
