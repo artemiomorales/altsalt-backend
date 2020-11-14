@@ -36,6 +36,10 @@ from graphql_jwt.decorators import signals,\
 from graphql_jwt.mixins import JSONWebTokenMixin, ResolveMixin
 from graphql_jwt.refresh_token.models import RefreshToken
 
+from catalog.constants import get_date_from_string
+
+from datetime import datetime
+import logging
 
 #########
 # TYPES #
@@ -136,9 +140,12 @@ class UserType(DjangoObjectType):
         return None
 
     def resolve_age(self, info):
-        born = self.date_of_birth
-        today = date.today()
-        return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+        if self.date_of_birth is not None:
+            born = self.date_of_birth
+            today = date.today()
+            return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+
+        return None
 
     def resolve_links(self, info):
         return UserLink.objects.filter(user_id=self.id)
@@ -195,7 +202,7 @@ def CreateProfileThumbnail(imgstr, ext, profile_image_name, user_profile_image, 
 
         save_name = "{0}-{1}-{2}x{3}".format(filename, size_name, responsive_size, file_extension)
 
-        if responsive_size is 1:
+        if responsive_size == 1:
             getattr(user_profile_image, size_name).save(name=save_name, content=data)
         else:
             default_storage.save(save_name, data)
@@ -219,7 +226,7 @@ class UpdateUser(graphene.Mutation):
         short_name = graphene.String()
         occupation = graphene.String()
         description = graphene.String()
-        date_of_birth = graphene.Date()
+        date_of_birth = graphene.String()
         links = graphene.List(LinkInput)
         show_age = graphene.Boolean()
         pronouns = graphene.String()
@@ -279,7 +286,10 @@ class UpdateUser(graphene.Mutation):
             target_user.description = description
 
         if date_of_birth is not None:
-            target_user.date_of_birth = date_of_birth
+            if date_of_birth == '':
+                target_user.date_of_birth = None
+            else:
+                target_user.date_of_birth = get_date_from_string(date_of_birth)
 
         existing_links = UserLink.objects.filter(user=target_user.id)
         existing_links.delete()
@@ -452,7 +462,6 @@ def creation_user_mutate_wrapper(f):
         username = kwargs.get('username')
         first_name = kwargs.get('first_name')
         last_name = kwargs.get('last_name')
-        date_of_birth = kwargs.get('date_of_birth')
         password = kwargs.get('password')
 
         if CreateAccountRequestValid(invite_email, invite_token) is False:
@@ -470,8 +479,7 @@ def creation_user_mutate_wrapper(f):
                 last_name=last_name,
                 display_name=first_name + ' ' + last_name,
                 username=username,
-                email=invite_email,
-                date_of_birth=date_of_birth
+                email=invite_email
             )
             new_user.set_password(password)
             new_user.save()
@@ -499,7 +507,6 @@ class CreateUser(ResolveMixin, JSONWebTokenMixin, graphene.Mutation):
         invite_token = graphene.String(required=True)
         first_name = graphene.String(required=True)
         last_name = graphene.String(required=True)
-        date_of_birth = graphene.Date(required=True)
         username = graphene.String(required=True)
         password = graphene.String(required=True)
 

@@ -11,7 +11,7 @@ from catalog.backends import ThumbnailImageStorage
 class Listing(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=100)
-    description = models.TextField(default="The author(s) haven't provided a description yet.", null=True)
+    description = models.TextField(default="", null=True)
     price = models.ForeignKey("Price", null=True, on_delete=models.SET_NULL)
     format = models.ManyToManyField(
         "Format",
@@ -30,7 +30,7 @@ class Listing(models.Model):
         "Language",
         through='ListingLanguage'
     )
-    publication_date = models.DateField(null=True)
+    publication_date = models.DateField(null=True, blank=True)
     date_added = models.DateField()
     is_approved = models.BooleanField(null=True, default=False)
     date_approved = models.DateField(null=True)
@@ -38,6 +38,10 @@ class Listing(models.Model):
     culture_represented = models.ManyToManyField(
         "Culture",
         through='ListingCultureRepresented'
+    )
+    tag = models.ManyToManyField(
+        "Tag",
+        through='ListingTag'
     )
     content_rating = models.ForeignKey("ContentRating", null=True, on_delete=models.PROTECT)
     seo_category = models.ForeignKey("SeoCategory", null=True, on_delete=models.CASCADE)
@@ -194,6 +198,24 @@ class ListingCultureRepresented(models.Model):
         ordering = ['-priority']
         constraints = [
             models.UniqueConstraint(fields=['listing', 'culture'], name='listing_culture_link')
+        ]
+
+
+class Tag(NameSlug):
+    class Meta:
+        db_table = TABLE_PREFIX + 'tag'
+
+
+class ListingTag(models.Model):
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
+    priority = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'listing_tag'
+        ordering = ['-priority']
+        constraints = [
+            models.UniqueConstraint(fields=['listing', 'tag'], name='listing_tag_link')
         ]
 
 

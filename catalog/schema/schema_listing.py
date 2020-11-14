@@ -11,11 +11,15 @@ from graphql import GraphQLError
 import datetime
 
 import logging
+from django.conf import settings
 
 # Email
 
 import sendgrid
 from sendgrid.helpers.mail import *
+
+from catalog.constants import get_date_from_string
+
 
 class ListingCoverImageType(DjangoObjectType, BaseImageTypeMixin):
     class Meta:
@@ -62,6 +66,11 @@ class FormatType(DjangoObjectType):
         model = Format
 
 
+class TagType(DjangoObjectType):
+    class Meta:
+        model = Tag
+
+
 class ListingFormatType(DjangoObjectType):
     class Meta:
         model = ListingFormat
@@ -71,6 +80,17 @@ class ListingFormatType(DjangoObjectType):
 
     def resolve_item(self, info):
         return Format.objects.get(id=self.format_id)
+
+
+class ListingTagType(DjangoObjectType):
+    class Meta:
+        model = ListingTag
+        exclude = ('tag',)
+
+    item = graphene.Field(TagType)
+
+    def resolve_item(self, info):
+        return Tag.objects.get(id=self.tag_id)
 
 
 class DistributionTypeGrapheneType(DjangoObjectType):
@@ -166,6 +186,7 @@ class ListingType(DjangoObjectType):
     genre_set = graphene.List(ListingGenreType)
     language_set = graphene.List(ListingLanguageType)
     culture_represented = graphene.List(ListingCultureRepresentedType)
+    tag_set = graphene.List(ListingTagType)
     price = graphene.Field(PriceGrapheneType)
     content_rating = graphene.Field(ContentRatingType)
     seo_category = graphene.Field(SeoCategoryType)
@@ -199,13 +220,6 @@ class ListingType(DjangoObjectType):
 
     def resolve_format_set(self, info):
         return ListingFormat.objects.filter(listing_id=self.id)
-        # infoSet = ListingFormat.objects.filter(listing_id=self.id)
-        # infoString = ''
-        # for i, item in enumerate(infoSet):
-        #     infoString += item.format.name
-        #     if i < len(infoSet) - 1:
-        #         infoString += ', '
-        # return infoString
 
     def resolve_distribution_type_set(self, info):
         return ListingDistributionType.objects.filter(listing_id=self.id)
@@ -218,6 +232,9 @@ class ListingType(DjangoObjectType):
 
     def resolve_culture_represented(self, info):
         return ListingCultureRepresented.objects.filter(listing_id=self.id)
+
+    def resolve_tag_set(self, info):
+        return ListingTag.objects.filter(listing_id=self.id)
 
 
 ##########
@@ -235,6 +252,7 @@ class ListingQuery(graphene.ObjectType):
     all_formats = graphene.List(FormatType)
     all_lengths = graphene.List(LengthType)
     all_genres = graphene.List(GenreType)
+    all_tags = graphene.List(TagType)
 
     def resolve_listing_bundle(self, info, **kwargs):
         approved_after_date = kwargs.get('approved_after_date')
@@ -286,6 +304,9 @@ class ListingQuery(graphene.ObjectType):
     def resolve_all_cultures(self, info, **kwargs):
         return Culture.objects.all()
 
+    def resolve_all_tags(self, info, **kwargs):
+        return Tag.objects.all()
+
 
 class ImageInput(graphene.InputObjectType):
     name = graphene.String(required=True)
@@ -311,6 +332,8 @@ class CreateListing(graphene.Mutation):
     @check_csrf
     @login_required
     def mutate(cls, self, info, title, cover_image):
+
+        logging.error(settings.DATA_UPLOAD_MAX_MEMORY_SIZE)
 
         new_listing = Listing(title=title, date_added=datetime.date.today())
         new_listing.save()
@@ -375,7 +398,7 @@ class UpdateListing(graphene.Mutation):
         preview_images = graphene.List(PreviewImageInput)
         availability = graphene.List(LinkInput)
         additional_links = graphene.List(LinkInput)
-        publication_date = graphene.Date()
+        publication_date = graphene.String()
         creators = graphene.List(BylineInput)
         collaborators = graphene.List(BylineInput)
         content_rating = graphene.String()
@@ -383,6 +406,7 @@ class UpdateListing(graphene.Mutation):
         distribution = graphene.List(graphene.String)
         genre = graphene.List(NameWithPriorityInput)
         culture_represented = graphene.List(CultureInput)
+        tag = graphene.List(NameWithPriorityInput)
         price = PriceInput()
 
 
@@ -407,6 +431,7 @@ class UpdateListing(graphene.Mutation):
         distribution = kwargs.get('distribution')
         genre = kwargs.get('genre')
         culture_represented = kwargs.get('culture_represented')
+        tag = kwargs.get('tag')
         price = kwargs.get('price')
 
         if Listing.objects.filter(id=id).exists() is False:
@@ -504,7 +529,10 @@ class UpdateListing(graphene.Mutation):
         # Publication Date #
 
         if publication_date is not None:
-            target_listing.publication_date = publication_date
+            if publication_date == '':
+                target_listing.publication_date = None
+            else:
+                target_listing.publication_date = get_date_from_string(publication_date + '01')
 
         # Creators #
 
@@ -536,55 +564,44 @@ class UpdateListing(graphene.Mutation):
                             creator_byline.listing_priority = creator.priority
                         else:
                             creator_byline = ListingCreatorByline(user=stored_user, listing=target_listing,
-                                                                  listing_priority=creator.priority)
+                                                                  listing_priority=creator.priority, requester=info.context.user)
                             send_byline_email(info.context.user.display_name, target_listing.title, stored_user.email,
                                               'creator')
                         creator_byline.save()
                     else:
-                        raise GraphQLError('Specified user {0} does not exist'.format(creator.username))
+                        raise GraphQLError('Specified user {0} does not exist. Please remove and try again.'.format(creator.username))
             else:
-                raise GraphQLError('Unable to process request. None of the provided creators has a valid username.'
+                raise GraphQLError('Unable to process request. Listing must contain at least one valid creator.'
                                    ' Please refresh and try again.')
 
         # Collaborators #
 
         if collaborators is not None:
 
-            collaborator_input_valid = False
+            existing_collaborator_bylines = ListingCollaboratorByline.objects.filter(listing=target_listing)
 
-            for creator in creators:
-                if get_user_model().objects.filter(username=creator.username).exists():
-                    collaborator_input_valid = True
-
-            if collaborator_input_valid:
-                existing_collaborator_bylines = ListingCollaboratorByline.objects.filter(listing=target_listing)
-
-                for existing_collaborator_byline in existing_collaborator_bylines:
-                    delete_existing_byline = True
-                    for collaborator in collaborators:
-                        if get_user_model().objects.filter(username=collaborator.username).exists() and \
-                           existing_collaborator_byline.user.username == collaborator.username:
-                            delete_existing_byline = False
-                    if delete_existing_byline:
-                        existing_collaborator_byline.delete()
-
+            for existing_collaborator_byline in existing_collaborator_bylines:
+                delete_existing_byline = True
                 for collaborator in collaborators:
-                    if get_user_model().objects.filter(username=collaborator.username).exists():
-                        stored_user = get_user_model().objects.get(username=collaborator.username)
-                        if ListingCollaboratorByline.objects.filter(listing=target_listing, user=stored_user).exists():
-                            collaborator_byline = ListingCollaboratorByline.objects.get(listing=target_listing, user=stored_user)
-                            collaborator_byline.listing_priority = collaborator.priority
-                        else:
-                            collaborator_byline = ListingCollaboratorByline(user=stored_user, listing=target_listing,
-                                                                  listing_priority=collaborator.priority)
-                            send_byline_email(info.context.user.display_name, target_listing.title, stored_user.email, 'collaborator')
-                        collaborator_byline.save()
-                    else:
-                        raise GraphQLError('Specified user {0} does not exist'.format(collaborator.username))
+                    if get_user_model().objects.filter(username=collaborator.username).exists() and \
+                       existing_collaborator_byline.user.username == collaborator.username:
+                        delete_existing_byline = False
+                if delete_existing_byline:
+                    existing_collaborator_byline.delete()
 
-            else:
-                raise GraphQLError('Unable to process request. None of the provided collaborators has a valid username.'
-                                   ' Please refresh and try again.')
+            for collaborator in collaborators:
+                if get_user_model().objects.filter(username=collaborator.username).exists():
+                    stored_user = get_user_model().objects.get(username=collaborator.username)
+                    if ListingCollaboratorByline.objects.filter(listing=target_listing, user=stored_user).exists():
+                        collaborator_byline = ListingCollaboratorByline.objects.get(listing=target_listing, user=stored_user)
+                        collaborator_byline.listing_priority = collaborator.priority
+                    else:
+                        collaborator_byline = ListingCollaboratorByline(user=stored_user, listing=target_listing,
+                                                              listing_priority=collaborator.priority, requester=info.context.user)
+                        send_byline_email(info.context.user.display_name, target_listing.title, stored_user.email, 'collaborator')
+                    collaborator_byline.save()
+                else:
+                    raise GraphQLError('Specified user {0} does not exist. Please remove and try again'.format(collaborator.username))
 
         # Price #
 
@@ -673,6 +690,23 @@ class UpdateListing(graphene.Mutation):
 
                 item_object = Culture.objects.get(slug=item_slug)
                 new_item_record = ListingCultureRepresented(listing=target_listing, culture=item_object, priority=item.priority)
+                new_item_record.save()
+
+        # Tag #
+
+        existing_tag = ListingTag.objects.filter(listing=target_listing)
+        existing_tag.delete()
+
+        if tag is not None:
+            for item in tag:
+                item_slug = slugify(item.name)
+                if Tag.objects.filter(slug=item_slug).exists() is False:
+                    new_model = Tag(name=item.name, slug=item_slug)
+                    new_model.save()
+
+                item_object = Tag.objects.get(slug=item_slug)
+                new_item_record = ListingTag(listing=target_listing, tag=item_object,
+                                                priority=item.priority)
                 new_item_record.save()
 
         target_listing.save()

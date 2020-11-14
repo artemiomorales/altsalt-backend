@@ -186,6 +186,11 @@ class ListingCultureRepresentedInline(SingleInline):
     pass
 
 
+class ListingTagInline(SingleInline):
+    model = ListingTag
+    pass
+
+
 @admin.register(UserProfileImage)
 class UserProfileImageAdmin(admin.ModelAdmin):
     pass
@@ -204,7 +209,8 @@ class ListingAdmin(ReverseModelAdmin):
                ListingDistributionTypeInline,
                ListingGenreInline,
                ListingLanguageInline,
-               ListingCultureRepresentedInline
+               ListingCultureRepresentedInline,
+               ListingTagInline
                ]
     pass
 
@@ -251,7 +257,12 @@ class LanguageAdmin(admin.ModelAdmin):
 
 
 @admin.register(Culture)
-class Culture(admin.ModelAdmin):
+class CultureAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
     pass
 
 
