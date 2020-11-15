@@ -171,8 +171,8 @@ class ListingType(DjangoObjectType):
     class Meta:
         model = Listing
         fields = ('id', 'title', 'description', 'preview_images',
-                  'length', 'price', 'content_rating', 'seo_category', 'publication_date',
-                  'is_published', 'is_approved')
+                  'length', 'price', 'content_rating', 'seo_category',
+                  'is_published', 'is_approved', 'publication_date', 'date_added')
 
     slug = graphene.String()
     cover_image = graphene.Field(ListingCoverImageType)
@@ -190,6 +190,7 @@ class ListingType(DjangoObjectType):
     price = graphene.Field(PriceGrapheneType)
     content_rating = graphene.Field(ContentRatingType)
     seo_category = graphene.Field(SeoCategoryType)
+    date_added = graphene.String()
 
     def resolve_slug(self, info):
         return slugify(self.title)
@@ -236,6 +237,10 @@ class ListingType(DjangoObjectType):
     def resolve_tag_set(self, info):
         return ListingTag.objects.filter(listing_id=self.id)
 
+    def resolve_date_added(self, info):
+        logging.error(self.date_added)
+        return self.date_added.strftime("%m/%d/%y")
+
 
 ##########
 # SCHEMA #
@@ -252,6 +257,7 @@ class ListingQuery(graphene.ObjectType):
     listing = graphene.Field(ListingType, id=graphene.String())
     listing_creation_bylines = graphene.List(ListingCreatorBylineType, user_id=graphene.Int(), listing_id=graphene.Int())
     all_content_ratings = graphene.List(ContentRatingType)
+    all_languages = graphene.List(LanguageType)
     all_cultures = graphene.List(CultureType)
     all_distribution_types = graphene.List(DistributionTypeGrapheneType)
     all_lengths = graphene.List(LengthType)
@@ -307,6 +313,9 @@ class ListingQuery(graphene.ObjectType):
 
     def resolve_all_content_ratings(self, info, **kwargs):
         return ContentRating.objects.all()
+
+    def resolve_all_languages(self, info, **kwargs):
+        return Language.objects.all()
 
     def resolve_all_formats(self, info, **kwargs):
         return Format.objects.all()
@@ -421,6 +430,8 @@ class UpdateListing(graphene.Mutation):
         creators = graphene.List(BylineInput)
         collaborators = graphene.List(BylineInput)
         content_rating = graphene.String()
+        length = graphene.String()
+        language = graphene.List(NameWithPriorityInput)
         format = graphene.List(NameWithPriorityInput)
         distribution = graphene.List(graphene.String)
         genre = graphene.List(NameWithPriorityInput)
@@ -446,6 +457,8 @@ class UpdateListing(graphene.Mutation):
         creators = kwargs.get('creators')
         collaborators = kwargs.get('collaborators')
         content_rating = kwargs.get('content_rating')
+        length = kwargs.get('length')
+        language = kwargs.get('language')
         format = kwargs.get('format')
         distribution = kwargs.get('distribution')
         genre = kwargs.get('genre')
@@ -647,6 +660,33 @@ class UpdateListing(graphene.Mutation):
 
             item_object = ContentRating.objects.get(slug=content_rating)
             target_listing.content_rating = item_object
+
+        # Length #
+
+        if length is not None:
+
+            if Length.objects.filter(slug=length).exists() is False:
+                raise GraphQLError("Invalid length")
+
+            item_object = Length.objects.get(slug=length)
+            target_listing.length = item_object
+
+        # Language #
+
+        existing_language = ListingLanguage.objects.filter(listing=target_listing)
+        existing_language.delete()
+
+        if language is not None:
+            for item in language:
+                item_slug = slugify(item.name)
+                if Language.objects.filter(slug=item_slug).exists() is False:
+                    new_model = Language(name=item.name, slug=item_slug)
+                    new_model.save()
+
+                item_object = Language.objects.get(slug=item_slug)
+                new_item_record = ListingLanguage(listing=target_listing, language=item_object,
+                                                  priority=item.priority)
+                new_item_record.save()
 
         # Format #
 

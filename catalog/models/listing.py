@@ -6,13 +6,16 @@ from .user import User
 from django.db import models
 from django.template.defaultfilters import slugify
 from catalog.backends import ThumbnailImageStorage
+from django.utils import timezone
+
+import datetime
 
 
 class Listing(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=100)
-    description = models.TextField(default="", null=True)
-    price = models.ForeignKey("Price", null=True, on_delete=models.SET_NULL)
+    description = models.TextField(default="", blank=True)
+    price = models.ForeignKey("Price", null=True, blank=True, on_delete=models.SET_NULL)
     format = models.ManyToManyField(
         "Format",
         through='ListingFormat'
@@ -21,7 +24,7 @@ class Listing(models.Model):
         "DistributionType",
         through='ListingDistributionType'
     )
-    length = models.ForeignKey("Length", null=True, on_delete=models.PROTECT)
+    length = models.ForeignKey("Length", null=True, blank=True, on_delete=models.PROTECT)
     genre = models.ManyToManyField(
         "Genre",
         through='ListingGenre'
@@ -31,11 +34,11 @@ class Listing(models.Model):
         through='ListingLanguage'
     )
     publication_date = models.DateField(null=True, blank=True)
-    date_added = models.DateField()
-    is_approved = models.BooleanField(null=True, default=False)
-    date_approved = models.DateField(null=True)
-    is_published = models.BooleanField(null=True, default=False)
-    is_featured = models.BooleanField(default=False, blank=True)
+    date_added = models.DateField(default=timezone.now)
+    date_approved = models.DateField(null=True, blank=True)
+    is_approved = models.BooleanField(default=False)
+    is_published = models.BooleanField(default=False)
+    is_featured = models.BooleanField(default=False)
     culture_represented = models.ManyToManyField(
         "Culture",
         through='ListingCultureRepresented'
