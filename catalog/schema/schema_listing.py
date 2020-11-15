@@ -242,7 +242,13 @@ class ListingType(DjangoObjectType):
 ##########
 
 class ListingQuery(graphene.ObjectType):
-    listing_bundle = graphene.List(ListingType, approved_after_date=graphene.Date(), approved_before_date=graphene.Date())
+    featured_listings = graphene.List(ListingType)
+    listing_bundle = graphene.List(ListingType,
+                                   include_featured=graphene.Boolean(default_value=True),
+                                   exclude_private=graphene.Boolean(default_value=True),
+                                   approved_after_date=graphene.Date(),
+                                   approved_before_date=graphene.Date()
+                                   )
     listing = graphene.Field(ListingType, id=graphene.String())
     listing_creation_bylines = graphene.List(ListingCreatorBylineType, user_id=graphene.Int(), listing_id=graphene.Int())
     all_content_ratings = graphene.List(ContentRatingType)
@@ -254,17 +260,30 @@ class ListingQuery(graphene.ObjectType):
     all_genres = graphene.List(GenreType)
     all_tags = graphene.List(TagType)
 
+    def resolve_featured_listings(self, info, **kwargs):
+        return Listing.objects.filter(is_featured=True)
+
     def resolve_listing_bundle(self, info, **kwargs):
+        include_featured = kwargs.get('include_featured')
+        exclude_private = kwargs.get('exclude_private')
         approved_after_date = kwargs.get('approved_after_date')
         approved_before_date = kwargs.get('approved_before_date')
 
+        if include_featured is True:
+            listings = Listing.objects.all()
+        else:
+            listings = Listing.objects.filter(is_featured=False)
+
+        if exclude_private is True:
+            listings = listings.filter(is_published=True, is_approved=True)
+
         if approved_after_date is not None:
-            return Listing.objects.filter(date_approved__gte=approved_after_date)
+            listings = listings.filter(date_approved__gte=approved_after_date)
 
         if approved_before_date is not None:
-            return Listing.objects.filter(date_approved__lt=approved_before_date)
+            listings = listings.filter(date_approved__lt=approved_before_date)
 
-        return Listing.objects.all()
+        return listings
 
     def resolve_listing(self, info, **kwargs):
         id = kwargs.get('id')

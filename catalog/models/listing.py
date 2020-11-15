@@ -35,6 +35,7 @@ class Listing(models.Model):
     is_approved = models.BooleanField(null=True, default=False)
     date_approved = models.DateField(null=True)
     is_published = models.BooleanField(null=True, default=False)
+    is_featured = models.BooleanField(default=False, blank=True)
     culture_represented = models.ManyToManyField(
         "Culture",
         through='ListingCultureRepresented'
