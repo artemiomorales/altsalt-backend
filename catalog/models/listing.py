@@ -43,8 +43,8 @@ class Listing(models.Model):
         "Tag",
         through='ListingTag'
     )
-    content_rating = models.ForeignKey("ContentRating", null=True, on_delete=models.PROTECT)
-    seo_category = models.ForeignKey("SeoCategory", null=True, on_delete=models.CASCADE)
+    content_rating = models.ForeignKey("ContentRating", null=True, blank=True, on_delete=models.PROTECT)
+    seo_category = models.ForeignKey("SeoCategory", null=True, blank=True, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
         if not self.id:

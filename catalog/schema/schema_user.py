@@ -182,9 +182,10 @@ class LogIn(graphql_jwt.ObtainJSONWebToken):
 # UPDATE USER #
 ###############
 
-class ListingInput(graphene.InputObjectType):
+class UserBylineInput(graphene.InputObjectType):
     id = graphene.String(required=True)
     priority = graphene.Int(required=True)
+    delete = graphene.Boolean(required=True)
 
 
 def CreateProfileThumbnail(imgstr, ext, profile_image_name, user_profile_image, size_name, size_dimensions):
@@ -232,8 +233,8 @@ class UpdateUser(graphene.Mutation):
         pronouns = graphene.String()
         location = graphene.String()
         background = graphene.List(CultureInput)
-        creator_bylines = graphene.List(ListingInput)
-        collaborator_bylines = graphene.List(ListingInput)
+        creator_bylines = graphene.List(UserBylineInput)
+        collaborator_bylines = graphene.List(UserBylineInput)
 
     @classmethod
     @check_csrf
@@ -327,8 +328,13 @@ class UpdateUser(graphene.Mutation):
                     target_listing = Listing.objects.get(id=creator_byline.id)
                     if ListingCreatorByline.objects.filter(user=target_user, listing=target_listing).exists() is True:
                         byline = ListingCreatorByline.objects.get(user=target_user, listing=target_listing)
-                        byline.user_priority = creator_byline.priority
-                        byline.save()
+
+                        if creator_byline.delete is True:
+                            raise GraphQLError('Creator bylines should not be deleted from '
+                                               'the user page; try editing a listing instead')
+                        else:
+                            byline.user_priority = creator_byline.priority
+                            byline.save()
 
         if collaborator_bylines is not None:
             for collaborator_byline in collaborator_bylines:
@@ -336,8 +342,12 @@ class UpdateUser(graphene.Mutation):
                     target_listing = Listing.objects.get(id=collaborator_byline.id)
                     if ListingCollaboratorByline.objects.filter(user=target_user, listing=target_listing).exists() is True:
                         byline = ListingCollaboratorByline.objects.get(user=target_user, listing=target_listing)
-                        byline.user_priority = collaborator_byline.priority
-                        byline.save()
+
+                        if collaborator_byline.delete is True:
+                            byline.delete()
+                        else:
+                            byline.user_priority = collaborator_byline.priority
+                            byline.save()
 
         target_user.save()
 
