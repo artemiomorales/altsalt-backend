@@ -14,6 +14,7 @@ import datetime
 class Listing(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=100)
+    short_name = models.CharField(max_length=34, default="", blank=True)
     description = models.TextField(default="", blank=True)
     price = models.ForeignKey("Price", null=True, blank=True, on_delete=models.SET_NULL)
     format = models.ManyToManyField(
@@ -133,7 +134,10 @@ class ListingFormat(models.Model):
 
 
 class DistributionType(NameSlug):
+    priority = models.IntegerField(default=0)
+
     class Meta:
+        ordering = ['-priority']
         db_table = TABLE_PREFIX + 'distribution_type'
 
 

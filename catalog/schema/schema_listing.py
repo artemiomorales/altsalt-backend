@@ -170,7 +170,7 @@ class SeoCategoryType(DjangoObjectType):
 class ListingType(DjangoObjectType):
     class Meta:
         model = Listing
-        fields = ('id', 'title', 'description', 'preview_images',
+        fields = ('id', 'title', 'short_name', 'description', 'preview_images',
                   'length', 'price', 'content_rating', 'seo_category',
                   'is_published', 'is_approved', 'publication_date', 'date_added')
 
@@ -420,6 +420,7 @@ class UpdateListing(graphene.Mutation):
     class Arguments:
         id = graphene.String(required=True)
         title = graphene.String()
+        short_name = graphene.String()
         description = graphene.String()
         is_published = graphene.Boolean()
         cover_image = ImageInput()
@@ -447,6 +448,7 @@ class UpdateListing(graphene.Mutation):
 
         id = kwargs.get('id')
         title = kwargs.get('title')
+        short_name = kwargs.get('short_name')
         is_published = kwargs.get('is_published')
         cover_image = kwargs.get('cover_image')
         description = kwargs.get('description')
@@ -478,6 +480,11 @@ class UpdateListing(graphene.Mutation):
 
         if title is not None:
             target_listing.title = title
+
+        # Short name #
+
+        if short_name is not None:
+            target_listing.short_name = short_name
 
         # Description #
 
