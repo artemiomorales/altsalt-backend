@@ -34,15 +34,15 @@ class ArticleType(DjangoObjectType):
 
 class CMSQuery(graphene.ObjectType):
     article_bundle = graphene.List(ArticleType)
-    article = graphene.Field(ArticleType, slug=graphene.String())
+    article = graphene.Field(ArticleType, id=graphene.String())
 
     def resolve_article_bundle(self, info):
         return Article.objects.all()
 
     def resolve_article(self, info, **kwargs):
-        slug = kwargs.get('slug')
+        id = kwargs.get('id')
 
-        if slug is not None:
-            return Article.objects.get(slug=slug)
+        if id is not None:
+            return Article.objects.get(id=int(id))
 
         return None
