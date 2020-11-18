@@ -15,15 +15,35 @@ from io import BytesIO
 from catalog.backends import CatalogImageStorage
 from django.template.defaultfilters import slugify
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, get_image_buffer
+from django.db import models
+
+
+class ImageFieldType(graphene.ObjectType):
+    url = graphene.String()
+    width = graphene.Int()
+    height = graphene.Int()
+
+    def resolve_url(self, info):
+        if self.name:
+            return self.url
+
+        return ''
+
+    def resolve_width(self, info):
+        if self.name:
+            return self.width
+
+        return None
+
+    def resolve_height(self, info):
+        if self.name:
+            return self.height
+
+        return None
 
 
 class BaseImageTypeMixin:
-
-    def resolve_original(self, info):
-        if self.original is not None and self.original.name:
-            return self.original.url
-
-        return ''
+    original = graphene.Field(ImageFieldType)
 
     def resolve_large(self, info):
         if self.large is not None and self.large.name:
