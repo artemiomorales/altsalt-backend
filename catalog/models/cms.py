@@ -18,7 +18,7 @@ class EditorialSettings(models.Model):
         return "Editorial Settings"
 
     def save(self, *args, **kwargs):
-        if EditorialSettings.objects.exists():
+        if EditorialSettings.objects.exists() and EditorialSettings.objects.get(id=self.id) is None:
             raise ValueError("This model has already its record.")
         else:
             super().save(*args, **kwargs)
