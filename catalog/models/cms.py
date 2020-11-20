@@ -9,6 +9,25 @@ from catalog.backends import ThumbnailImageStorage
 from django import utils
 
 
+class EditorialSettings(models.Model):
+    show_newsletter_popup = models.BooleanField(default=True)
+    show_featured = models.BooleanField(default=True)
+    featured_heading = models.CharField(default="Featured", max_length=180)
+
+    def __str__(self):
+        return "Editorial Settings"
+
+    def save(self, *args, **kwargs):
+        if EditorialSettings.objects.exists():
+            raise ValueError("This model has already its record.")
+        else:
+            super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = 'Editorial Settings'
+        verbose_name_plural = 'Editorial Settings'
+
+
 class Article(models.Model):
     title = models.CharField(max_length=100)
     seo_title = models.CharField(max_length=100, blank=True)

@@ -279,3 +279,8 @@ class ContentRatingAdmin(admin.ModelAdmin):
 @admin.register(SeoCategory)
 class SeoCategoryAdmin(admin.ModelAdmin):
     pass
+
+
+@admin.register(EditorialSettings)
+class EditorialSettingsAdmin(admin.ModelAdmin):
+    pass

@@ -405,6 +405,9 @@ class SendInvitation(graphene.Mutation):
         subject = kwargs.get('subject')
         if subject is None:
             subject = "Your submission to AltSalt has been approved"
+        if is_test is True:
+            subject = "TEST - {0}".format(subject)
+
         title = kwargs.get('title')
         if title is None:
             title = "Welcome to AltSalt!"
