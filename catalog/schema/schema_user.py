@@ -6,6 +6,7 @@ from catalog.models.listing import *
 
 import graphene
 from graphene_django.types import DjangoObjectType
+from graphql_jwt.decorators import login_required
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CultureType, LinkInput, \
     CultureInput, CreateCulture
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
@@ -352,6 +353,48 @@ class UpdateUser(graphene.Mutation):
         target_user.save()
 
         return UpdateUser(user=target_user)
+
+
+##################
+# CONFIRM BYLINE #
+##################
+
+class ConfirmByline(graphene.Mutation):
+    user = graphene.Field(UserType)
+    confirmed = graphene.Boolean()
+
+    class Arguments:
+        id = graphene.String(required=True)
+        target_status = graphene.Boolean(required=True)
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, id, target_status):
+
+        if Listing.objects.filter(id=id).exists() is False:
+            raise GraphQLError("Target listing does not exist! Please refresh or try again later.")
+
+        target_listing = Listing.objects.get(id=id)
+
+        target_byline = None
+
+        if ListingCreatorByline.objects.filter(listing=target_listing, user=info.context.user).exists():
+            target_byline = ListingCreatorByline.objects.get(listing=target_listing, user=info.context.user)
+
+        if ListingCollaboratorByline.objects.filter(listing=target_listing, user=info.context.user).exists():
+            target_byline = ListingCollaboratorByline.objects.get(listing=target_listing, user=info.context.user)
+
+        if target_byline is None:
+            raise GraphQLError("You are not authorized to update this byline.")
+
+        if target_status:
+            target_byline.is_confirmed = True
+            target_byline.save()
+            return ConfirmByline(user=info.context.user, confirmed=True)
+        else:
+            target_byline.delete()
+            return ConfirmByline(user=info.context.user, confirmed=False)
 
 
 ####################
@@ -702,6 +745,7 @@ class UserQuery(graphene.ObjectType):
 class UserMutation(graphene.ObjectType):
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
+    confirm_byline = ConfirmByline.Field()
     log_in = LogIn.Field()
     verify_token = CustomVerifyToken.Field()
     refresh_token = CustomRefreshToken.Field()

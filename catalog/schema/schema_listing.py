@@ -802,46 +802,7 @@ class DeleteListing(graphene.Mutation):
         return True
 
 
-class ConfirmByline(graphene.Mutation):
-    listing = graphene.Field(ListingType)
-    confirmed = graphene.Boolean()
-
-    class Arguments:
-        id = graphene.String(required=True)
-        target_status = graphene.Boolean(required=True)
-
-    @classmethod
-    @check_csrf
-    @login_required
-    def mutate(cls, self, info, id, target_status):
-
-        if Listing.objects.filter(id=id).exists() is False:
-            raise GraphQLError("Target listing does not exist! Please refresh or try again later.")
-
-        target_listing = Listing.objects.get(id=id)
-
-        target_byline = None
-
-        if ListingCreatorByline.objects.filter(listing=target_listing, user=info.context.user).exists():
-            target_byline = ListingCreatorByline.objects.get(listing=target_listing, user=info.context.user)
-
-        if ListingCollaboratorByline.objects.filter(listing=target_listing, user=info.context.user).exists():
-            target_byline = ListingCollaboratorByline.objects.get(listing=target_listing, user=info.context.user)
-
-        if target_byline is None:
-            raise GraphQLError("You are not authorized to update this byline.")
-
-        if target_status:
-            target_byline.is_confirmed = True
-            target_byline.save()
-            return ConfirmByline(listing=target_listing, confirmed=True)
-        else:
-            target_byline.delete()
-            return ConfirmByline(listing=target_listing, confirmed=False)
-
-
 class ListingMutation(graphene.ObjectType):
     create_listing = CreateListing.Field()
     update_listing = UpdateListing.Field()
     delete_listing = DeleteListing.Field()
-    confirm_byline = ConfirmByline.Field()
