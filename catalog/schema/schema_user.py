@@ -4,6 +4,7 @@ from catalog.models.cms import *
 from catalog.models.user import *
 from catalog.models.listing import *
 
+import re
 import graphene
 from graphene_django.types import DjangoObjectType
 from graphql_jwt.decorators import login_required
@@ -530,11 +531,14 @@ def creation_user_mutate_wrapper(f):
             if get_user_model().objects.filter(email=invite_email).exists() is True:
                 raise GraphQLError('User with specified email already exists')
 
+            if re.match('^[a-zA-Z0-9_.-]+$', username) is None:
+                raise GraphQLError('Username may only contain letters, numbers, hyphens, underscores, and periods')
+
             new_user = get_user_model()(
                 first_name=first_name,
                 last_name=last_name,
                 display_name=first_name + ' ' + last_name,
-                username=username,
+                username=username.lower(),
                 email=invite_email
             )
             new_user.set_password(password)
