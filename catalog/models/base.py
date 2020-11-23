@@ -56,11 +56,12 @@ class Continent(NameSlug):
         db_table = TABLE_PREFIX + 'continent'
 
 
-class Culture(NameSlug):
+class Country(NameSlug):
     continent = models.ForeignKey(Continent, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
-        db_table = TABLE_PREFIX + 'culture'
+        db_table = TABLE_PREFIX + 'country'
+        ordering = ['name']
 
 
 class CustomImage(models.Model):

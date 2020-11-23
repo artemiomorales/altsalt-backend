@@ -3,8 +3,8 @@ from django.contrib.auth import get_user_model
 
 import graphene
 from graphene_django.types import DjangoObjectType
-from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CultureType, LinkInput, \
-    NameWithPriorityInput, CultureInput, CreateCulture
+from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, LinkInput, \
+    NameWithPriorityInput
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
 
@@ -146,15 +146,15 @@ class ListingLanguageType(DjangoObjectType):
         return Language.objects.get(id=self.language_id)
 
 
-class ListingCultureRepresentedType(DjangoObjectType):
+class ListingCountryRepresentedType(DjangoObjectType):
     class Meta:
-        model = ListingCultureRepresented
+        model = ListingCountryRepresented
         exclude = ('culture',)
 
-    item = graphene.Field(CultureType)
+    item = graphene.Field(CountryType)
 
     def resolve_item(self, info):
-        return Culture.objects.get(id=self.culture_id)
+        return Country.objects.get(id=self.country_id)
 
 
 class ContentRatingType(DjangoObjectType):
@@ -185,7 +185,7 @@ class ListingType(DjangoObjectType):
     distribution_type_set = graphene.List(ListingDistributionTypeGrapheneType)
     genre_set = graphene.List(ListingGenreType)
     language_set = graphene.List(ListingLanguageType)
-    culture_represented = graphene.List(ListingCultureRepresentedType)
+    countries_represented = graphene.List(ListingCountryRepresentedType)
     tag_set = graphene.List(ListingTagType)
     price = graphene.Field(PriceGrapheneType)
     content_rating = graphene.Field(ContentRatingType)
@@ -231,8 +231,8 @@ class ListingType(DjangoObjectType):
     def resolve_language_set(self, info):
         return ListingLanguage.objects.filter(listing_id=self.id)
 
-    def resolve_culture_represented(self, info):
-        return ListingCultureRepresented.objects.filter(listing_id=self.id)
+    def resolve_countries_represented(self, info):
+        return ListingCountryRepresented.objects.filter(listing_id=self.id)
 
     def resolve_tag_set(self, info):
         return ListingTag.objects.filter(listing_id=self.id)
@@ -258,7 +258,7 @@ class ListingQuery(graphene.ObjectType):
     listing_creation_bylines = graphene.List(ListingCreatorBylineType, user_id=graphene.Int(), listing_id=graphene.Int())
     all_content_ratings = graphene.List(ContentRatingType)
     all_languages = graphene.List(LanguageType)
-    all_cultures = graphene.List(CultureType)
+    all_countries = graphene.List(CountryType)
     all_distribution_types = graphene.List(DistributionTypeGrapheneType)
     all_lengths = graphene.List(LengthType)
     all_formats = graphene.List(FormatType)
@@ -329,8 +329,8 @@ class ListingQuery(graphene.ObjectType):
     def resolve_all_genres(self, info, **kwargs):
         return Genre.objects.all()
 
-    def resolve_all_cultures(self, info, **kwargs):
-        return Culture.objects.all()
+    def resolve_all_countries(self, info, **kwargs):
+        return Country.objects.all()
 
     def resolve_all_tags(self, info, **kwargs):
         return Tag.objects.all()
@@ -436,7 +436,7 @@ class UpdateListing(graphene.Mutation):
         format = graphene.List(NameWithPriorityInput)
         distribution = graphene.List(graphene.String)
         genre = graphene.List(NameWithPriorityInput)
-        culture_represented = graphene.List(CultureInput)
+        countries_represented = graphene.List(NameWithPriorityInput)
         tag = graphene.List(NameWithPriorityInput)
         price = PriceInput()
 
@@ -464,7 +464,7 @@ class UpdateListing(graphene.Mutation):
         format = kwargs.get('format')
         distribution = kwargs.get('distribution')
         genre = kwargs.get('genre')
-        culture_represented = kwargs.get('culture_represented')
+        countries_represented = kwargs.get('countries_represented')
         tag = kwargs.get('tag')
         price = kwargs.get('price')
 
@@ -745,17 +745,18 @@ class UpdateListing(graphene.Mutation):
 
         # Culture Represented #
 
-        existing_culture_represented = ListingCultureRepresented.objects.filter(listing=target_listing)
-        existing_culture_represented.delete()
+        existing_countries_represented = ListingCountryRepresented.objects.filter(listing=target_listing)
+        existing_countries_represented.delete()
 
-        if culture_represented is not None:
-            for item in culture_represented:
+        if countries_represented is not None:
+            for item in countries_represented:
                 item_slug = slugify(item.name)
-                if Culture.objects.filter(slug=item_slug).exists() is False:
-                    CreateCulture(item.name, item_slug, item.continent)
+                if Country.objects.filter(slug=item_slug).exists() is False:
+                    new_country = Country(name=item.name, slug=item.slug)
+                    new_country.save()
 
-                item_object = Culture.objects.get(slug=item_slug)
-                new_item_record = ListingCultureRepresented(listing=target_listing, culture=item_object, priority=item.priority)
+                item_object = Country.objects.get(slug=item_slug)
+                new_item_record = ListingCountryRepresented(listing=target_listing, country=item_object, priority=item.priority)
                 new_item_record.save()
 
         # Tag #

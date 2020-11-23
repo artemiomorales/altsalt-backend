@@ -23,7 +23,7 @@ class SingleInline(admin.TabularInline):
 
 
 class UserCultureInline(SingleInline):
-    model = UserCulture
+    model = UserCountry
     pass
 
 
@@ -182,7 +182,7 @@ class ListingLanguageInline(SingleInline):
 
 
 class ListingCultureRepresentedInline(SingleInline):
-    model = ListingCultureRepresented
+    model = ListingCountryRepresented
     pass
 
 
@@ -256,7 +256,7 @@ class LanguageAdmin(admin.ModelAdmin):
     pass
 
 
-@admin.register(Culture)
+@admin.register(Country)
 class CultureAdmin(admin.ModelAdmin):
     pass
 

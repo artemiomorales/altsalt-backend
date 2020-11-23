@@ -1,5 +1,5 @@
 import graphene
-from catalog.models.base import Culture, Continent
+from catalog.models.base import Country, Continent
 from graphene_django.types import DjangoObjectType
 from django.conf import settings
 from django.middleware.csrf import _sanitize_token, _compare_salted_tokens
@@ -106,22 +106,9 @@ def save_image_data(model_instance, image_data, image_name):
     model_instance.save(skip_callback=False)
 
 
-def CreateCulture(culture_name, culture_slug, continent_name=None):
-
-    new_culture = Culture(name=culture_name.title(), slug=culture_slug)
-    if continent_name is not None:
-        continent_slug = slugify(continent_name)
-        continent = Continent.objects.get(slug=continent_slug)
-        new_culture.continent = continent
-
-    new_culture.save()
-
-    return new_culture
-
-
-class CultureType(DjangoObjectType):
+class CountryType(DjangoObjectType):
     class Meta:
-        model = Culture
+        model = Country
 
 
 class NameWithPriorityInput(graphene.InputObjectType):
@@ -131,7 +118,3 @@ class NameWithPriorityInput(graphene.InputObjectType):
 
 class LinkInput(NameWithPriorityInput):
     url = graphene.String(required=True)
-
-
-class CultureInput(NameWithPriorityInput):
-    continent = graphene.String()

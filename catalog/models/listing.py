@@ -1,6 +1,6 @@
 import os
 from .base import \
-    TABLE_PREFIX, listing_cover_image_path, listing_preview_image_path, NameSlug, CustomImageAlttext, Link, Culture
+    TABLE_PREFIX, listing_cover_image_path, listing_preview_image_path, NameSlug, CustomImageAlttext, Link, Country
 from .user import User
 
 from django.db import models
@@ -40,9 +40,9 @@ class Listing(models.Model):
     is_approved = models.BooleanField(default=False)
     is_published = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)
-    culture_represented = models.ManyToManyField(
-        "Culture",
-        through='ListingCultureRepresented'
+    country_represented = models.ManyToManyField(
+        "Country",
+        through='ListingCountryRepresented'
     )
     tag = models.ManyToManyField(
         "Tag",
@@ -196,16 +196,16 @@ class ListingLanguage(models.Model):
         ]
 
 
-class ListingCultureRepresented(models.Model):
+class ListingCountryRepresented(models.Model):
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
-    culture = models.ForeignKey(Culture, on_delete=models.CASCADE)
+    country = models.ForeignKey(Country, on_delete=models.CASCADE)
     priority = models.IntegerField(default=0)
 
     class Meta:
-        db_table = TABLE_PREFIX + 'listing_culture_represented'
+        db_table = TABLE_PREFIX + 'listing_country_represented'
         ordering = ['-priority']
         constraints = [
-            models.UniqueConstraint(fields=['listing', 'culture'], name='listing_culture_link')
+            models.UniqueConstraint(fields=['listing', 'country'], name='listing_country_link')
         ]
 
 

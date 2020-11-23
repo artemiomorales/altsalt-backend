@@ -8,8 +8,8 @@ import re
 import graphene
 from graphene_django.types import DjangoObjectType
 from graphql_jwt.decorators import login_required
-from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CultureType, LinkInput, \
-    CultureInput, CreateCulture
+from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, LinkInput, \
+    NameWithPriorityInput
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 from .schema_cms import ArticleBylineType
 from django.contrib.auth.hashers import make_password, check_password
@@ -59,15 +59,15 @@ class OrganizationMemberType(DjangoObjectType):
         return get_user_model().objects.get(id=self.member_id)
 
 
-class UserCultureType(DjangoObjectType):
+class UserCountryType(DjangoObjectType):
     class Meta:
-        model = UserCulture
-        exclude = ('culture',)
+        model = UserCountry
+        exclude = ('country',)
 
-    item = graphene.Field(CultureType)
+    item = graphene.Field(CountryType)
 
     def resolve_item(self, info):
-        return Culture.objects.get(id=self.culture_id)
+        return Country.objects.get(id=self.country_id)
 
 
 class UserLinkType(DjangoObjectType):
@@ -100,7 +100,7 @@ class UserType(DjangoObjectType):
     listings = graphene.List(ListingCreatorBylineType)
     collaborations = graphene.List(ListingCollaboratorBylineType)
     articles = graphene.List(ArticleBylineType)
-    culture = graphene.List(UserCultureType)
+    countries = graphene.List(UserCountryType)
     age = graphene.Int()
     links = graphene.List(UserLinkType)
     date_joined = graphene.String()
@@ -132,8 +132,8 @@ class UserType(DjangoObjectType):
 
         return None
 
-    def resolve_culture(self, info):
-        return UserCulture.objects.filter(user_id=self.id)
+    def resolve_countries(self, info):
+        return UserCountry.objects.filter(user_id=self.id)
 
     def resolve_profile_image(self, info):
         if UserProfileImage.objects.filter(user_id=self.id).exists() is True:
@@ -234,7 +234,7 @@ class UpdateUser(graphene.Mutation):
         show_age = graphene.Boolean()
         pronouns = graphene.String()
         location = graphene.String()
-        background = graphene.List(CultureInput)
+        countries = graphene.List(NameWithPriorityInput)
         creator_bylines = graphene.List(UserBylineInput)
         collaborator_bylines = graphene.List(UserBylineInput)
 
@@ -262,7 +262,7 @@ class UpdateUser(graphene.Mutation):
         show_age = kwargs.get('show_age')
         pronouns = kwargs.get('pronouns')
         location = kwargs.get('location')
-        background = kwargs.get('background')
+        countries = kwargs.get('countries')
         creator_bylines = kwargs.get('creator_bylines')
         collaborator_bylines = kwargs.get('collaborator_bylines')
 
@@ -311,18 +311,19 @@ class UpdateUser(graphene.Mutation):
         if location is not None:
             target_user.location = location
 
-        existing_background = UserCulture.objects.filter(user=target_user)
+        existing_background = UserCountry.objects.filter(user=target_user)
         existing_background.delete()
 
-        if background is not None:
-            for culture in background:
-                culture_slug = slugify(culture.name)
-                if Culture.objects.filter(slug=culture_slug).exists() is False:
-                    CreateCulture(culture.name, culture_slug, culture.continent)
+        if countries is not None:
+            for country in countries:
+                item_slug = slugify(country.name)
+                if Country.objects.filter(slug=item_slug).exists() is False:
+                    new_country = Country(name=country.name, slug=country.slug)
+                    new_country.save()
 
-                culture_object = Culture.objects.get(slug=culture_slug)
-                user_culture = UserCulture(user=target_user, culture=culture_object, priority=culture.priority)
-                user_culture.save()
+                item_object = Country.objects.get(slug=item_slug)
+                user_country = UserCountry(user=target_user, country=item_object, priority=country.priority)
+                user_country.save()
 
         if creator_bylines is not None:
             for creator_byline in creator_bylines:

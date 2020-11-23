@@ -1,4 +1,4 @@
-from .base import PROJECT_PREFIX, TABLE_PREFIX, profile_image_path, Culture, CustomImage, Link, media_upload_path
+from .base import PROJECT_PREFIX, TABLE_PREFIX, profile_image_path, Country, CustomImage, Link, media_upload_path
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -22,9 +22,9 @@ class User(AbstractUser):
     is_organization = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
     is_moderator = models.BooleanField(default=False)
-    culture = models.ManyToManyField(
-        "Culture",
-        through='UserCulture'
+    country = models.ManyToManyField(
+        "Country",
+        through='UserCountry'
     )
 
     listing_creator_bylines = models.ManyToManyField(
@@ -95,16 +95,16 @@ class UserLink(Link):
         db_table = TABLE_PREFIX + 'user_link'
 
 
-class UserCulture(models.Model):
+class UserCountry(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    culture = models.ForeignKey(Culture, on_delete=models.CASCADE)
+    country = models.ForeignKey(Country, on_delete=models.CASCADE)
     priority = models.IntegerField(default=0)
 
     class Meta:
-        db_table = TABLE_PREFIX + 'user_culture'
+        db_table = TABLE_PREFIX + 'user_country'
         ordering = ['-priority']
         constraints = [
-            models.UniqueConstraint(fields=['user', 'culture'], name='user_culture_link')
+            models.UniqueConstraint(fields=['user', 'country'], name='user_country_link')
         ]
 
 
