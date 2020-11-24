@@ -61,6 +61,7 @@ class Country(NameSlug):
 
     class Meta:
         db_table = TABLE_PREFIX + 'country'
+        verbose_name_plural = 'Countries'
         ordering = ['name']
 
 
@@ -68,6 +69,7 @@ class Identity(NameSlug):
 
     class Meta:
         db_table = TABLE_PREFIX + 'identity'
+        verbose_name_plural = 'Identities'
         ordering = ['name']
 
 

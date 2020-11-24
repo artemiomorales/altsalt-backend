@@ -22,8 +22,13 @@ class SingleInline(admin.TabularInline):
     pass
 
 
-class UserCultureInline(SingleInline):
+class UserCountryInline(SingleInline):
     model = UserCountry
+    pass
+
+
+class UserIdentityInline(SingleInline):
+    model = UserIdentity
     pass
 
 
@@ -140,7 +145,7 @@ class CustomUserAdmin(UserAdmin):
     inline_type = 'tabular'
     inline_reverse = ['user_profile_image, listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture', 'organization_member']
     inlines = [UserProfileImageInline, OrganizationMemberInline, ListingCreationBylineInlineForUser, ListingCollaboratorBylineInlineForUser,
-               UserCultureInline, UserLinkInline]
+               UserCountryInline, UserIdentityInline, UserLinkInline]
 
     def get_inline_instances(self, request, obj=None):
         return obj and super(CustomUserAdmin, self).get_inline_instances(request, obj) or []
@@ -181,8 +186,13 @@ class ListingLanguageInline(SingleInline):
     pass
 
 
-class ListingCultureRepresentedInline(SingleInline):
+class ListingCountryRepresentedInline(SingleInline):
     model = ListingCountryRepresented
+    pass
+
+
+class ListingIdentityRepresentedInline(SingleInline):
+    model = ListingIdentityRepresented
     pass
 
 
@@ -209,7 +219,8 @@ class ListingAdmin(ReverseModelAdmin):
                ListingDistributionTypeInline,
                ListingGenreInline,
                ListingLanguageInline,
-               ListingCultureRepresentedInline,
+               ListingCountryRepresentedInline,
+               ListingIdentityRepresentedInline,
                ListingTagInline
                ]
     pass
@@ -257,7 +268,12 @@ class LanguageAdmin(admin.ModelAdmin):
 
 
 @admin.register(Country)
-class CultureAdmin(admin.ModelAdmin):
+class CountryAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Identity)
+class IdentityAdmin(admin.ModelAdmin):
     pass
 
 
