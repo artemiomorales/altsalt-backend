@@ -1,4 +1,4 @@
-from .base import PROJECT_PREFIX, TABLE_PREFIX, profile_image_path, Country, CustomImage, Link, media_upload_path
+from .base import PROJECT_PREFIX, TABLE_PREFIX, profile_image_path, Country, Identity, CustomImage, Link, media_upload_path
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -25,6 +25,10 @@ class User(AbstractUser):
     country = models.ManyToManyField(
         "Country",
         through='UserCountry'
+    )
+    identity = models.ManyToManyField(
+        "Identity",
+        through='UserIdentity'
     )
 
     listing_creator_bylines = models.ManyToManyField(
@@ -105,6 +109,19 @@ class UserCountry(models.Model):
         ordering = ['-priority']
         constraints = [
             models.UniqueConstraint(fields=['user', 'country'], name='user_country_link')
+        ]
+
+
+class UserIdentity(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    identity = models.ForeignKey(Identity, on_delete=models.CASCADE)
+    priority = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'user_identity'
+        ordering = ['-priority']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'identity'], name='user_identity_link')
         ]
 
 

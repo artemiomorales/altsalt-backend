@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 
 import graphene
 from graphene_django.types import DjangoObjectType
-from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, LinkInput, \
+from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
     NameWithPriorityInput
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
@@ -157,6 +157,17 @@ class ListingCountryRepresentedType(DjangoObjectType):
         return Country.objects.get(id=self.country_id)
 
 
+class ListingIdentityRepresentedType(DjangoObjectType):
+    class Meta:
+        model = ListingIdentityRepresented
+        exclude = ('identity',)
+
+    item = graphene.Field(IdentityType)
+
+    def resolve_item(self, info):
+        return Identity.objects.get(id=self.identity_id)
+
+
 class ContentRatingType(DjangoObjectType):
     class Meta:
         model = ContentRating
@@ -186,6 +197,7 @@ class ListingType(DjangoObjectType):
     genre_set = graphene.List(ListingGenreType)
     language_set = graphene.List(ListingLanguageType)
     countries_represented = graphene.List(ListingCountryRepresentedType)
+    identities_represented = graphene.List(ListingIdentityRepresentedType)
     tag_set = graphene.List(ListingTagType)
     price = graphene.Field(PriceGrapheneType)
     content_rating = graphene.Field(ContentRatingType)
@@ -234,6 +246,9 @@ class ListingType(DjangoObjectType):
     def resolve_countries_represented(self, info):
         return ListingCountryRepresented.objects.filter(listing_id=self.id)
 
+    def resolve_identities_represented(self, info):
+        return ListingIdentityRepresented.objects.filter(listing_id=self.id)
+
     def resolve_tag_set(self, info):
         return ListingTag.objects.filter(listing_id=self.id)
 
@@ -259,6 +274,7 @@ class ListingQuery(graphene.ObjectType):
     all_content_ratings = graphene.List(ContentRatingType)
     all_languages = graphene.List(LanguageType)
     all_countries = graphene.List(CountryType)
+    all_identities = graphene.List(IdentityType)
     all_distribution_types = graphene.List(DistributionTypeGrapheneType)
     all_lengths = graphene.List(LengthType)
     all_formats = graphene.List(FormatType)
@@ -331,6 +347,9 @@ class ListingQuery(graphene.ObjectType):
 
     def resolve_all_countries(self, info, **kwargs):
         return Country.objects.all()
+
+    def resolve_all_identities(self, info, **kwargs):
+        return Identity.objects.all()
 
     def resolve_all_tags(self, info, **kwargs):
         return Tag.objects.all()
@@ -437,6 +456,7 @@ class UpdateListing(graphene.Mutation):
         distribution = graphene.List(graphene.String)
         genre = graphene.List(NameWithPriorityInput)
         countries_represented = graphene.List(NameWithPriorityInput)
+        identities_represented = graphene.List(NameWithPriorityInput)
         tag = graphene.List(NameWithPriorityInput)
         price = PriceInput()
 
@@ -465,6 +485,7 @@ class UpdateListing(graphene.Mutation):
         distribution = kwargs.get('distribution')
         genre = kwargs.get('genre')
         countries_represented = kwargs.get('countries_represented')
+        identities_represented = kwargs.get('identities_represented')
         tag = kwargs.get('tag')
         price = kwargs.get('price')
 
@@ -743,7 +764,7 @@ class UpdateListing(graphene.Mutation):
                                                priority=item.priority)
                 new_item_record.save()
 
-        # Culture Represented #
+        # Countries Represented #
 
         existing_countries_represented = ListingCountryRepresented.objects.filter(listing=target_listing)
         existing_countries_represented.delete()
@@ -752,11 +773,27 @@ class UpdateListing(graphene.Mutation):
             for item in countries_represented:
                 item_slug = slugify(item.name)
                 if Country.objects.filter(slug=item_slug).exists() is False:
-                    new_country = Country(name=item.name, slug=item.slug)
+                    new_country = Country(name=item.name, slug=item_slug)
                     new_country.save()
 
                 item_object = Country.objects.get(slug=item_slug)
                 new_item_record = ListingCountryRepresented(listing=target_listing, country=item_object, priority=item.priority)
+                new_item_record.save()
+
+        # Identities Represented #
+
+        existing_identities_represented = ListingIdentityRepresented.objects.filter(listing=target_listing)
+        existing_identities_represented.delete()
+
+        if identities_represented is not None:
+            for item in identities_represented:
+                item_slug = slugify(item.name)
+                if Identity.objects.filter(slug=item_slug).exists() is False:
+                    new_identity = Identity(name=item.name, slug=item_slug)
+                    new_identity.save()
+
+                item_object = Identity.objects.get(slug=item_slug)
+                new_item_record = ListingIdentityRepresented(listing=target_listing, identity=item_object, priority=item.priority)
                 new_item_record.save()
 
         # Tag #

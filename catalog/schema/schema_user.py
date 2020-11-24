@@ -8,7 +8,7 @@ import re
 import graphene
 from graphene_django.types import DjangoObjectType
 from graphql_jwt.decorators import login_required
-from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, LinkInput, \
+from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
     NameWithPriorityInput
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 from .schema_cms import ArticleBylineType
@@ -70,6 +70,17 @@ class UserCountryType(DjangoObjectType):
         return Country.objects.get(id=self.country_id)
 
 
+class UserIdentityType(DjangoObjectType):
+    class Meta:
+        model = UserIdentity
+        exclude = ('identity',)
+
+    item = graphene.Field(IdentityType)
+
+    def resolve_item(self, info):
+        return Identity.objects.get(id=self.identity_id)
+
+
 class UserLinkType(DjangoObjectType):
     class Meta:
         model = UserLink
@@ -101,6 +112,7 @@ class UserType(DjangoObjectType):
     collaborations = graphene.List(ListingCollaboratorBylineType)
     articles = graphene.List(ArticleBylineType)
     countries = graphene.List(UserCountryType)
+    identities = graphene.List(UserIdentityType)
     age = graphene.Int()
     links = graphene.List(UserLinkType)
     date_joined = graphene.String()
@@ -134,6 +146,9 @@ class UserType(DjangoObjectType):
 
     def resolve_countries(self, info):
         return UserCountry.objects.filter(user_id=self.id)
+
+    def resolve_identities(self, info):
+        return UserIdentity.objects.filter(user_id=self.id)
 
     def resolve_profile_image(self, info):
         if UserProfileImage.objects.filter(user_id=self.id).exists() is True:
@@ -235,6 +250,7 @@ class UpdateUser(graphene.Mutation):
         pronouns = graphene.String()
         location = graphene.String()
         countries = graphene.List(NameWithPriorityInput)
+        identities = graphene.List(NameWithPriorityInput)
         creator_bylines = graphene.List(UserBylineInput)
         collaborator_bylines = graphene.List(UserBylineInput)
 
@@ -263,6 +279,7 @@ class UpdateUser(graphene.Mutation):
         pronouns = kwargs.get('pronouns')
         location = kwargs.get('location')
         countries = kwargs.get('countries')
+        identities = kwargs.get('identities')
         creator_bylines = kwargs.get('creator_bylines')
         collaborator_bylines = kwargs.get('collaborator_bylines')
 
@@ -311,19 +328,33 @@ class UpdateUser(graphene.Mutation):
         if location is not None:
             target_user.location = location
 
-        existing_background = UserCountry.objects.filter(user=target_user)
-        existing_background.delete()
+        existing_countries = UserCountry.objects.filter(user=target_user)
+        existing_countries.delete()
 
         if countries is not None:
             for country in countries:
                 item_slug = slugify(country.name)
                 if Country.objects.filter(slug=item_slug).exists() is False:
-                    new_country = Country(name=country.name, slug=country.slug)
+                    new_country = Country(name=country.name, slug=item_slug)
                     new_country.save()
 
                 item_object = Country.objects.get(slug=item_slug)
                 user_country = UserCountry(user=target_user, country=item_object, priority=country.priority)
                 user_country.save()
+
+        existing_identities = UserIdentity.objects.filter(user=target_user)
+        existing_identities.delete()
+
+        if identities is not None:
+            for identity in identities:
+                item_slug = slugify(identity.name)
+                if Identity.objects.filter(slug=item_slug).exists() is False:
+                    new_identity = Identity(name=identity.name, slug=item_slug)
+                    new_identity.save()
+
+                item_object = Identity.objects.get(slug=item_slug)
+                user_identity = UserIdentity(user=target_user, identity=item_object, priority=identity.priority)
+                user_identity.save()
 
         if creator_bylines is not None:
             for creator_byline in creator_bylines:

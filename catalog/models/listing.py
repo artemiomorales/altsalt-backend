@@ -1,6 +1,7 @@
 import os
 from .base import \
-    TABLE_PREFIX, listing_cover_image_path, listing_preview_image_path, NameSlug, CustomImageAlttext, Link, Country
+    TABLE_PREFIX, listing_cover_image_path, listing_preview_image_path,\
+    NameSlug, CustomImageAlttext, Link, Country, Identity
 from .user import User
 
 from django.db import models
@@ -43,6 +44,10 @@ class Listing(models.Model):
     country_represented = models.ManyToManyField(
         "Country",
         through='ListingCountryRepresented'
+    )
+    identity_represented = models.ManyToManyField(
+        "Identity",
+        through='ListingIdentityRepresented'
     )
     tag = models.ManyToManyField(
         "Tag",
@@ -206,6 +211,19 @@ class ListingCountryRepresented(models.Model):
         ordering = ['-priority']
         constraints = [
             models.UniqueConstraint(fields=['listing', 'country'], name='listing_country_link')
+        ]
+
+
+class ListingIdentityRepresented(models.Model):
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    identity = models.ForeignKey(Identity, on_delete=models.CASCADE)
+    priority = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'listing_identity_represented'
+        ordering = ['-priority']
+        constraints = [
+            models.UniqueConstraint(fields=['listing', 'identity'], name='listing_identity_link')
         ]
 
 

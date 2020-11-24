@@ -64,6 +64,13 @@ class Country(NameSlug):
         ordering = ['name']
 
 
+class Identity(NameSlug):
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'identity'
+        ordering = ['name']
+
+
 class CustomImage(models.Model):
     _loaded_values = None
     loop_executed = False

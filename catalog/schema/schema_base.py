@@ -1,5 +1,5 @@
 import graphene
-from catalog.models.base import Country, Continent
+from catalog.models.base import Country, Identity
 from graphene_django.types import DjangoObjectType
 from django.conf import settings
 from django.middleware.csrf import _sanitize_token, _compare_salted_tokens
@@ -109,6 +109,11 @@ def save_image_data(model_instance, image_data, image_name):
 class CountryType(DjangoObjectType):
     class Meta:
         model = Country
+
+
+class IdentityType(DjangoObjectType):
+    class Meta:
+        model = Identity
 
 
 class NameWithPriorityInput(graphene.InputObjectType):
