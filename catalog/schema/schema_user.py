@@ -335,7 +335,7 @@ class UpdateUser(graphene.Mutation):
             for country in countries:
                 item_slug = slugify(country.name)
                 if Country.objects.filter(slug=item_slug).exists() is False:
-                    new_country = Country(name=country.name, slug=item_slug)
+                    new_country = Country(name=country.name.capitalize(), slug=item_slug)
                     new_country.save()
 
                 item_object = Country.objects.get(slug=item_slug)
@@ -349,7 +349,7 @@ class UpdateUser(graphene.Mutation):
             for identity in identities:
                 item_slug = slugify(identity.name)
                 if Identity.objects.filter(slug=item_slug).exists() is False:
-                    new_identity = Identity(name=identity.name, slug=item_slug)
+                    new_identity = Identity(name=identity.name.capitalize(), slug=item_slug)
                     new_identity.save()
 
                 item_object = Identity.objects.get(slug=item_slug)
