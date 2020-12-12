@@ -9,7 +9,7 @@ import graphene
 from graphene_django.types import DjangoObjectType
 from graphql_jwt.decorators import login_required
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
-    NameWithPriorityInput
+    NameWithPriorityInput, UserInput, send_membership_email
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 from .schema_cms import ArticleBylineType
 from django.contrib.auth.hashers import make_password, check_password
@@ -199,6 +199,12 @@ class LogIn(graphql_jwt.ObtainJSONWebToken):
 # UPDATE USER #
 ###############
 
+class UserMembershipInput(graphene.InputObjectType):
+    organization_username = graphene.String(required=True)
+    priority = graphene.Int(required=True)
+    delete = graphene.Boolean(required=True)
+
+
 class UserBylineInput(graphene.InputObjectType):
     id = graphene.String(required=True)
     priority = graphene.Int(required=True)
@@ -253,6 +259,10 @@ class UpdateUser(graphene.Mutation):
         identities = graphene.List(NameWithPriorityInput)
         creator_bylines = graphene.List(UserBylineInput)
         collaborator_bylines = graphene.List(UserBylineInput)
+        organizations = graphene.List(UserMembershipInput)
+        is_organization = graphene.Boolean()
+        admins = graphene.List(UserInput)
+        members = graphene.List(UserInput)
 
     @classmethod
     @check_csrf
@@ -282,6 +292,10 @@ class UpdateUser(graphene.Mutation):
         identities = kwargs.get('identities')
         creator_bylines = kwargs.get('creator_bylines')
         collaborator_bylines = kwargs.get('collaborator_bylines')
+        organizations = kwargs.get('organizations')
+        is_organization = kwargs.get('is_organization')
+        admins = kwargs.get('admins')
+        members = kwargs.get('members')
 
         if profile_image_name != '' and profile_image is not None:
 
@@ -383,6 +397,81 @@ class UpdateUser(graphene.Mutation):
                             byline.user_priority = collaborator_byline.priority
                             byline.save()
 
+        if organizations is not None:
+            for organization in organizations:
+                if get_user_model().objects.filter(username=organization.organization_username).exists() is True:
+                    organization_item = get_user_model().objects.get(username=organization.organization_username)
+                    if OrganizationMember.objects.filter(organization=organization_item, member=target_user).exists() is True:
+                        role = OrganizationMember.objects.get(organization=organization_item, member=target_user)
+
+                        if organization.delete is True:
+                            role.delete()
+                        else:
+                            role.user_priority = organization.priority
+                            role.save()
+
+        if is_organization is not None:
+            target_user.is_organization = is_organization
+
+
+        if admins is not None:
+
+            existing_admin_roles = OrganizationMember.objects.filter(organization=target_user, is_admin=True)
+            for existing_admin_role in existing_admin_roles:
+                delete_existing_byline = True
+                for admin in admins:
+                    if get_user_model().objects.filter(username=admin.username).exists() and \
+                       existing_admin_role.member.username == admin.username:
+                        delete_existing_byline = False
+                if delete_existing_byline:
+                    existing_admin_role.delete()
+
+            for admin in admins:
+                if get_user_model().objects.filter(username=admin.username).exists():
+                    stored_user = get_user_model().objects.get(username=admin.username)
+                    if OrganizationMember.objects.filter(organization=target_user, member=stored_user).exists():
+                        membership = OrganizationMember.objects.get(organization=target_user, member=stored_user)
+                        membership.organization_priority = admin.priority
+                        membership.is_admin = True
+                    else:
+                        membership = OrganizationMember(organization=target_user, member=stored_user,
+                                                              organization_priority=admin.priority, is_admin=True)
+                        send_membership_email(target_user.display_name, 'admin', stored_user.email)
+                    membership.save()
+                else:
+                    raise GraphQLError(
+                        'Specified user {0} does not exist. Please remove and try again'.format(admin.username))
+
+
+        if members is not None:
+
+            existing_member_roles = OrganizationMember.objects.filter(organization=target_user, is_admin=False)
+            for existing_member_role in existing_member_roles:
+                delete_existing_byline = True
+                for member in members:
+                    if get_user_model().objects.filter(username=member.username).exists() and \
+                            existing_member_role.member.username == member.username:
+                        delete_existing_byline = False
+                if delete_existing_byline:
+                    existing_member_role.delete()
+
+            for member in members:
+                if get_user_model().objects.filter(username=member.username).exists():
+                    stored_user = get_user_model().objects.get(username=member.username)
+                    if OrganizationMember.objects.filter(organization=target_user, member=stored_user).exists():
+                        membership = OrganizationMember.objects.get(organization=target_user, member=stored_user)
+                        membership.organization_priority = member.priority
+                        membership.is_admin = False
+                    else:
+                        membership = OrganizationMember(organization=target_user, member=stored_user,
+                                                        organization_priority=member.priority, is_admin=False)
+                        send_membership_email(target_user.display_name, 'member', stored_user.email)
+                    membership.save()
+                else:
+                    raise GraphQLError(
+                        'Specified user {0} does not exist. Please remove and try again'.format(member.username))
+
+
         target_user.save()
 
         return UpdateUser(user=target_user)
@@ -428,6 +517,43 @@ class ConfirmByline(graphene.Mutation):
         else:
             target_byline.delete()
             return ConfirmByline(user=info.context.user, confirmed=False)
+
+
+######################
+# CONFIRM MEMBERSHIP #
+######################
+
+class ConfirmMembership(graphene.Mutation):
+    user = graphene.Field(UserType)
+    confirmed = graphene.Boolean()
+
+    class Arguments:
+        organization_username = graphene.String(required=True)
+        target_status = graphene.Boolean(required=True)
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, organization_username, target_status):
+
+        if get_user_model().objects.filter(username=organization_username).exists() is False:
+            raise GraphQLError("Target listing does not exist! Please refresh or try again later.")
+
+        logging.error(info.context.user)
+        organization = get_user_model().objects.get(username=organization_username)
+
+        if OrganizationMember.objects.filter(organization=organization, member=info.context.user).exists():
+            target_membership = OrganizationMember.objects.get(organization=organization, member=info.context.user)
+        else:
+            raise GraphQLError("Unable to update membership! Please refresh or try again later.")
+
+        if target_status:
+            target_membership.is_confirmed = True
+            target_membership.save()
+            return ConfirmMembership(user=info.context.user, confirmed=True)
+        else:
+            target_membership.delete()
+            return ConfirmMembership(user=info.context.user, confirmed=False)
 
 
 ####################
@@ -782,6 +908,7 @@ class UserMutation(graphene.ObjectType):
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
     confirm_byline = ConfirmByline.Field()
+    confirm_membership = ConfirmMembership.Field()
     log_in = LogIn.Field()
     verify_token = CustomVerifyToken.Field()
     refresh_token = CustomRefreshToken.Field()

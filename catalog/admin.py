@@ -85,9 +85,19 @@ class ListingCollaboratorBylineInlineForUser(SingleInline):
     pass
 
 
-class OrganizationMemberInline(SingleInline):
+class RoleInline(SingleInline):
+    model = OrganizationMember
+    fk_name = "member"
+    verbose_name = "Role"
+    verbose_name_plural = "Roles"
+    pass
+
+
+class MemberInline(SingleInline):
     model = OrganizationMember
     fk_name = "organization"
+    verbose_name = "Member"
+    verbose_name_plural = "Members"
     pass
 
 #
@@ -144,7 +154,7 @@ class CustomUserAdmin(UserAdmin):
 
     inline_type = 'tabular'
     inline_reverse = ['user_profile_image, listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture', 'organization_member']
-    inlines = [UserProfileImageInline, OrganizationMemberInline, ListingCreationBylineInlineForUser, ListingCollaboratorBylineInlineForUser,
+    inlines = [UserProfileImageInline, RoleInline, MemberInline, ListingCreationBylineInlineForUser, ListingCollaboratorBylineInlineForUser,
                UserCountryInline, UserIdentityInline, UserLinkInline]
 
     def get_inline_instances(self, request, obj=None):

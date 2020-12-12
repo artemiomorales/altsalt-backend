@@ -129,6 +129,7 @@ class OrganizationMember(models.Model):
     organization = models.ForeignKey(User, on_delete=models.CASCADE, related_name='organization')
     member = models.ForeignKey(User, on_delete=models.CASCADE, related_name='member')
     is_admin = models.BooleanField(default=False)
+    is_confirmed = models.BooleanField(default=False)
     organization_priority = models.IntegerField(default=0)
     member_priority = models.IntegerField(default=0)
 

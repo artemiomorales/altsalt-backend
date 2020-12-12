@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 import graphene
 from graphene_django.types import DjangoObjectType
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
-    NameWithPriorityInput
+    NameWithPriorityInput, UserInput, send_byline_email
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
 
@@ -13,10 +13,6 @@ import datetime
 import logging
 from django.conf import settings
 
-# Email
-
-import sendgrid
-from sendgrid.helpers.mail import *
 
 from catalog.constants import get_date_from_string
 
@@ -397,40 +393,10 @@ class CreateListing(graphene.Mutation):
         return CreateListing(listing=new_listing)
 
 
-class BylineInput(graphene.InputObjectType):
-    username = graphene.String(required=True)
-    priority = graphene.Int(required=True)
-
-
 class PriceInput(graphene.InputObjectType):
     price_type = graphene.String(required=True)
     amount = graphene.Float()
     details = graphene.String()
-
-
-def send_byline_email(inviter_name, listing_title, invitee_email, invite_type):
-
-    subject = "{0} added you as a {1} on {2}".format(inviter_name, invite_type, listing_title)
-    title = "Confirm a New Byline"
-    message = ("You've been added as a {0} on {1} by {2}. "
-                   "Before this publication displays on your profile, you must confirm it. "
-                   "Please log in to your account to complete this request. If this was made "
-                   "in error, you can also delete the request from within your account.").format(invite_type, listing_title, inviter_name)
-
-    sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
-    from_email = Email("info@altsalt.com")
-    to_email = To(invitee_email)
-
-    log_in_url = '{0}/user/login'.format(os.environ.get('BASE_URL'))
-    mail = Mail(from_email, to_email, subject)
-    mail.dynamic_template_data = {
-        'subject': subject,
-        'title': title,
-        'message': message,
-        'log_in_url': log_in_url
-    }
-    mail.template_id = 'd-8937eb33fafb473d9603ef921ba8d184'
-    response = sg.client.mail.send.post(request_body=mail.get())
 
 
 class UpdateListing(graphene.Mutation):
@@ -447,8 +413,8 @@ class UpdateListing(graphene.Mutation):
         availability = graphene.List(LinkInput)
         additional_links = graphene.List(LinkInput)
         publication_date = graphene.String()
-        creators = graphene.List(BylineInput)
-        collaborators = graphene.List(BylineInput)
+        creators = graphene.List(UserInput)
+        collaborators = graphene.List(UserInput)
         content_rating = graphene.String()
         length = graphene.String()
         language = graphene.List(NameWithPriorityInput)
@@ -658,7 +624,8 @@ class UpdateListing(graphene.Mutation):
                     else:
                         collaborator_byline = ListingCollaboratorByline(user=stored_user, listing=target_listing,
                                                               listing_priority=collaborator.priority, requester=info.context.user)
-                        send_byline_email(info.context.user.display_name, target_listing.title, stored_user.email, 'collaborator')
+                        send_byline_email(info.context.user.display_name, target_listing.title, stored_user.email,
+                                                'collaborator')
                     collaborator_byline.save()
                 else:
                     raise GraphQLError('Specified user {0} does not exist. Please remove and try again'.format(collaborator.username))
