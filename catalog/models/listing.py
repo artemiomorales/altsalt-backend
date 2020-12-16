@@ -1,13 +1,15 @@
 import os
 from .base import \
     TABLE_PREFIX, listing_cover_image_path, listing_preview_image_path,\
-    NameSlug, CustomImageAlttext, Link, Country, Identity
+    listing_upload_path, NameSlug, CustomImageAlttext, Link, Country, Identity, \
+    CustomSaveMixin
 from .user import User
 
 from django.db import models
 from django.template.defaultfilters import slugify
-from catalog.backends import ThumbnailImageStorage
+from catalog.backends import CatalogImageStorage, ThumbnailImageStorage
 from django.utils import timezone
+from catalog.constants import DEFAULT_FILE_UPLOAD_NAME
 
 import datetime
 
@@ -68,6 +70,22 @@ class Listing(models.Model):
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing'
+
+
+class ListingUpload(CustomSaveMixin):
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    file = models.FileField(storage=CatalogImageStorage(), upload_to=listing_upload_path, null=True, blank=True)
+    allow_downloads = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        super(ListingUpload, self).save(*args, **kwargs)
+
+        if not self._state.adding and self._loaded_values is not None and \
+            getattr(self, DEFAULT_FILE_UPLOAD_NAME) != self._loaded_values[DEFAULT_FILE_UPLOAD_NAME]:
+                storage = CatalogImageStorage()
+                old_filename = self._loaded_values[DEFAULT_FILE_UPLOAD_NAME]
+                if old_filename is not None and old_filename != '':
+                    storage.delete(old_filename)
 
 
 class ListingLink(Link):

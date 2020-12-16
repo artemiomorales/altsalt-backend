@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 import graphene
 from graphene_django.types import DjangoObjectType
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
-    NameWithPriorityInput, UserInput, send_byline_email
+    NameWithPriorityInput, UserInput, send_byline_email, save_pdf_data
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
 
@@ -14,7 +14,19 @@ import logging
 from django.conf import settings
 
 
-from catalog.constants import get_date_from_string
+from catalog.constants import get_date_from_string, DEFAULT_FILE_UPLOAD_NAME
+
+
+class ListingUploadType(DjangoObjectType):
+    file = graphene.String()
+
+    def resolve_file(self, info):
+        if self.file.name:
+            return self.file.url
+        return None
+
+    class Meta:
+        model = ListingUpload
 
 
 class ListingCoverImageType(DjangoObjectType, BaseImageTypeMixin):
@@ -186,6 +198,7 @@ class ListingType(DjangoObjectType):
     preview_images = graphene.List(ListingPreviewImageType)
     creator_bylines = graphene.List(ListingCreatorBylineType)
     collaborator_bylines = graphene.List(ListingCollaboratorBylineType)
+    upload = graphene.Field(ListingUploadType)
     availability = graphene.List(ListingAvailabilityLinkType)
     additional_links = graphene.List(ListingAdditionalLinkType)
     format_set = graphene.List(ListingFormatType)
@@ -221,6 +234,12 @@ class ListingType(DjangoObjectType):
     def resolve_collaborator_bylines(self, info):
         return ListingCollaboratorByline.objects.filter(listing_id=self.id)
 
+    def resolve_upload(self, info):
+        if ListingUpload.objects.filter(listing_id=self.id).exists():
+            return ListingUpload.objects.get(listing_id=self.id)
+        else:
+            return None
+
     def resolve_availability(self, info):
         return ListingAvailabilityLink.objects.filter(listing_id=self.id)
 
@@ -249,7 +268,6 @@ class ListingType(DjangoObjectType):
         return ListingTag.objects.filter(listing_id=self.id)
 
     def resolve_date_added(self, info):
-        logging.error(self.date_added)
         return self.date_added.strftime("%m/%d/%y")
 
 
@@ -351,6 +369,13 @@ class ListingQuery(graphene.ObjectType):
         return Tag.objects.all()
 
 
+class UploadInput(graphene.InputObjectType):
+    name = graphene.String(required=True)
+    data = graphene.String(required=True)
+    delete = graphene.Boolean()
+    allow_downloads = graphene.Boolean()
+
+
 class ImageInput(graphene.InputObjectType):
     name = graphene.String(required=True)
     data = graphene.String(required=True)
@@ -375,8 +400,6 @@ class CreateListing(graphene.Mutation):
     @check_csrf
     @login_required
     def mutate(cls, self, info, title, cover_image):
-
-        logging.error(settings.DATA_UPLOAD_MAX_MEMORY_SIZE)
 
         new_listing = Listing(title=title, date_added=datetime.date.today())
         new_listing.save()
@@ -410,6 +433,7 @@ class UpdateListing(graphene.Mutation):
         is_published = graphene.Boolean()
         cover_image = ImageInput()
         preview_images = graphene.List(PreviewImageInput)
+        upload = UploadInput()
         availability = graphene.List(LinkInput)
         additional_links = graphene.List(LinkInput)
         publication_date = graphene.String()
@@ -439,6 +463,7 @@ class UpdateListing(graphene.Mutation):
         cover_image = kwargs.get('cover_image')
         description = kwargs.get('description')
         preview_images = kwargs.get('preview_images')
+        upload = kwargs.get('upload')
         availability = kwargs.get('availability')
         additional_links = kwargs.get('additional_links')
         publication_date = kwargs.get('publication_date')
@@ -529,6 +554,32 @@ class UpdateListing(graphene.Mutation):
                     current_preview.alttext = preview_image.alttext
                     current_preview.caption = preview_image.caption
                     current_preview.save(skip_callback=True)
+
+        # Upload #
+
+        if upload is not None:
+
+            if upload.delete is True:
+
+                if ListingUpload.objects.filter(listing=target_listing).exists() is True:
+                    current_upload = ListingUpload.objects.get(listing=target_listing)
+                    current_upload.delete()
+
+            else:
+
+                if ListingUpload.objects.filter(listing=target_listing).exists() is True:
+                    current_upload = ListingUpload.objects.get(listing=target_listing)
+
+                else:
+                    current_upload = ListingUpload(listing=target_listing, allow_downloads=False)
+                    current_upload.save()
+
+                current_upload.allow_downloads = upload.allow_downloads
+                current_upload.save()
+
+                if upload.data != '' and upload.name != '':
+                    save_pdf_data(current_upload, DEFAULT_FILE_UPLOAD_NAME, upload.data, upload.name)
+
 
         # Availability #
 

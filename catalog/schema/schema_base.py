@@ -8,18 +8,17 @@ from graphql import GraphQLError
 import os
 import base64
 import PIL.Image as ImageUtils
+from django.core.files.base import ContentFile
 from django.core.files.uploadhandler import InMemoryUploadedFile
 from io import BytesIO
 
 
-from catalog.backends import CatalogImageStorage
-from django.template.defaultfilters import slugify
-from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, get_image_buffer
-from django.db import models
+from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, get_image_buffer
 
 
 # Email
 
+import logging
 import sendgrid
 from sendgrid.helpers.mail import *
 
@@ -90,11 +89,33 @@ def check_csrf(f):
     return wrapper
 
 
+def save_pdf_data(model_instance, model_attribute, file_data, file_name):
+    prefix, filestr = file_data.split(';base64,')
+    mime_type = prefix.split('/')[-1]
+
+    logging.error(mime_type)
+
+    if 'pdf' not in mime_type:
+        raise TypeError('File must be in PDF format')
+
+    filename, extension = os.path.splitext(file_name)
+
+    file_buffer = base64.b64decode(filestr + "===")
+    file_instance = ContentFile(file_buffer)
+    upload_data = InMemoryUploadedFile(file_instance, None, file_name, 'application/pdf', len(file_instance), None,
+                                       mime_type)
+    getattr(model_instance, model_attribute).save(
+        name="{0}{1}".format(filename, extension),
+        content=upload_data,
+        save=False)
+    model_instance.save()
+
+
 def save_image_data(model_instance, image_data, image_name):
     prefix, imgstr = image_data.split(';base64,')
     mime_type = prefix.split('/')[-1]
 
-    if 'jpeg' not in mime_type is False and 'png' not in mime_type:
+    if 'jpeg' not in mime_type and 'png' not in mime_type:
         raise TypeError('Images must be in JPEG or PNG format')
 
     filename, extension = os.path.splitext(image_name)

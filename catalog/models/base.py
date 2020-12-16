@@ -73,9 +73,8 @@ class Identity(NameSlug):
         ordering = ['name']
 
 
-class CustomImage(models.Model):
+class CustomSaveMixin(models.Model):
     _loaded_values = None
-    loop_executed = False
 
     @classmethod
     def from_db(cls, db, field_names, values):
@@ -91,6 +90,13 @@ class CustomImage(models.Model):
         # customization to store the original field values on the instance
         new._loaded_values = dict(zip(field_names, values))
         return new
+
+    class Meta:
+        abstract = True
+
+
+class CustomImage(CustomSaveMixin):
+    loop_executed = False
 
     def save(self, skip_callback=False, *args, **kwargs):
 
@@ -188,7 +194,7 @@ def profile_image_path(instance, filename):
     return save_string
 
 
-def content_image_path(content_type, content_id, media_label, media_id, filename):
+def content_path(content_type, content_id, media_label, media_id, filename):
     date = datetime.datetime.now()
     filename, file_extension = os.path.splitext(filename)
 
@@ -202,15 +208,20 @@ def content_image_path(content_type, content_id, media_label, media_id, filename
 
 
 def listing_cover_image_path(instance, filename):
-    return content_image_path('listing', instance.listing.id, 'cover', instance.id, filename)
+    return content_path('listing', instance.listing.id, 'cover', instance.id, filename)
 
 
 def listing_preview_image_path(instance, filename):
-    return content_image_path('listing', instance.listing.id, 'preview', instance.id, filename)
+    return content_path('listing', instance.listing.id, 'preview', instance.id, filename)
+
+
+def listing_upload_path(instance, filename):
+    listing_path = catalog_media_path('listing', instance.listing.id)
+    return "{0}/upload-{1}/{2}".format(listing_path, instance.id, filename)
 
 
 def article_cover_image_path(instance, filename):
-    return content_image_path('article', instance.id, 'cover', instance.id, filename)
+    return content_path('article', instance.id, 'cover', instance.id, filename)
 
 
 def media_upload_path(instance, filename):

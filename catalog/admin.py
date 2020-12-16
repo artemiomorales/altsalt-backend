@@ -211,9 +211,15 @@ class ListingTagInline(SingleInline):
     pass
 
 
+class ListingUploadInline(SingleInline):
+    model = ListingUpload
+    pass
+
+
 @admin.register(UserProfileImage)
 class UserProfileImageAdmin(admin.ModelAdmin):
     pass
+
 
 @admin.register(Listing)
 class ListingAdmin(ReverseModelAdmin):
@@ -223,6 +229,7 @@ class ListingAdmin(ReverseModelAdmin):
                ListingPreviewImageInline,
                ListingCreationBylineInlineForListing,
                ListingCollaboratorBylineInlineForListing,
+               ListingUploadInline,
                ListingAvailabilityLinkInline,
                ListingAdditionalLinkInline,
                ListingFormatInline,

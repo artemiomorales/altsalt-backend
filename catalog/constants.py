@@ -3,6 +3,7 @@ from django.core.files.base import ContentFile
 from datetime import datetime
 
 DEFAULT_IMAGE_SIZE_NAME = 'original'
+DEFAULT_FILE_UPLOAD_NAME = 'file'
 
 DEFAULT_THUMBNAIL_SIZES = [
     {'attribute': 'large', 'suffix': '-1x'},

@@ -8,3 +8,4 @@ class CatalogConfig(AppConfig):
     def ready(self):
 
         from catalog.signals import on_image_delete
+        from catalog.signals import on_file_delete

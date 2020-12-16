@@ -1,7 +1,7 @@
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
-from catalog.models import ListingCoverImage, ListingPreviewImage
-from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, RESPONSIVE_SIZES
+from catalog.models import ListingCoverImage, ListingPreviewImage, ListingUpload
+from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, RESPONSIVE_SIZES, DEFAULT_FILE_UPLOAD_NAME
 from catalog.backends import CatalogImageStorage
 
 
@@ -28,3 +28,17 @@ def on_image_delete(sender, **kwargs):
             for responsive_size in RESPONSIVE_SIZES:
                 responsive_name = thumbnail_name.replace('-1x', "-{0}x".format(responsive_size))
                 storage.delete(responsive_name)
+
+
+@receiver(pre_delete, sender=ListingUpload)
+def on_file_delete(sender, **kwargs):
+
+    instance = kwargs.get('instance')
+
+    storage = CatalogImageStorage()
+
+    default_attribute = getattr(instance, DEFAULT_FILE_UPLOAD_NAME)
+    default_name = default_attribute.name
+
+    if default_name is not None and default_name != '':
+        storage.delete(default_name)
