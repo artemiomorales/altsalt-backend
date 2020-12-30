@@ -161,12 +161,11 @@ def send_membership_email(organization_name, invite_type, invitee_email):
     subject = "Confirm membership to {0}".format(organization_name)
     title = "Confirm Membership"
     message = ("You've been added to {0} as a(n) {1}. "
-                   "Before this change displays on your profile, you must confirm it. "
-                   "Please log in to your account to complete this request. If this was made "
-                   "in error, you can also delete the request from within your account.").format(organization_name, invite_type)
+                   "To display this membership on you profile, log into your account to complete the request. "
+                   "You can also delete the request from within your account.").format(organization_name, invite_type)
 
     sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
-    from_email = Email("info@altsalt.com")
+    from_email = Email(email="info@altsalt.com", name="AltSalt")
     to_email = To(invitee_email)
 
     log_in_url = '{0}/user/login'.format(os.environ.get('BASE_URL'))
@@ -175,7 +174,8 @@ def send_membership_email(organization_name, invite_type, invitee_email):
         'subject': subject,
         'title': title,
         'message': message,
-        'log_in_url': log_in_url
+        'log_in_url': log_in_url,
+        "name": "AltSalt",
     }
     mail.template_id = 'd-8937eb33fafb473d9603ef921ba8d184'
     response = sg.client.mail.send.post(request_body=mail.get())
@@ -186,12 +186,11 @@ def send_byline_email(inviter_name, listing_title, invitee_email, invite_type):
     subject = "Confirm byline on {0}".format(listing_title)
     title = "Confirm a New Byline"
     message = ("You've been added as a {0} on {1} by {2}. "
-                   "Before this change displays on your profile, you must confirm it. "
-                   "Please log in to your account to complete this request. If this was made "
-                   "in error, you can also delete the request from within your account.").format(invite_type, listing_title, inviter_name)
+                   "To display this byline on your profile, log into your account to complete the request. "
+                   "You can also delete the request from within your account.").format(invite_type, listing_title, inviter_name)
 
     sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
-    from_email = Email("info@altsalt.com")
+    from_email = Email(email="info@altsalt.com", name="AltSalt")
     to_email = To(invitee_email)
 
     log_in_url = '{0}/user/login'.format(os.environ.get('BASE_URL'))
@@ -200,7 +199,8 @@ def send_byline_email(inviter_name, listing_title, invitee_email, invite_type):
         'subject': subject,
         'title': title,
         'message': message,
-        'log_in_url': log_in_url
+        'log_in_url': log_in_url,
+        "name": "AltSalt",
     }
     mail.template_id = 'd-8937eb33fafb473d9603ef921ba8d184'
     response = sg.client.mail.send.post(request_body=mail.get())

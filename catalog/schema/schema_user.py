@@ -622,7 +622,7 @@ class SendInvitation(graphene.Mutation):
         invite_token = GenerateRandomString()
 
         sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
-        from_email = Email("info@altsalt.com")
+        from_email = Email(email="info@altsalt.com", name="AltSalt")
         to_email = To(invite_email)
 
         sign_up_url = '{0}/user/signup'.format(os.environ.get('BASE_URL'));
@@ -780,7 +780,7 @@ class CreateResetPasswordRequest(graphene.Mutation):
 
             sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
 
-            from_email = Email("info@altsalt.com")
+            from_email = Email(email="info@altsalt.com", name="AltSalt")
             to_email = To(email)
             subject = "Reset your AltSalt password"
             mail = Mail(from_email, to_email, subject)
