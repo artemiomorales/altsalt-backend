@@ -127,27 +127,29 @@ class CustomImage(CustomSaveMixin):
                                 old_responsive_name = old_thumbnail_name.replace('-1x', "-{0}x".format(responsive_size))
                                 storage.delete(old_responsive_name)
 
+                # GENERATING THUMBNAILS IS CURRENTLY DISABLED - THIS IS HANDLED BY THE FRONT END
+                #
                 # Get a reference to the new image to generate thumbnails
-                new_default_image_attribute = getattr(self, DEFAULT_IMAGE_SIZE_NAME)
-
-                default_image_data = ImageUtils.open(new_default_image_attribute)
-                mime_type = default_image_data.format
-                directory, filepath = os.path.split(new_default_image_attribute.name)
-                filename, extension = os.path.splitext(filepath)
-                original_filename = filename.split('-original')[0]
-
-                # Create new thumbnails
-                # Set up another thread to take care of generating thumbnails
-                if skip_callback is False:
-                    thread_args = [
-                        type(self).__name__,
-                        self.id,
-                        mime_type,
-                        original_filename,
-                        ".{0}".format(extension)
-                    ]
-                    generate_thumbnails_thread = threading.Thread(target=generate_thumbnails, args=thread_args)
-                    generate_thumbnails_thread.start()
+                # new_default_image_attribute = getattr(self, DEFAULT_IMAGE_SIZE_NAME)
+                #
+                # default_image_data = ImageUtils.open(new_default_image_attribute)
+                # mime_type = default_image_data.format
+                # directory, filepath = os.path.split(new_default_image_attribute.name)
+                # filename, extension = os.path.splitext(filepath)
+                # original_filename = filename.split('-original')[0]
+                #
+                # # Create new thumbnails
+                # # Set up another thread to take care of generating thumbnails
+                # if skip_callback is False:
+                #     thread_args = [
+                #         type(self).__name__,
+                #         self.id,
+                #         mime_type,
+                #         original_filename,
+                #         ".{0}".format(extension)
+                #     ]
+                #     generate_thumbnails_thread = threading.Thread(target=generate_thumbnails, args=thread_args)
+                #     generate_thumbnails_thread.start()
 
     class Meta:
         abstract = True
@@ -178,7 +180,6 @@ def sanitize_filename(filename):
             sanitized_filename = sanitized_filename.replace(responsive_string, "00")
 
     return sanitized_filename
-
 
 def profile_image_path(instance, filename):
     date = datetime.datetime.now()

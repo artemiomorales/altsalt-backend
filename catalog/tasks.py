@@ -19,12 +19,14 @@ def clean_bucket(dry_run=True):
 
     from catalog.models import Listing
     from catalog.models import ListingCoverImage, ListingPreviewImage
-    from catalog.models.base import catalog_media_path
+    from catalog.models.user import User, UserProfileImage
+    from catalog.models.base import catalog_media_path, profile_image_path
 
     storage = CatalogImageStorage()
     s3 = boto3.client('s3')
 
     listings = Listing.objects.all()
+    users = User.objects.all()
 
     for listing in listings:
 
@@ -56,6 +58,30 @@ def clean_bucket(dry_run=True):
         if dry_run:
             logging.error('-------------------------')
 
+    for user in users:
+        logging.error("USERNAME")
+        logging.error(user.username)
+        logging.error("")
+
+        response = s3.list_objects_v2(
+            Bucket=os.environ.get('AWS_STORAGE_BUCKET_NAME'),
+            Prefix=catalog_media_path('user', user.id)
+        )
+
+        profile_images = UserProfileImage.objects.filter(user_id=user.id)
+        profile_image_names = get_image_names(profile_images)
+
+        if "Contents" in response:
+            for item in response['Contents']:
+                if not item['Key'] in profile_image_names:
+                    if dry_run:
+                        logging.error(item['Key'])
+                    else:
+                        storage.delete(item['Key'])
+
+        if dry_run:
+            logging.error('-------------------------')
+
 
 def get_image_names(image_object_collection):
     image_names = []
@@ -68,14 +94,16 @@ def get_image_names(image_object_collection):
             default_name = default_attribute.name
             image_names.append(default_name)
 
+        # THUMBNAILS ARE NOT CURRENTLY IN USE
+        #
         # Add thumbnails and responsive images
-        for thumbnail_size in DEFAULT_THUMBNAIL_SIZES:
-            thumbnail_attribute = getattr(image_object, thumbnail_size['attribute'])
-            if thumbnail_attribute is not None and thumbnail_attribute.name is not None:
-                thumbnail_name = thumbnail_attribute.name
-                image_names.append(thumbnail_name)
-                for responsive_size in RESPONSIVE_SIZES:
-                    image_names.append(thumbnail_name.replace('-1x', "-{0}x".format(responsive_size)))
+        # for thumbnail_size in DEFAULT_THUMBNAIL_SIZES:
+        #     thumbnail_attribute = getattr(image_object, thumbnail_size['attribute'])
+        #     if thumbnail_attribute is not None and thumbnail_attribute.name is not None:
+        #         thumbnail_name = thumbnail_attribute.name
+        #         image_names.append(thumbnail_name)
+        #         for responsive_size in RESPONSIVE_SIZES:
+        #             image_names.append(thumbnail_name.replace('-1x', "-{0}x".format(responsive_size)))
 
     return image_names
 
