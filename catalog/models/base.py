@@ -222,7 +222,7 @@ def listing_upload_path(instance, filename):
 
 
 def article_cover_image_path(instance, filename):
-    return content_path('article', instance.id, 'cover', instance.id, filename)
+    return content_path('article', instance.article.id, 'cover', instance.article.id, filename)
 
 
 def media_upload_path(instance, filename):
