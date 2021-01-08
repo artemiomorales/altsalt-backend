@@ -30,7 +30,7 @@ class EditorialSettings(models.Model):
 
 class Article(models.Model):
     title = models.CharField(max_length=125)
-    seo_title = models.CharField(max_length=100, blank=True)
+    seo_title = models.CharField(max_length=125, blank=True)
     slug = models.SlugField(unique=True, blank=True)
     preview_text = models.TextField(max_length=200)
     body = models.TextField()
