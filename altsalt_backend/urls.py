@@ -23,10 +23,11 @@ from catalog import views
 
 # Graphene
 from graphene_django.views import GraphQLView
-
+from ratelimit.decorators import ratelimit
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # path('graphql/', ratelimit(key='ip', method='GET', rate='1/m')(jwt_cookie(csrf_exempt(GraphQLView.as_view(graphiql=True))))),
     path('graphql/', jwt_cookie(csrf_exempt(GraphQLView.as_view(graphiql=True)))),
     path('csrf/', csrf_exempt(views.csrf)),
     path('ping/', views.ping),

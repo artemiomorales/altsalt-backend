@@ -7,9 +7,9 @@ from catalog.models.listing import *
 import re
 import graphene
 from graphene_django.types import DjangoObjectType
-from graphql_jwt.decorators import login_required
+from graphql_jwt.decorators import login_required, token_auth
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
-    NameWithPriorityInput, UserInput, send_membership_email
+    NameWithPriorityInput, UserInput, send_membership_email, ratelimit
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 from .schema_cms import ArticleBylineType
 from django.contrib.auth.hashers import make_password, check_password
@@ -42,6 +42,10 @@ from catalog.constants import get_date_from_string
 
 from datetime import datetime
 import logging
+
+# rate limiting
+# from django_graphql_ratelimit import ratelimit
+
 
 #########
 # TYPES #
@@ -188,6 +192,12 @@ def GenerateRandomString():
 
 class LogIn(graphql_jwt.ObtainJSONWebToken):
     user = graphene.Field(UserType)
+
+    @classmethod
+    @ratelimit
+    @token_auth
+    def mutate(cls, root, info, **kwargs):
+        return cls.resolve(root, info, **kwargs)
 
     @classmethod
     @check_csrf

@@ -23,6 +23,11 @@ import sendgrid
 from sendgrid.helpers.mail import *
 
 
+# Rate limiting
+
+from ratelimit.core import is_ratelimited
+
+
 class ImageFieldType(graphene.ObjectType):
     url = graphene.String()
     width = graphene.Int()
@@ -87,6 +92,32 @@ def check_csrf(f):
             raise GraphQLError("CSRF verification failed.")
 
     return wrapper
+
+
+def ratelimit(f):
+    # def decorator(fn, **kwargs):
+    #     @wraps(fn)
+    def _wrapped(cls, self, info, **kwargs):
+        request = info.context
+
+        old_limited = getattr(request, "limited", False)
+
+        # request.gql_rl_field = "ip"
+        # new_key = GQLRatelimitKey
+
+        ratelimited = is_ratelimited(
+            request=request,
+            fn=f,
+            key="ip",
+            rate="5/m",
+            increment=True,
+        )
+
+        if ratelimited or old_limited:
+            raise Exception("Permission denied")
+        return f(cls, self, info, **kwargs)
+    return _wrapped
+    # return decorator
 
 
 def save_pdf_data(model_instance, model_attribute, file_data, file_name):
