@@ -244,13 +244,6 @@ CACHES = {
     }
 }
 
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
-#         'LOCATION': '127.0.0.1:11211',
-#     }
-# }
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -271,6 +264,8 @@ LOGGING = {
         },
     },
 }
+
+GRAPHENE_PROTECTOR_DEPTH_LIMIT = 10
 
 django_heroku.settings(locals())
 

@@ -1,5 +1,4 @@
 import graphene
-import graphql_jwt
 
 import catalog.schema.schema
 

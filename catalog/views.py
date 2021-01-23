@@ -19,7 +19,7 @@ def csrf(request):
     csrf_data = get_token(request)
     response = JsonResponse({'result': 'OK'})
     response.set_cookie('csrftoken', csrf_data, max_age=None, expires=None, path='/',
-                        domain='altsalt-local.com', secure=secure_csrf, httponly=False, samesite=None)
+                        domain='altsalt.com', secure=secure_csrf, httponly=False, samesite=None)
     # response.cookies['csrftoken']['samesite'] = 'None'
     return response
 

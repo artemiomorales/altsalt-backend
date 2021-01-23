@@ -23,6 +23,7 @@ from catalog import views
 
 # Graphene
 from graphene_django.views import GraphQLView
+from graphene_protector.django import ProtectorBackend
 
 import os
 from os.path import join, dirname
@@ -35,7 +36,7 @@ debug = True if os.environ.get('DEBUG') == 'True' else False
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('graphql/', jwt_cookie(csrf_exempt(GraphQLView.as_view(graphiql=debug)))),
+    path('graphql/', jwt_cookie(csrf_exempt(GraphQLView.as_view(graphiql=debug, backend=ProtectorBackend())))),
     path('csrf/', csrf_exempt(views.csrf)),
     path('ping/', views.ping),
 
