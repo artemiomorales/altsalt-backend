@@ -19,6 +19,9 @@ import string
 from graphql import GraphQLError
 from django.template.defaultfilters import slugify
 
+from catalog.data.restricted_terms.restricted_usernames import is_restricted_username
+from catalog.data.restricted_terms.restricted_fragments import is_restricted_fragment
+
 # Image handling
 import base64
 import PIL.Image as ImageUtils
@@ -698,8 +701,12 @@ def creation_user_mutate_wrapper(f):
             raise GraphQLError('Invitation is invalid')
 
         else:
-            if get_user_model().objects.filter(username=username).exists() is True:
+            if get_user_model().objects.filter(username=username).exists() is True or \
+               is_restricted_username(username) is True or \
+               is_restricted_fragment(username) is True:
                 raise GraphQLError('Username is not available')
+
+            raise GraphQLError("skipped restrictions")
 
             if get_user_model().objects.filter(email=invite_email).exists() is True:
                 raise GraphQLError('User with specified email already exists')
@@ -744,9 +751,6 @@ class CreateUser(ResolveMixin, JSONWebTokenMixin, graphene.Mutation):
         password = graphene.String(required=True)
 
     @classmethod
-    @ratelimit(group="create_user", key="ip", rate="5/hr",
-               message="Max number of requests reached. Your device has been temporarily restricted."
-                       " Please try again later.")
     @check_csrf
     @creation_user_mutate_wrapper
     def mutate(cls, root, info, **kwargs):
