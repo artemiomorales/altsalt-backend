@@ -14,6 +14,6 @@ class IntrospectionDisabledException(Exception):
 
 class DisableIntrospectionMiddleware(object):
     def resolve(self, next, root, info, **kwargs):
-        if not debug and info.field_name.lower() in ['__schema', '__introspection']:
+        if debug is False and info.field_name.lower() in ['__schema', '__introspection']:
             raise IntrospectionDisabledException
         return next(root, info, **kwargs)

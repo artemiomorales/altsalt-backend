@@ -17,6 +17,6 @@ def get_empty_suggested_type_names(schema, output_type, field_name):
     return []
 
 
-if debug is True:
+if debug is False:
     rules.fields_on_correct_type.get_suggested_field_names = get_empty_suggested_field_names
     rules.fields_on_correct_type.get_suggested_type_names = get_empty_suggested_type_names
