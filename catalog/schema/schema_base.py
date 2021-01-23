@@ -14,7 +14,7 @@ from io import BytesIO
 
 
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, get_image_buffer
-
+from functools import wraps
 
 # Email
 
@@ -94,30 +94,42 @@ def check_csrf(f):
     return wrapper
 
 
-def ratelimit(f):
-    # def decorator(fn, **kwargs):
-    #     @wraps(fn)
-    def _wrapped(cls, self, info, **kwargs):
-        request = info.context
+def GQLRatelimitKey(group, request):
+    return request.gql_rl_field
 
-        old_limited = getattr(request, "limited", False)
 
-        # request.gql_rl_field = "ip"
-        # new_key = GQLRatelimitKey
+def ratelimit(group=None, key=None, rate=None, message="Permission denied"):
+    def decorator(fn):
+        def _wrapped(cls, self, info, **kwargs):
+            request = info.context
+            old_limited = getattr(request, "limited", False)
 
-        ratelimited = is_ratelimited(
-            request=request,
-            fn=f,
-            key="ip",
-            rate="5/m",
-            increment=True,
-        )
+            logging.error(kwargs)
 
-        if ratelimited or old_limited:
-            raise Exception("Permission denied")
-        return f(cls, self, info, **kwargs)
-    return _wrapped
-    # return decorator
+            new_key = key
+            if key and key.startswith("gql:"):
+                _key = key.split("gql:")[1]
+                value = kwargs.get(_key, None)
+                if not value:
+                    raise ValueError(f"Cannot get key: {key}")
+                request.gql_rl_field = value
+
+                new_key = GQLRatelimitKey
+
+            ratelimited = is_ratelimited(
+                request=request,
+                group=group,
+                fn=fn,
+                key=new_key,
+                rate=rate,
+                increment=True,
+            )
+
+            if ratelimited or old_limited:
+                raise Exception(message)
+            return fn(cls, self, info, **kwargs)
+        return _wrapped
+    return decorator
 
 
 def save_pdf_data(model_instance, model_attribute, file_data, file_name):

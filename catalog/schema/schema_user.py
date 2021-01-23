@@ -43,9 +43,6 @@ from catalog.constants import get_date_from_string
 from datetime import datetime
 import logging
 
-# rate limiting
-# from django_graphql_ratelimit import ratelimit
-
 
 #########
 # TYPES #
@@ -194,7 +191,12 @@ class LogIn(graphql_jwt.ObtainJSONWebToken):
     user = graphene.Field(UserType)
 
     @classmethod
-    @ratelimit
+    @ratelimit(group="login", key="gql:username", rate="6/5m",
+               message="Max number of login attempts reached. Your account has been temporarily locked."
+                       " Please consider resetting your password, and try again later.")
+    @ratelimit(group="login", key="ip", rate="6/5m",
+               message="Max number of login attempts reached. Your device has been temporarily restricted."
+                       " Please consider resetting your password, and try again later.")
     @token_auth
     def mutate(cls, root, info, **kwargs):
         return cls.resolve(root, info, **kwargs)
@@ -547,7 +549,7 @@ class ConfirmMembership(graphene.Mutation):
     def mutate(cls, self, info, organization_username, target_status):
 
         if get_user_model().objects.filter(username=organization_username).exists() is False:
-            raise GraphQLError("Target listing does not exist! Please refresh or try again later.")
+            raise GraphQLError("Target user does not exist! Please refresh or try again later.")
 
         logging.error(info.context.user)
         organization = get_user_model().objects.get(username=organization_username)
@@ -668,6 +670,9 @@ class VerifyInvitation(graphene.Mutation):
         invite_token = graphene.String(required=True)
 
     @classmethod
+    @ratelimit(group="verify_invitation", key="ip", rate="5/hr",
+               message="Max number of attempts reached. Your device has been temporarily restricted."
+                       " Please try again later.")
     @check_csrf
     def mutate(cls, self, info, invite_email, invite_token):
         if CreateAccountRequestValid(invite_email, invite_token) is True:
@@ -739,6 +744,9 @@ class CreateUser(ResolveMixin, JSONWebTokenMixin, graphene.Mutation):
         password = graphene.String(required=True)
 
     @classmethod
+    @ratelimit(group="create_user", key="ip", rate="5/hr",
+               message="Max number of requests reached. Your device has been temporarily restricted."
+                       " Please try again later.")
     @check_csrf
     @creation_user_mutate_wrapper
     def mutate(cls, root, info, **kwargs):
@@ -775,6 +783,9 @@ class CreateResetPasswordRequest(graphene.Mutation):
         email = graphene.String(required=True)
 
     @classmethod
+    @ratelimit(group="reset_password_request", key="ip", rate="5/hr",
+               message="Max number of requests reached. Your device has been temporarily restricted."
+                       " Please try again later.")
     @check_csrf
     def mutate(cls, self, info, email):
 
@@ -816,6 +827,9 @@ class VerifyResetPasswordRequest(graphene.Mutation):
         token = graphene.String(required=True)
 
     @classmethod
+    @ratelimit(group="verify_reset_password", key="ip", rate="5/hr",
+               message="Max number of attempts reached. Your device has been temporarily restricted."
+                       " Please try again later.")
     @check_csrf
     def mutate(cls, self, info, email, token):
 

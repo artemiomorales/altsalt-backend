@@ -23,12 +23,19 @@ from catalog import views
 
 # Graphene
 from graphene_django.views import GraphQLView
-from ratelimit.decorators import ratelimit
+
+import os
+from os.path import join, dirname
+from dotenv import load_dotenv
+
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+
+debug = True if os.environ.get('DEBUG') == 'True' else False
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # path('graphql/', ratelimit(key='ip', method='GET', rate='1/m')(jwt_cookie(csrf_exempt(GraphQLView.as_view(graphiql=True))))),
-    path('graphql/', jwt_cookie(csrf_exempt(GraphQLView.as_view(graphiql=True)))),
+    path('graphql/', jwt_cookie(csrf_exempt(GraphQLView.as_view(graphiql=debug)))),
     path('csrf/', csrf_exempt(views.csrf)),
     path('ping/', views.ping),
 
