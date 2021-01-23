@@ -19,4 +19,4 @@ def is_restricted_fragment(username):
             return True
     return False
 
-__all__ = ["wordlist", "is_restricted"]
+__all__ = ["wordlist", "is_restricted_fragment"]

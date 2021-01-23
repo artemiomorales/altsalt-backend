@@ -49,4 +49,4 @@ wordlist = set(_d.split(" "))
 def is_restricted_username(username):
     return True if username in wordlist else False
 
-__all__ = ["wordlist", "is_restricted"]
+__all__ = ["wordlist", "is_restricted_username"]
