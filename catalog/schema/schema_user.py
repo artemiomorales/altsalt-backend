@@ -706,8 +706,6 @@ def creation_user_mutate_wrapper(f):
                is_restricted_fragment(username) is True:
                 raise GraphQLError('Username is not available')
 
-            raise GraphQLError("skipped restrictions")
-
             if get_user_model().objects.filter(email=invite_email).exists() is True:
                 raise GraphQLError('User with specified email already exists')
 
