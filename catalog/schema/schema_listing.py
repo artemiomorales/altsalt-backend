@@ -9,13 +9,8 @@ from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
 
 import datetime
-from catalog.constants import capitalize_string
 
-import logging
-from django.conf import settings
-
-
-from catalog.constants import get_date_from_string, DEFAULT_FILE_UPLOAD_NAME
+from catalog.constants import get_date_from_string, capitalize_string, DEFAULT_FILE_UPLOAD_NAME
 
 
 class ListingUploadType(DjangoObjectType):
