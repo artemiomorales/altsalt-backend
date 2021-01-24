@@ -48,6 +48,7 @@ class NameSlug(models.Model):
 
     class Meta:
         abstract = True
+        ordering = ['name']
 
 
 class Continent(NameSlug):
