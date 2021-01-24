@@ -9,6 +9,7 @@ from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
 
 import datetime
+from catalog.constants import capitalize_string
 
 import logging
 from django.conf import settings
@@ -726,7 +727,7 @@ class UpdateListing(graphene.Mutation):
             for item in language:
                 item_slug = slugify(item.name)
                 if Language.objects.filter(slug=item_slug).exists() is False:
-                    new_model = Language(name=item.name.capitalize(), slug=item_slug)
+                    new_model = Language(name=capitalize_string(item.name), slug=item_slug)
                     new_model.save()
 
                 item_object = Language.objects.get(slug=item_slug)
@@ -743,7 +744,7 @@ class UpdateListing(graphene.Mutation):
             for item in format:
                 item_slug = slugify(item.name)
                 if Format.objects.filter(slug=item_slug).exists() is False:
-                    new_model = Format(name=item.name.capitalize(), slug=item_slug)
+                    new_model = Format(name=capitalize_string(item.name), slug=item_slug)
                     new_model.save()
 
                 item_object = Format.objects.get(slug=item_slug)
@@ -774,7 +775,7 @@ class UpdateListing(graphene.Mutation):
             for item in genre:
                 item_slug = slugify(item.name)
                 if Genre.objects.filter(slug=item_slug).exists() is False:
-                    new_model = Genre(name=item.name.capitalize(), slug=item_slug)
+                    new_model = Genre(name=capitalize_string(item.name), slug=item_slug)
                     new_model.save()
 
                 item_object = Genre.objects.get(slug=item_slug)
@@ -807,7 +808,7 @@ class UpdateListing(graphene.Mutation):
             for item in identities_represented:
                 item_slug = slugify(item.name)
                 if Identity.objects.filter(slug=item_slug).exists() is False:
-                    new_identity = Identity(name=item.name.capitalize(), slug=item_slug)
+                    new_identity = Identity(name=capitalize_string(item.name), slug=item_slug)
                     new_identity.save()
 
                 item_object = Identity.objects.get(slug=item_slug)
@@ -823,7 +824,7 @@ class UpdateListing(graphene.Mutation):
             for item in tag:
                 item_slug = slugify(item.name)
                 if Tag.objects.filter(slug=item_slug).exists() is False:
-                    new_model = Tag(name=item.name.capitalize(), slug=item_slug)
+                    new_model = Tag(name=capitalize_string(item.name), slug=item_slug)
                     new_model.save()
 
                 item_object = Tag.objects.get(slug=item_slug)

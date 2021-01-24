@@ -29,6 +29,7 @@ from io import BytesIO
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 
+from catalog.constants import capitalize_string
 
 # Email
 import sendgrid
@@ -378,7 +379,7 @@ class UpdateUser(graphene.Mutation):
             for identity in identities:
                 item_slug = slugify(identity.name)
                 if Identity.objects.filter(slug=item_slug).exists() is False:
-                    new_identity = Identity(name=identity.name.capitalize(), slug=item_slug)
+                    new_identity = Identity(name=capitalize_string(identity.name), slug=item_slug)
                     new_identity.save()
 
                 item_object = Identity.objects.get(slug=item_slug)

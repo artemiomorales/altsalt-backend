@@ -1,6 +1,7 @@
 from io import BytesIO
 from django.core.files.base import ContentFile
 from datetime import datetime
+import re
 
 DEFAULT_IMAGE_SIZE_NAME = 'original'
 DEFAULT_FILE_UPLOAD_NAME = 'file'
@@ -30,3 +31,9 @@ def get_date_from_string(datestring):
     month = datestring[4:6]
     day = datestring[6:8]
     return datetime.fromisoformat('{0}-{1}-{2}'.format(year, month, day))
+
+
+def capitalize_string(target_string):
+    def match_string(match):
+        return match.group().capitalize()
+    return re.sub(r"/(?:^|\s|[\"'([{-])+\S/g", match_string, target_string)
