@@ -58,13 +58,6 @@ class Listing(models.Model):
     content_rating = models.ForeignKey("ContentRating", null=True, blank=True, on_delete=models.PROTECT)
     seo_category = models.ForeignKey("SeoCategory", null=True, blank=True, on_delete=models.CASCADE)
 
-    def save(self, *args, **kwargs):
-        if not self.id:
-            # Newly created object, so set slug
-            self.slug = slugify(self.title)
-
-        super(Listing, self).save(*args, **kwargs)
-
     def __str__(self):
         return self.title
 

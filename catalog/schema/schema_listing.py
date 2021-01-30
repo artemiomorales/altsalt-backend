@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 import graphene
 from graphene_django.types import DjangoObjectType
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
-    NameWithPriorityInput, UserInput, send_byline_email, save_pdf_data
+    NameWithPriorityInput, UserInput, send_byline_email, save_pdf_data, ImageInput, PriceInput, UploadInput, PriceGrapheneType
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
 
@@ -58,11 +58,6 @@ class ListingAdditionalLinkType(DjangoObjectType):
 class PriceTypeGrapheneType(DjangoObjectType):
     class Meta:
         model = PriceType
-
-
-class PriceGrapheneType(DjangoObjectType):
-    class Meta:
-        model = Price
 
 
 class FormatType(DjangoObjectType):
@@ -365,19 +360,6 @@ class ListingQuery(graphene.ObjectType):
         return Tag.objects.all()
 
 
-class UploadInput(graphene.InputObjectType):
-    name = graphene.String(required=True)
-    data = graphene.String(required=True)
-    delete = graphene.Boolean()
-    allow_downloads = graphene.Boolean()
-
-
-class ImageInput(graphene.InputObjectType):
-    name = graphene.String(required=True)
-    data = graphene.String(required=True)
-    alttext = graphene.String(required=True)
-
-
 class PreviewImageInput(ImageInput):
     id = graphene.Int()
     caption = graphene.String()
@@ -410,12 +392,6 @@ class CreateListing(graphene.Mutation):
         creator_byline.save()
 
         return CreateListing(listing=new_listing)
-
-
-class PriceInput(graphene.InputObjectType):
-    price_type = graphene.String(required=True)
-    amount = graphene.Float()
-    details = graphene.String()
 
 
 class UpdateListing(graphene.Mutation):

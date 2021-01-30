@@ -12,6 +12,7 @@ from catalog.models.user import *
 from catalog.models.base import *
 from catalog.models.listing import *
 from catalog.models.cms import *
+from catalog.models.submission import *
 
 
 from django_reverse_admin import ReverseModelAdmin
@@ -215,7 +216,6 @@ class ListingUploadInline(SingleInline):
     model = ListingUpload
     pass
 
-
 @admin.register(UserProfileImage)
 class UserProfileImageAdmin(admin.ModelAdmin):
     pass
@@ -239,6 +239,27 @@ class ListingAdmin(ReverseModelAdmin):
                ListingCountryRepresentedInline,
                ListingIdentityRepresentedInline,
                ListingTagInline
+               ]
+    pass
+
+
+class SubmissionAvailabilityLinkInline(SingleInline):
+    model = SubmissionAvailabilityLink
+    pass
+
+
+class SubmissionAdditionalLinkInline(SingleInline):
+    model = SubmissionAdditionalLink
+    pass
+
+
+@admin.register(Submission)
+class SubmissionAdmin(ReverseModelAdmin):
+    inline_type = 'tabular'
+    inline_reverse = ['listing', 'price']
+    inlines = [
+                SubmissionAvailabilityLinkInline,
+                SubmissionAdditionalLinkInline,
                ]
     pass
 

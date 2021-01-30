@@ -1,5 +1,6 @@
 import graphene
 from catalog.models.base import Country, Identity
+from catalog.models.listing import Price
 from graphene_django.types import DjangoObjectType
 from django.conf import settings
 from django.middleware.csrf import _sanitize_token, _compare_salted_tokens
@@ -72,6 +73,30 @@ class BaseImageTypeMixin:
             return self.small.url
 
         return ''
+
+
+class ImageInput(graphene.InputObjectType):
+    name = graphene.String(required=True)
+    data = graphene.String(required=True)
+    alttext = graphene.String(required=True)
+
+
+class PriceInput(graphene.InputObjectType):
+    price_type = graphene.String(required=True)
+    amount = graphene.Float()
+    details = graphene.String()
+
+
+class UploadInput(graphene.InputObjectType):
+    name = graphene.String(required=True)
+    data = graphene.String(required=True)
+    delete = graphene.Boolean()
+    allow_downloads = graphene.Boolean()
+
+
+class PriceGrapheneType(DjangoObjectType):
+    class Meta:
+        model = Price
 
 
 def check_csrf(f):

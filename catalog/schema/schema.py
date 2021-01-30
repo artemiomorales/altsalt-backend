@@ -2,11 +2,12 @@ import graphene
 from .schema_listing import ListingQuery, ListingMutation
 from .schema_user import UserQuery, UserMutation
 from .schema_cms import CMSQuery
+from .schema_submission import SubmissionQuery, SubmissionMutation
 
 
-class Query(ListingQuery, UserQuery, CMSQuery, graphene.ObjectType):
+class Query(ListingQuery, UserQuery, CMSQuery, SubmissionQuery, graphene.ObjectType):
     pass
 
 
-class Mutation(ListingMutation, UserMutation, graphene.ObjectType):
+class Mutation(ListingMutation, UserMutation, SubmissionMutation, graphene.ObjectType):
     pass

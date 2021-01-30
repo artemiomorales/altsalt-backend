@@ -222,6 +222,11 @@ def listing_upload_path(instance, filename):
     return "{0}/upload-{1}/{2}".format(listing_path, instance.id, filename)
 
 
+def submission_upload_path(instance, filename):
+    listing_path = catalog_media_path('listing', instance.listing.id)
+    return "{0}/submission-{1}/{2}".format(listing_path, instance.id, filename)
+
+
 def article_cover_image_path(instance, filename):
     return content_path('article', instance.article.id, 'cover', instance.article.id, filename)
 
