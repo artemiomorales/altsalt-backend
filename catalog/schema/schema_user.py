@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from catalog.models.cms import *
 from catalog.models.user import *
 from catalog.models.listing import *
+from catalog.models.submission import *
 
 import re
 import graphene
@@ -10,8 +11,9 @@ from graphene_django.types import DjangoObjectType
 from graphql_jwt.decorators import login_required, token_auth
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
     NameWithPriorityInput, UserInput, send_membership_email, ratelimit
-from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 from .schema_cms import ArticleBylineType
+from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
+
 from django.contrib.auth.hashers import make_password, check_password
 import os
 import random
@@ -46,7 +48,6 @@ from catalog.constants import get_date_from_string
 
 from datetime import datetime
 import logging
-
 
 #########
 # TYPES #
@@ -124,6 +125,7 @@ class UserType(DjangoObjectType):
     organizations = graphene.List(OrganizationMemberType)
     admins = graphene.List(OrganizationMemberType)
     members = graphene.List(OrganizationMemberType)
+    submissions = graphene.List('catalog.schema.schema_submission.SubmissionType')
 
     def resolve_listings(self, info):
         return ListingCreatorByline.objects.filter(user_id=self.id)
@@ -174,6 +176,9 @@ class UserType(DjangoObjectType):
 
     def resolve_date_joined(self, info):
         return self.date_joined.strftime("%m/%d/%y")
+
+    def resolve_submissions(self, info):
+        return Submission.objects.filter(creator=self)
 
 
 #########
@@ -555,7 +560,6 @@ class ConfirmMembership(graphene.Mutation):
         if get_user_model().objects.filter(username=organization_username).exists() is False:
             raise GraphQLError("Target user does not exist! Please refresh or try again later.")
 
-        logging.error(info.context.user)
         organization = get_user_model().objects.get(username=organization_username)
 
         if OrganizationMember.objects.filter(organization=organization, member=info.context.user).exists():

@@ -182,7 +182,7 @@ class ListingType(DjangoObjectType):
         model = Listing
         fields = ('id', 'title', 'short_name', 'description', 'preview_images',
                   'length', 'price', 'content_rating', 'seo_category',
-                  'is_published', 'is_approved', 'publication_date', 'date_added')
+                  'is_published', 'is_approved', 'publication_date', 'date_added', 'is_editable')
 
     slug = graphene.String()
     cover_image = graphene.Field(ListingCoverImageType)
@@ -203,6 +203,8 @@ class ListingType(DjangoObjectType):
     content_rating = graphene.Field(ContentRatingType)
     seo_category = graphene.Field(SeoCategoryType)
     date_added = graphene.String()
+    submission_approved = graphene.Boolean()
+    moderator_authentication = graphene.Boolean()
 
     def resolve_slug(self, info):
         return slugify(self.title)
@@ -261,6 +263,16 @@ class ListingType(DjangoObjectType):
     def resolve_date_added(self, info):
         return self.date_added.strftime("%m/%d/%y")
 
+    def resolve_submission_approved(self, info):
+        if Submission.objects.filter(listing_id=self.id).exists():
+            submission = Submission.objects.get(listing_id=self.id)
+            return submission.is_approved
+        return True
+
+    def resolve_moderator_authentication(self, info):
+        if info.context.user.is_authenticated and info.context.user.is_moderator:
+            return True
+        return False
 
 ##########
 # SCHEMA #
@@ -268,6 +280,7 @@ class ListingType(DjangoObjectType):
 
 class ListingQuery(graphene.ObjectType):
     featured_listings = graphene.List(ListingType)
+    candidate_listings = graphene.List(ListingType)
     listing_bundle = graphene.List(ListingType,
                                    include_featured=graphene.Boolean(default_value=True),
                                    exclude_private=graphene.Boolean(default_value=True),
@@ -289,6 +302,9 @@ class ListingQuery(graphene.ObjectType):
 
     def resolve_featured_listings(self, info, **kwargs):
         return Listing.objects.filter(is_featured=True)
+
+    def resolve_candidate_listings(self, info, **kwargs):
+        return Listing.objects.filter(is_approved=False, is_published=True)
 
     def resolve_listing_bundle(self, info, **kwargs):
         include_featured = kwargs.get('include_featured')
@@ -807,6 +823,28 @@ class UpdateListing(graphene.Mutation):
         return UpdateListing(listing=target_listing)
 
 
+class UpdateListingApproval(graphene.Mutation):
+    listing = graphene.Field(ListingType)
+
+    class Arguments:
+        id = graphene.String(required=True)
+        target_status = graphene.Boolean(required=True)
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, id, target_status):
+
+        if info.context.user.is_moderator is False:
+            raise GraphQLError("You are not authorized to perform this action.")
+
+        target_listing = Listing.objects.get(id=id)
+        target_listing.is_approved = target_status
+        target_listing.save()
+
+        return UpdateListingApproval(listing=target_listing)
+
+
 class DeleteListing(graphene.Mutation):
     success = graphene.Boolean()
 
@@ -826,6 +864,10 @@ class DeleteListing(graphene.Mutation):
         if ListingCreatorByline.objects.filter(listing=target_listing, user=info.context.user).exists() is False:
             raise GraphQLError("You are not authorized to update this listing.")
 
+        if Submission.objects.filter(listing_id=id):
+            related_submission = Submission.objects.get(listing_id=id)
+            related_submission.delete()
+
         target_listing.delete()
         return True
 
@@ -834,3 +876,4 @@ class ListingMutation(graphene.ObjectType):
     create_listing = CreateListing.Field()
     update_listing = UpdateListing.Field()
     delete_listing = DeleteListing.Field()
+    update_listing_approval = UpdateListingApproval.Field()

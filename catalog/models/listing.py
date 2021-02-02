@@ -40,6 +40,7 @@ class Listing(models.Model):
     publication_date = models.DateField(null=True, blank=True)
     date_added = models.DateField(default=timezone.now)
     date_approved = models.DateField(null=True, blank=True)
+    is_editable = models.BooleanField(default=True)
     is_approved = models.BooleanField(default=False)
     is_published = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)

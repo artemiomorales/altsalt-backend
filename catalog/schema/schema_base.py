@@ -13,9 +13,10 @@ from django.core.files.base import ContentFile
 from django.core.files.uploadhandler import InMemoryUploadedFile
 from io import BytesIO
 
-
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, get_image_buffer
-from functools import wraps
+from botocore.exceptions import ClientError
+import boto3
+from botocore.config import Config
 
 # Email
 
@@ -201,6 +202,26 @@ def save_image_data(model_instance, image_data, image_name):
     model_instance.save(skip_callback=False)
 
 
+def create_presigned_url(object_name, expiration=3600):
+
+    s3_client = boto3.client('s3', config=Config(
+        region_name=settings.AWS_S3_REGION_NAME,
+        signature_version='s3v4'
+    ))
+    try:
+        response = s3_client.generate_presigned_url('get_object',
+                                                    Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                                                            'Key': object_name},
+                                                    ExpiresIn=expiration)
+    except ClientError as e:
+        logging.error("there was an error")
+        logging.error(e)
+        raise GraphQLError("Unable to create download URL! Please try again later.")
+
+    # The response contains the presigned URL
+    return response
+
+
 class CountryType(DjangoObjectType):
     class Meta:
         model = Country
@@ -223,6 +244,7 @@ class LinkInput(NameWithPriorityInput):
 class UserInput(graphene.InputObjectType):
     username = graphene.String(required=True)
     priority = graphene.Int(required=True)
+
 
 def send_membership_email(organization_name, invite_type, invitee_email):
 
@@ -271,4 +293,82 @@ def send_byline_email(inviter_name, listing_title, invitee_email, invite_type):
         "name": "AltSalt",
     }
     mail.template_id = 'd-8937eb33fafb473d9603ef921ba8d184'
+    response = sg.client.mail.send.post(request_body=mail.get())
+
+
+def send_moderator_notification_email(target_email, submission_title):
+    subject = "New AltSalt submission {0}".format(submission_title)
+    title = "We received a new submission! - {0}".format(submission_title)
+
+    message = ("To view this submission, go to the moderator tools "
+               "inside of your AltSalt account.")
+
+    sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+    from_email = Email(email="info@altsalt.com", name="AltSalt")
+    to_email = To(target_email)
+
+    log_in_url = '{0}/user/login'.format(os.environ.get('BASE_URL'))
+    mail = Mail(from_email, to_email, subject)
+    mail.dynamic_template_data = {
+        'subject': subject,
+        'title': title,
+        'message': message,
+        'log_in_url': log_in_url,
+        "name": "AltSalt",
+    }
+    mail.template_id = 'd-8937eb33fafb473d9603ef921ba8d184'
+    response = sg.client.mail.send.post(request_body=mail.get())
+
+
+def send_submission_approved_email(target_username, submission_title, target_email, message):
+    subject = "{0}, your submission {1} has been approved".format(target_username, submission_title)
+    title = "Create a New Listing for {0}".format(submission_title)
+
+    if message is None or message.strip() == '':
+        body = ("Your submission has been approved! "
+                "To display this work on your profile, "
+                "please log into your account to create a listing. ")
+    else:
+        body = message
+
+    sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+    from_email = Email(email="info@altsalt.com", name="AltSalt")
+    to_email = To(target_email)
+
+    log_in_url = '{0}/user/login'.format(os.environ.get('BASE_URL'))
+    mail = Mail(from_email, to_email, subject)
+    mail.dynamic_template_data = {
+        'subject': subject,
+        'title': title,
+        'message': body,
+        'log_in_url': log_in_url,
+        "name": "AltSalt",
+    }
+    mail.template_id = 'd-8937eb33fafb473d9603ef921ba8d184'
+    response = sg.client.mail.send.post(request_body=mail.get())
+
+
+def send_submission_rejected_email(target_username, submission_title, target_email, message):
+    subject = "{0}, your submission {1} was not approved".format(target_username, submission_title)
+    title = "Thank you for submitting to AltSalt!"
+
+    if message is None or message.strip() == '':
+        body = ("We appreciate you submitting to AltSalt. "
+                "We did not approve your submission, either because it's not a good fit "
+                "or it violated our community guidelines. However, we invite you to submit again in the future! ")
+    else:
+        body = message
+
+    sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+    from_email = Email(email="info@altsalt.com", name="AltSalt")
+    to_email = To(target_email)
+
+    mail = Mail(from_email, to_email, subject)
+    mail.dynamic_template_data = {
+        'subject': subject,
+        'title': title,
+        'message': body,
+        "name": "AltSalt",
+    }
+    mail.template_id = 'd-7bbf18f8831c4783be50a0ab93f4d8ac'
     response = sg.client.mail.send.post(request_body=mail.get())

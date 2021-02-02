@@ -1,6 +1,6 @@
-from django.db.models.signals import pre_delete
+from django.db.models.signals import pre_delete, post_delete
 from django.dispatch import receiver
-from catalog.models import ListingCoverImage, ListingPreviewImage, ListingUpload
+from catalog.models import ListingCoverImage, ListingPreviewImage, ListingUpload, Submission
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, RESPONSIVE_SIZES, DEFAULT_FILE_UPLOAD_NAME
 from catalog.backends import CatalogImageStorage
 
@@ -31,6 +31,7 @@ def on_image_delete(sender, **kwargs):
 
 
 @receiver(pre_delete, sender=ListingUpload)
+@receiver(pre_delete, sender=Submission)
 def on_file_delete(sender, **kwargs):
 
     instance = kwargs.get('instance')
@@ -42,3 +43,13 @@ def on_file_delete(sender, **kwargs):
 
     if default_name is not None and default_name != '':
         storage.delete(default_name)
+
+
+@receiver(post_delete, sender=Submission)
+def on_submission_delete(sender, **kwargs):
+    try:
+        instance = kwargs.get('instance')
+        if getattr(instance, 'listing') is not None:
+            kwargs['instance'].listing.delete()
+    except:
+        pass

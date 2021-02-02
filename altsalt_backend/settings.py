@@ -211,8 +211,9 @@ SESSION_COOKIE_DOMAIN = DOMAIN if DOMAIN is not None else None
 
 
 # AWS S3
-AWS_QUERYSTRING_AUTH=False
-AWS_DEFAULT_ACL='public-read'
+AWS_QUERYSTRING_AUTH = False
+AWS_DEFAULT_ACL = 'public-read'
+AWS_S3_SIGNATURE_VERSION = 's3v4'
 
 # Graphene
 
