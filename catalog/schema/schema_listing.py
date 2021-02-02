@@ -4,7 +4,8 @@ from django.contrib.auth import get_user_model
 import graphene
 from graphene_django.types import DjangoObjectType
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
-    NameWithPriorityInput, UserInput, send_byline_email, save_pdf_data, ImageInput, PriceInput, UploadInput, PriceGrapheneType
+    NameWithPriorityInput, UserInput, send_byline_email, save_pdf_data, ImageInput, PriceInput,\
+    UploadInput, PriceGrapheneType, send_listing_public_email
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
 
@@ -395,19 +396,23 @@ class CreateListing(graphene.Mutation):
     @login_required
     def mutate(cls, self, info, title, cover_image):
 
-        new_listing = Listing(title=title, date_added=datetime.date.today())
-        new_listing.save()
+        # Disabled for now
 
-        listing_cover = ListingCoverImage(listing=new_listing)
-        listing_cover.save(skip_callback=True)
-        save_image_data(listing_cover, cover_image.data, cover_image.name)
-        listing_cover.alttext = cover_image.alttext
-        listing_cover.save(skip_callback=True)
+        raise GraphQLError("You are not authorized to perform this action")
 
-        creator_byline = ListingCreatorByline(user=info.context.user, listing=new_listing, is_confirmed=True)
-        creator_byline.save()
-
-        return CreateListing(listing=new_listing)
+        # new_listing = Listing(title=title, date_added=datetime.date.today())
+        # new_listing.save()
+        #
+        # listing_cover = ListingCoverImage(listing=new_listing)
+        # listing_cover.save(skip_callback=True)
+        # save_image_data(listing_cover, cover_image.data, cover_image.name)
+        # listing_cover.alttext = cover_image.alttext
+        # listing_cover.save(skip_callback=True)
+        #
+        # creator_byline = ListingCreatorByline(user=info.context.user, listing=new_listing, is_confirmed=True)
+        # creator_byline.save()
+        #
+        # return CreateListing(listing=new_listing)
 
 
 class UpdateListing(graphene.Mutation):
@@ -839,6 +844,21 @@ class UpdateListingApproval(graphene.Mutation):
             raise GraphQLError("You are not authorized to perform this action.")
 
         target_listing = Listing.objects.get(id=id)
+
+        # Only send confirmation email if the status has changed to true
+
+        status_changed = False
+
+        if target_listing.is_approved is not target_status:
+            status_changed = True
+
+        if status_changed is True and target_status is True:
+            creator_bylines = ListingCreatorByline.objects.filter(listing=target_listing)
+            for creator_byline in creator_bylines:
+                send_listing_public_email(target_username=creator_byline.user.username,
+                                          listing_title=target_listing.title,
+                                          target_email=creator_byline.user.email)
+
         target_listing.is_approved = target_status
         target_listing.save()
 

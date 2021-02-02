@@ -348,6 +348,29 @@ def send_submission_approved_email(target_username, submission_title, target_ema
     response = sg.client.mail.send.post(request_body=mail.get())
 
 
+def send_listing_public_email(target_username, listing_title, target_email):
+    subject = "{0}, your listing {1} is public!".format(target_username, listing_title)
+    title = "{0} is now on AltSalt".format(listing_title)
+
+    message = ("We approved your listing and it will "
+            "appear to everyone who visits AltSalt shortly (it may take an hour or so "
+            "for the changes to propagate).")
+
+    sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+    from_email = Email(email="info@altsalt.com", name="AltSalt")
+    to_email = To(target_email)
+
+    mail = Mail(from_email, to_email, subject)
+    mail.dynamic_template_data = {
+        'subject': subject,
+        'title': title,
+        'message': message,
+        "name": "AltSalt",
+    }
+    mail.template_id = 'd-7bbf18f8831c4783be50a0ab93f4d8ac'
+    response = sg.client.mail.send.post(request_body=mail.get())
+
+
 def send_submission_rejected_email(target_username, submission_title, target_email, message):
     subject = "{0}, your submission {1} was not approved".format(target_username, submission_title)
     title = "Thank you for submitting to AltSalt!"
