@@ -110,7 +110,7 @@ class UserProfileImageType(DjangoObjectType, BaseImageTypeMixin):
 class UserType(DjangoObjectType):
     class Meta:
         model = get_user_model()
-        fields = ('id', 'is_moderator', 'username', 'display_name', 'short_name', 'occupation',
+        fields = ('id', 'is_moderator', 'username', 'first_name', 'display_name', 'short_name', 'occupation',
                   'description', 'is_organization', 'date_of_birth', 'show_age', 'pronouns', 'location', 'date_joined')
 
     profile_image = graphene.Field(UserProfileImageType)
@@ -126,6 +126,7 @@ class UserType(DjangoObjectType):
     admins = graphene.List(OrganizationMemberType)
     members = graphene.List(OrganizationMemberType)
     submissions = graphene.List('catalog.schema.schema_submission.SubmissionType')
+    invitations_remaining = graphene.Int()
 
     def resolve_listings(self, info):
         return ListingCreatorByline.objects.filter(user_id=self.id)
@@ -179,6 +180,13 @@ class UserType(DjangoObjectType):
 
     def resolve_submissions(self, info):
         return Submission.objects.filter(creator=self)
+
+    def resolve_invitations_remaining(self, info):
+        if self.is_moderator:
+            return -1
+
+        invitation_count = Invitation.objects.filter(requester=self).count()
+        return 2 - invitation_count
 
 
 #########
@@ -582,7 +590,7 @@ class ConfirmMembership(graphene.Mutation):
 
 
 def CreateAccountRequestValid(invite_email, invite_token):
-    invitation = Invitation.objects.get(email=invite_email)
+    invitation = Invitation.objects.get(email=invite_email, redeemed=False)
 
     if invitation is None:
         return False
@@ -595,7 +603,7 @@ def CreateAccountRequestValid(invite_email, invite_token):
 
 
 class SendInvitation(graphene.Mutation):
-    success = graphene.Boolean()
+    user = graphene.Field(UserType)
 
     class Arguments:
         invite_email = graphene.String(required=True)
@@ -606,23 +614,24 @@ class SendInvitation(graphene.Mutation):
 
     @classmethod
     @check_csrf
+    @login_required
     def mutate(cls, self, info, **kwargs):
 
-        if info.context.user.is_moderator is False:
-            raise GraphQLError('You are not authorized to perform this action')
+        invitation_count = Invitation.objects.filter(requester=info.context.user).count()
 
-        invite_email = kwargs.get('invite_email')
+        if info.context.user.is_moderator is False and invitation_count >= 2:
+            raise GraphQLError('No invitations left!')
+
         is_test = kwargs.get("is_test")
 
         if is_test is True:
             invite_email = info.context.user.email
-
-        if get_user_model().objects.filter(email=invite_email).exists() is True and is_test is False:
-            raise GraphQLError('User with specified email already exists!')
-
-        if Invitation.objects.filter(email=invite_email).exists() is True and is_test is False:
-            previous_invitation = Invitation.objects.get(email=invite_email)
-            previous_invitation.delete()
+        else:
+            invite_email = kwargs.get('invite_email')
+            if Invitation.objects.filter(email=invite_email).exists() is True:
+                raise GraphQLError('Specified user has already been invited!')
+            if get_user_model().objects.filter(email=invite_email).exists() is True:
+                raise GraphQLError('User with specified email already exists!')
 
         subject = kwargs.get('subject')
         if subject is None:
@@ -661,13 +670,13 @@ class SendInvitation(graphene.Mutation):
         response = sg.client.mail.send.post(request_body=mail.get())
 
         if is_test:
-            new_invitation = Invitation(email=invite_email, token=make_password(invite_token))
-            return SendInvitation(success=True)
+            new_invitation = Invitation(email=invite_email, token=make_password(invite_token), requester=info.context.user)
+            return SendInvitation(user=info.context.user)
 
         else:
-            new_invitation = Invitation(email=invite_email, token=make_password(invite_token))
+            new_invitation = Invitation(email=invite_email, token=make_password(invite_token), requester=info.context.user)
             new_invitation.save()
-            return SendInvitation(success=True)
+            return SendInvitation(user=info.context.user)
 
 
 class VerifyInvitation(graphene.Mutation):
@@ -728,7 +737,8 @@ def creation_user_mutate_wrapper(f):
             new_user.save()
 
             invitation = Invitation.objects.get(email=invite_email)
-            invitation.delete()
+            invitation.redeemed = True
+            invitation.save()
 
             context = info.context
             context._jwt_token_auth = True

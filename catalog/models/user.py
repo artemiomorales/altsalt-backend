@@ -144,6 +144,13 @@ class OrganizationMember(models.Model):
 class Invitation(models.Model):
     email = models.CharField(max_length=120)
     token = models.CharField(max_length=120)
+    requester = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    redeemed = models.BooleanField(default=False)
+
+    def __str__(self):
+        if getattr(self, 'requester') is not None:
+            return self.requester.username
+        return '-'
 
     class Meta:
         db_table = TABLE_PREFIX + 'invitation'

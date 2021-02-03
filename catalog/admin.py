@@ -280,6 +280,14 @@ class FormatAdmin(admin.ModelAdmin):
     pass
 
 
+@admin.register(Invitation)
+class InvitationAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (None, {'fields': ('email', 'requester', 'redeemed')}),
+    )
+    pass
+
+
 @admin.register(PriceType)
 class PriceTypeAdmin(admin.ModelAdmin):
     pass
