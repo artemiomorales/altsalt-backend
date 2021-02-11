@@ -7,6 +7,7 @@ from django.conf import settings
 from django.template.defaultfilters import slugify
 from catalog.constants import RESPONSIVE_SIZES
 from catalog.backends import CatalogImageStorage
+from django.utils import timezone
 
 # Image Handling
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES
@@ -161,6 +162,15 @@ class CustomImageAlttext(CustomImage):
 
     class Meta:
         abstract = True
+
+
+# class Comment(models.Model):
+#     user = models.ForeignKey('User', on_delete=models.CASCADE)
+#     body = models.TextField(default="", blank=True)
+#     date_created = models.DateField(default=timezone.now)
+#
+#     class Meta:
+#         db_table = TABLE_PREFIX + 'comment'
 
 
 def catalog_media_path(media_type, instance_id):

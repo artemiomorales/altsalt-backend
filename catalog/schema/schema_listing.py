@@ -398,21 +398,22 @@ class CreateListing(graphene.Mutation):
 
         # Disabled for now
 
-        raise GraphQLError("You are not authorized to perform this action")
+        if info.context.user.is_verified is False and info.context.user.is_moderator is False:
+            raise GraphQLError("You are not authorized to perform this action")
 
-        # new_listing = Listing(title=title, date_added=datetime.date.today())
-        # new_listing.save()
-        #
-        # listing_cover = ListingCoverImage(listing=new_listing)
-        # listing_cover.save(skip_callback=True)
-        # save_image_data(listing_cover, cover_image.data, cover_image.name)
-        # listing_cover.alttext = cover_image.alttext
-        # listing_cover.save(skip_callback=True)
-        #
-        # creator_byline = ListingCreatorByline(user=info.context.user, listing=new_listing, is_confirmed=True)
-        # creator_byline.save()
-        #
-        # return CreateListing(listing=new_listing)
+        new_listing = Listing(title=title, date_added=datetime.date.today())
+        new_listing.save()
+
+        listing_cover = ListingCoverImage(listing=new_listing)
+        listing_cover.save(skip_callback=True)
+        save_image_data(listing_cover, cover_image.data, cover_image.name)
+        listing_cover.alttext = cover_image.alttext
+        listing_cover.save(skip_callback=True)
+
+        creator_byline = ListingCreatorByline(user=info.context.user, listing=new_listing, is_confirmed=True)
+        creator_byline.save()
+
+        return CreateListing(listing=new_listing)
 
 
 class UpdateListing(graphene.Mutation):

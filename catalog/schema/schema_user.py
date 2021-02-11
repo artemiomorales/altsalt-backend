@@ -110,7 +110,7 @@ class UserProfileImageType(DjangoObjectType, BaseImageTypeMixin):
 class UserType(DjangoObjectType):
     class Meta:
         model = get_user_model()
-        fields = ('id', 'is_moderator', 'username', 'first_name', 'display_name', 'short_name', 'occupation',
+        fields = ('id', 'is_moderator', 'is_verified', 'username', 'first_name', 'display_name', 'short_name', 'occupation',
                   'description', 'is_organization', 'date_of_birth', 'show_age', 'pronouns', 'location', 'date_joined')
 
     profile_image = graphene.Field(UserProfileImageType)
