@@ -23,5 +23,5 @@ class DisableIntrospectionMiddleware(object):
 class CacheMiddleware(MiddlewareMixin):
 
     def process_response(self, request, response):
-        response['Cache-Control'] = 'no-store, max-age=0'
+        response['Cache-Control'] = 'max-age=0, no-cache, no-store, must-revalidate, private'
         return response
