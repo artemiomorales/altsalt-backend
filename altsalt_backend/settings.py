@@ -61,6 +61,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+
+    'catalog.middleware.CacheMiddleware',
+
     'django.contrib.sessions.middleware.SessionMiddleware',
 
     'corsheaders.middleware.CorsMiddleware',
@@ -190,6 +193,18 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST_LIST = os.environ.get('CORS_ORIGIN_WHITELIST').split(',')
 CORS_ORIGIN_WHITELIST = CORS_ORIGIN_WHITELIST_LIST[:-1] if\
     os.environ.get('CORS_ORIGIN_WHITELIST') is not None else []
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'cache-control'
+]
 
 # CSRF
 CSRF_TRUSTED_ORIGINS_LIST = os.environ.get('CSRF_TRUSTED_ORIGINS').split(',')
