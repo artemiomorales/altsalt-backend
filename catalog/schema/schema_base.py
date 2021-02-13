@@ -93,6 +93,7 @@ class UploadInput(graphene.InputObjectType):
     data = graphene.String(required=True)
     delete = graphene.Boolean()
     allow_downloads = graphene.Boolean()
+    is_preview = graphene.Boolean()
 
 
 class PriceGrapheneType(DjangoObjectType):

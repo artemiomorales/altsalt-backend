@@ -565,10 +565,11 @@ class UpdateListing(graphene.Mutation):
                     current_upload = ListingUpload.objects.get(listing=target_listing)
 
                 else:
-                    current_upload = ListingUpload(listing=target_listing, allow_downloads=False)
+                    current_upload = ListingUpload(listing=target_listing, is_preview=False, allow_downloads=False)
                     current_upload.save()
 
                 current_upload.allow_downloads = upload.allow_downloads
+                current_upload.is_preview = upload.is_preview
                 current_upload.save()
 
                 if upload.data != '' and upload.name != '':
