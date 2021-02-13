@@ -24,4 +24,5 @@ class CacheMiddleware(MiddlewareMixin):
 
     def process_response(self, request, response):
         response['Cache-Control'] = 'max-age=0, no-cache, no-store, must-revalidate, private'
+        response['Vary'] = 'Origin'
         return response
