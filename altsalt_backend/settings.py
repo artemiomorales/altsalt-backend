@@ -283,7 +283,7 @@ LOGGING = {
 
 GRAPHENE_PROTECTOR_DEPTH_LIMIT = 10
 
-django_heroku.settings(locals())
-
 DATA_UPLOAD_MAX_MEMORY_SIZE = 17500000
 FILE_UPLOAD_MAX_MEMORY_SIZE = 17500000
+
+django_heroku.settings(locals())
