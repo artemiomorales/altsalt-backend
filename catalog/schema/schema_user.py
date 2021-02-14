@@ -886,6 +886,58 @@ class ResetPassword(graphene.Mutation):
             return ResetPassword(success=True)
 
 
+class SendFeedback(graphene.Mutation):
+    success = graphene.Boolean()
+
+    class Arguments:
+        subject = graphene.String(required=True)
+        message = graphene.String(required=True)
+
+    @classmethod
+    @ratelimit(group="send_feedback", key="ip", rate="5/d",
+               message="Max number of messages sent. Your device has been temporarily restricted."
+                       " You can try Discord, or emailing us at info@altsalt.com.")
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, **kwargs):
+
+        subject = kwargs.get('subject')
+        message = kwargs.get('message')
+
+        sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+
+        # CONFIRMATION
+
+        from_confirmation_email = Email(email="info@altsalt.com", name="AltSalt")
+        to_confirmation_email = To(info.context.user.email)
+        confirmation_email = Mail(from_confirmation_email, to_confirmation_email, subject)
+        confirmation_email.dynamic_template_data = {
+            'sender_email': info.context.user.email,
+            'sender_username': info.context.user.username,
+            'subject': subject,
+            'message': message,
+        }
+        confirmation_email.template_id = 'd-ab2fd8f0ec8c4edc8e58accd466cefa9'
+        confirmation_response = sg.client.mail.send.post(request_body=confirmation_email.get())
+
+        # FEEDBACK
+
+        from_feedback_email = Email(email=info.context.user.email, name=info.context.user.username)
+        to_feedback_email = To('info@altsalt.com')
+
+        feedback_email = Mail(from_feedback_email, to_feedback_email, subject)
+        feedback_email.dynamic_template_data = {
+            'sender_email': info.context.user.email,
+            'sender_username': info.context.user.username,
+            'subject': subject,
+            'message': message,
+        }
+        feedback_email.template_id = 'd-547f4ba836a04abc8d4ba16c835bb19d'
+        feedback_response = sg.client.mail.send.post(request_body=feedback_email.get())
+
+        return SendFeedback(success=True)
+
+
 #######################
 # JWT / REFRESH TOKEN #
 #######################
@@ -959,3 +1011,4 @@ class UserMutation(graphene.ObjectType):
     create_reset_password_request = CreateResetPasswordRequest.Field()
     verify_reset_password_request = VerifyResetPasswordRequest.Field()
     reset_password = ResetPassword.Field()
+    send_feedback = SendFeedback.Field()
