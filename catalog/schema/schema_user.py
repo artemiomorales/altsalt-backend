@@ -590,6 +590,18 @@ class ConfirmMembership(graphene.Mutation):
 
 
 def CreateAccountRequestValid(invite_email, invite_token):
+
+    from os.path import join, dirname
+    from dotenv import load_dotenv
+
+    dotenv_path = join(dirname(__file__), '.env')
+    load_dotenv(dotenv_path)
+
+    signups_open = True if os.environ.get('SIGNUPS_OPEN') == 'True' else False
+
+    if signups_open is True and invite_token == os.environ.get('SIGNUP_CODE'):
+        return True
+
     invitation = Invitation.objects.get(email=invite_email, redeemed=False)
 
     if invitation is None:
