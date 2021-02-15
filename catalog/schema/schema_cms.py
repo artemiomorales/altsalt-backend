@@ -43,7 +43,7 @@ class CMSQuery(graphene.ObjectType):
     editorial_settings = graphene.Field(EditorialSettingsType)
 
     def resolve_article_bundle(self, info):
-        return Article.objects.all()
+        return Article.objects.filter(is_published=True)
 
     def resolve_article(self, info, **kwargs):
         id = kwargs.get('id')
