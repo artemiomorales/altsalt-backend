@@ -12,6 +12,7 @@ from graphql import GraphQLError
 import datetime
 
 from catalog.constants import get_date_from_string, capitalize_string, DEFAULT_FILE_UPLOAD_NAME
+from django.utils import timezone
 
 
 class ListingUploadType(DjangoObjectType):
@@ -869,6 +870,7 @@ class UpdateListingApproval(graphene.Mutation):
             status_changed = True
 
         if status_changed is True and target_status is True:
+            target_listing.date_approved = timezone.now()
             creator_bylines = ListingCreatorByline.objects.filter(listing=target_listing)
             for creator_byline in creator_bylines:
                 send_listing_public_email(target_username=creator_byline.user.username,
