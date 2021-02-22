@@ -44,6 +44,8 @@ class Listing(models.Model):
     is_approved = models.BooleanField(default=False)
     is_published = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)
+    show_custom_author = models.BooleanField(default=False)
+    custom_author = models.CharField(max_length=150, blank=True)
     country_represented = models.ManyToManyField(
         "Country",
         through='ListingCountryRepresented'

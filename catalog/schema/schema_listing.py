@@ -183,7 +183,8 @@ class ListingType(DjangoObjectType):
         model = Listing
         fields = ('id', 'title', 'short_name', 'description', 'preview_images',
                   'length', 'price', 'content_rating', 'seo_category',
-                  'is_published', 'is_approved', 'publication_date', 'date_added', 'is_editable')
+                  'is_published', 'is_approved', 'publication_date', 'date_added', 'is_editable',
+                  'show_custom_author', 'custom_author')
 
     slug = graphene.String()
     cover_image = graphene.Field(ListingCoverImageType)
@@ -433,6 +434,8 @@ class UpdateListing(graphene.Mutation):
         publication_date = graphene.String()
         creators = graphene.List(UserInput)
         collaborators = graphene.List(UserInput)
+        show_custom_author = graphene.Boolean()
+        custom_author = graphene.String()
         content_rating = graphene.String()
         length = graphene.String()
         language = graphene.List(NameWithPriorityInput)
@@ -463,6 +466,8 @@ class UpdateListing(graphene.Mutation):
         publication_date = kwargs.get('publication_date')
         creators = kwargs.get('creators')
         collaborators = kwargs.get('collaborators')
+        show_custom_author = kwargs.get('show_custom_author')
+        custom_author = kwargs.get('custom_author')
         content_rating = kwargs.get('content_rating')
         length = kwargs.get('length')
         language = kwargs.get('language')
@@ -675,6 +680,15 @@ class UpdateListing(graphene.Mutation):
                     collaborator_byline.save()
                 else:
                     raise GraphQLError('Specified user {0} does not exist. Please remove and try again'.format(collaborator.username))
+
+        # Custom Author #
+
+        if show_custom_author is not None:
+            target_listing.show_custom_author = show_custom_author
+
+        if custom_author is not None:
+            target_listing.custom_author = custom_author
+
 
         # Price #
 
