@@ -346,3 +346,14 @@ class SeoCategoryAdmin(admin.ModelAdmin):
 @admin.register(EditorialSettings)
 class EditorialSettingsAdmin(admin.ModelAdmin):
     pass
+
+
+class CommentInline(SingleInline):
+    model = Comment
+    pass
+
+
+@admin.register(Thread)
+class ThreadAdmin(admin.ModelAdmin):
+    inlines = [CommentInline,]
+    pass

@@ -164,13 +164,39 @@ class CustomImageAlttext(CustomImage):
         abstract = True
 
 
-# class Comment(models.Model):
-#     user = models.ForeignKey('User', on_delete=models.CASCADE)
-#     body = models.TextField(default="", blank=True)
-#     date_created = models.DateField(default=timezone.now)
-#
-#     class Meta:
-#         db_table = TABLE_PREFIX + 'comment'
+class Thread(models.Model):
+    timestamp = models.DateTimeField(default=timezone.now)
+    originator = models.ForeignKey('User', on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        username = ''
+        if self.originator is not None:
+            username = self.originator.username
+
+        from catalog.models.listing import ListingThread
+
+        if ListingThread.objects.filter(thread=self).exists():
+            listing_thread = ListingThread.objects.get(thread=self)
+
+        return "{0} - {1}".format(listing_thread.listing.title, username)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'thread'
+        ordering = ['timestamp']
+
+
+class Comment(models.Model):
+    thread = models.ForeignKey(Thread, on_delete=models.CASCADE)
+    commenter = models.ForeignKey('User', on_delete=models.SET_NULL, null=True)
+    body = models.TextField(default="", blank=True)
+    timestamp = models.DateTimeField(default=timezone.now)
+    is_root = models.BooleanField(default=False)
+    is_edited = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'comment'
+        ordering = ['timestamp']
 
 
 def catalog_media_path(media_type, instance_id):

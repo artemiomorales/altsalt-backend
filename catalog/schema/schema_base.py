@@ -1,5 +1,5 @@
 import graphene
-from catalog.models.base import Country, Identity
+from catalog.models.base import Country, Identity, Thread, Comment
 from catalog.models.listing import Price
 from graphene_django.types import DjangoObjectType
 from django.conf import settings
@@ -12,6 +12,7 @@ import PIL.Image as ImageUtils
 from django.core.files.base import ContentFile
 from django.core.files.uploadhandler import InMemoryUploadedFile
 from io import BytesIO
+from django.utils import timezone
 
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, get_image_buffer
 from botocore.exceptions import ClientError
@@ -23,7 +24,7 @@ from botocore.config import Config
 import logging
 import sendgrid
 from sendgrid.helpers.mail import *
-
+import datetime
 
 # Rate limiting
 
@@ -99,6 +100,40 @@ class UploadInput(graphene.InputObjectType):
 class PriceGrapheneType(DjangoObjectType):
     class Meta:
         model = Price
+
+
+class CommentType(DjangoObjectType):
+    class Meta:
+        model = Comment
+
+    timestamp = graphene.String()
+
+    def resolve_timestamp(self, info):
+        timedelta = timezone.now() - self.timestamp
+        if timedelta.days > 0:
+            return "{0} days ago".format(timedelta.days)
+        seconds = timedelta.seconds
+        if seconds >= 3600:
+            hours = round(timedelta.seconds / 3600)
+            return "{0} hours ago".format(hours)
+        if seconds >= 60:
+            minutes = round(timedelta.seconds / 60)
+            return "{0} minutes ago".format(minutes)
+        if seconds == 0:
+            return "Just now"
+
+        return "{0} seconds ago".format(seconds)
+
+
+class ThreadType(DjangoObjectType):
+    class Meta:
+        model = Thread
+        fields = ('id', 'originator', 'timestamp')
+
+    comments = graphene.List(CommentType)
+
+    def resolve_comments(self, info):
+        return Comment.objects.filter(thread_id=self.id)
 
 
 def check_csrf(f):

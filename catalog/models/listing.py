@@ -317,7 +317,6 @@ class ListingCoverImage(CustomImageAlttext):
                               ThumbnailImageStorage(target_width=767, target_height=180),
                               upload_to=listing_cover_image_path, null=True, blank=True)
 
-
     class Meta:
         db_table = TABLE_PREFIX + 'listing_cover_image'
 
@@ -347,7 +346,22 @@ class ListingPreviewImage(CustomImageAlttext):
     index = models.IntegerField(default=0)
     caption = models.CharField(max_length=300, blank=True)
 
-
     class Meta:
         db_table = TABLE_PREFIX + 'listing_preview_image'
         ordering = ['index']
+
+
+class ListingThread(models.Model):
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
+    thread = models.ForeignKey("Thread", on_delete=models.CASCADE)
+    timestamp = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return "{0} - {1}".format(self.listing.title, self.thread.originator)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'listing_thread'
+        ordering = ['-timestamp']
+        constraints = [
+            models.UniqueConstraint(fields=['listing', 'thread'], name='listing_thread_link')
+        ]

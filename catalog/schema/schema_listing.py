@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 import graphene
 from graphene_django.types import DjangoObjectType
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
-    NameWithPriorityInput, UserInput, send_byline_email, save_pdf_data, ImageInput, PriceInput,\
+    NameWithPriorityInput, UserInput, send_byline_email, save_pdf_data, ImageInput, PriceInput, ThreadType, \
     UploadInput, PriceGrapheneType, send_listing_public_email
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
@@ -179,6 +179,17 @@ class SeoCategoryType(DjangoObjectType):
         model = SeoCategory
 
 
+class ListingThreadType(DjangoObjectType):
+    class Meta:
+        model = ListingThread
+        exclude = ('thread',)
+
+    item = graphene.Field(ThreadType)
+
+    def resolve_item(self, info):
+        return Thread.objects.get(id=self.thread_id)
+
+
 class ListingType(DjangoObjectType):
     class Meta:
         model = Listing
@@ -208,6 +219,7 @@ class ListingType(DjangoObjectType):
     date_added = graphene.String()
     submission_approved = graphene.Boolean()
     moderator_authentication = graphene.Boolean()
+    thread_set = graphene.List(ListingThreadType)
 
     def resolve_slug(self, info):
         return slugify(self.title)
@@ -276,6 +288,10 @@ class ListingType(DjangoObjectType):
         if info.context.user.is_authenticated and info.context.user.is_moderator:
             return True
         return False
+
+    def resolve_thread_set(self, info):
+        return ListingThread.objects.filter(listing_id=self.id)
+
 
 ##########
 # SCHEMA #
@@ -910,8 +926,135 @@ class DeleteListing(graphene.Mutation):
         return True
 
 
+class CreateListingThread(graphene.Mutation):
+    listing = graphene.Field(ListingType)
+
+    class Arguments:
+        listing = graphene.String(required=True)
+        body = graphene.String(required=True)
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, **kwargs):
+
+        listing = kwargs.get('listing')
+        body = kwargs.get('body')
+
+        if Listing.objects.filter(id=listing).exists() is False:
+            raise GraphQLError("Target listing does not exist! Please refresh or try again later.")
+
+        target_listing = Listing.objects.get(id=listing)
+
+        # if ListingThread.objects.filter(listing=target_listing).exists():
+        #     listing_threads = ListingThread.objects.filter(listing=target_listing)
+        #     for listing_thread in listing_threads:
+        #         if listing_thread.thread.originator == info.context.user:
+        #             raise GraphQLError("You've already resonated on this listing")
+
+        if body.strip() == '':
+            raise GraphQLError("Comment body must not be empty")
+
+        new_thread = Thread(originator=info.context.user)
+        new_thread.save()
+
+        new_listing_thread = ListingThread(listing=target_listing, thread=new_thread)
+        new_listing_thread.save()
+
+        new_comment = Comment(thread=new_thread, commenter=info.context.user, body=body, is_root=True)
+        new_comment.save()
+
+        return CreateListingThread(listing=target_listing)
+
+
+class CreateListingThreadReply(graphene.Mutation):
+    listing = graphene.Field(ListingType)
+
+    class Arguments:
+        listing = graphene.String(required=True)
+        thread = graphene.String(required=True)
+        body = graphene.String()
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, **kwargs):
+
+        listing = kwargs.get('listing')
+        thread = kwargs.get('thread')
+        body = kwargs.get('body')
+
+        if Listing.objects.filter(id=listing).exists() is False:
+            raise GraphQLError("Target listing does not exist! Please refresh or try again later")
+
+        if Thread.objects.filter(id=thread).exists() is False:
+            raise GraphQLError("Target thread does not exist! Please refresh or try again later")
+
+        target_listing = Listing.objects.get(id=listing)
+        target_thread = Thread.objects.get(id=thread)
+
+        can_reply = False
+        creator_bylines = ListingCreatorByline.objects.filter(listing=target_listing)
+
+        for creator_byline in creator_bylines:
+            if creator_byline.user == info.context.user:
+                can_reply = True
+                break
+
+        if can_reply is False:
+            collaborator_bylines = ListingCollaboratorByline.objects.filter(listing=target_listing)
+            for collaborator_byline in collaborator_bylines:
+                if collaborator_byline.user == info.context.user:
+                    can_reply = True
+                    break
+
+        if can_reply is False:
+            raise GraphQLError("Only creators and collaborators may reply to threads")
+
+        if body.strip() == '':
+            raise GraphQLError("Comment body must not be empty")
+
+        new_comment = Comment(thread=target_thread, commenter=info.context.user, body=body, is_root=False)
+        new_comment.save()
+
+        return CreateListingThreadReply(listing=target_listing)
+
+
+class UpdateComment(graphene.Mutation):
+    thread = graphene.Field(ThreadType)
+
+    class Arguments:
+        comment = graphene.String(required=True)
+        body = graphene.String()
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, **kwargs):
+
+        comment = kwargs.get('comment')
+        body = kwargs.get('body')
+
+        if Comment.objects.filter(id=comment).exists() is False:
+            raise GraphQLError("Target comment does not exist! Please refresh or try again later")
+
+        target_comment = Comment.objects.get(id=comment)
+
+        if target_comment.commenter != info.context.user:
+            raise GraphQLError("You are not authorized to update this comment")
+
+        target_comment.body = body
+        target_comment.is_edited = True
+        target_comment.save()
+
+        return UpdateComment(thread=target_comment.thread)
+
+
 class ListingMutation(graphene.ObjectType):
     create_listing = CreateListing.Field()
     update_listing = UpdateListing.Field()
     delete_listing = DeleteListing.Field()
     update_listing_approval = UpdateListingApproval.Field()
+    create_listing_thread = CreateListingThread.Field()
+    create_listing_thread_reply = CreateListingThreadReply.Field()
+    update_comment = UpdateComment.Field()
