@@ -161,18 +161,18 @@ class CommentType(DjangoObjectType):
     def resolve_timestamp(self, info):
         timedelta = timezone.now() - self.timestamp
         if timedelta.days > 0:
-            return "{0} days ago".format(timedelta.days)
+            return "{0}d".format(timedelta.days)
         seconds = timedelta.seconds
         if seconds >= 3600:
             hours = round(timedelta.seconds / 3600)
-            return "{0} hours ago".format(hours)
+            return "{0}h".format(hours)
         if seconds >= 60:
             minutes = round(timedelta.seconds / 60)
-            return "{0} minutes ago".format(minutes)
+            return "{0}m".format(minutes)
         if seconds == 0:
             return "Just now"
 
-        return "{0} seconds ago".format(seconds)
+        return "{0}s".format(seconds)
 
     def resolve_user_reaction(self, info):
         if info.context.user.is_authenticated is False:
