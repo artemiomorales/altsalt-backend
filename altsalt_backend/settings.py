@@ -281,7 +281,7 @@ LOGGING = {
     },
 }
 
-GRAPHENE_PROTECTOR_DEPTH_LIMIT = 10
+GRAPHENE_PROTECTOR_DEPTH_LIMIT = 15
 
 django_heroku.settings(locals())
 

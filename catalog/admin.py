@@ -357,3 +357,13 @@ class CommentInline(SingleInline):
 class ThreadAdmin(admin.ModelAdmin):
     inlines = [CommentInline,]
     pass
+
+
+@admin.register(ReactionType)
+class ReactionTypeAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(CommentReaction)
+class CommentReactionAdmin(admin.ModelAdmin):
+    pass

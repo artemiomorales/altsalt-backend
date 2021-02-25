@@ -199,6 +199,24 @@ class Comment(models.Model):
         ordering = ['timestamp']
 
 
+class ReactionType(NameSlug):
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'reaction_type'
+
+
+class CommentReaction(models.Model):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
+    reactor = models.ForeignKey('User', on_delete=models.CASCADE)
+    reaction_type = models.ForeignKey(ReactionType, on_delete=models.PROTECT)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'comment_reaction'
+        constraints = [
+            models.UniqueConstraint(fields=['comment', 'reactor'], name='comment_reactor_link')
+        ]
+
+
 def catalog_media_path(media_type, instance_id):
     return 'catalog/{0}/{1}'.format(media_type, instance_id)
 

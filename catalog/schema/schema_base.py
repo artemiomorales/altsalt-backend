@@ -1,5 +1,5 @@
 import graphene
-from catalog.models.base import Country, Identity, Thread, Comment
+from catalog.models.base import Country, Identity, Thread, Comment, ReactionType, CommentReaction
 from catalog.models.listing import Price
 from graphene_django.types import DjangoObjectType
 from django.conf import settings
@@ -19,16 +19,40 @@ from botocore.exceptions import ClientError
 import boto3
 from botocore.config import Config
 
+# JWT
+from graphql_jwt.decorators import login_required
+
+
 # Email
 
 import logging
 import sendgrid
 from sendgrid.helpers.mail import *
-import datetime
+
 
 # Rate limiting
 
 from ratelimit.core import is_ratelimited
+
+
+def check_csrf(f):
+
+    def wrapper(cls, self, info, **kwargs):
+        if settings.CSRF_COOKIE_NAME in info.context.COOKIES and \
+                'X-Csrftoken' in info.context.headers:
+
+            csrf_cookie = info.context.COOKIES[settings.CSRF_COOKIE_NAME]
+            csrf_token = _sanitize_token(info.context.headers['X-Csrftoken'])
+
+            if _compare_salted_tokens(csrf_cookie, csrf_token):
+                return f(cls, self, info, **kwargs)
+            else:
+                raise GraphQLError("CSRF verification failed.")
+
+        else:
+            raise GraphQLError("CSRF verification failed.")
+
+    return wrapper
 
 
 class ImageFieldType(graphene.ObjectType):
@@ -102,11 +126,37 @@ class PriceGrapheneType(DjangoObjectType):
         model = Price
 
 
+class CountryType(DjangoObjectType):
+    class Meta:
+        model = Country
+
+
+class IdentityType(DjangoObjectType):
+    class Meta:
+        model = Identity
+
+
+class NameWithPriorityInput(graphene.InputObjectType):
+    name = graphene.String(required=True)
+    priority = graphene.Int(required=True)
+
+
+class LinkInput(NameWithPriorityInput):
+    url = graphene.String(required=True)
+
+
+class UserInput(graphene.InputObjectType):
+    username = graphene.String(required=True)
+    priority = graphene.Int(required=True)
+
+
 class CommentType(DjangoObjectType):
     class Meta:
         model = Comment
 
     timestamp = graphene.String()
+    user_reaction = graphene.Boolean()
+    reaction_count = graphene.Int()
 
     def resolve_timestamp(self, info):
         timedelta = timezone.now() - self.timestamp
@@ -124,6 +174,19 @@ class CommentType(DjangoObjectType):
 
         return "{0} seconds ago".format(seconds)
 
+    def resolve_user_reaction(self, info):
+        if info.context.user.is_authenticated is False:
+            return False
+
+        if CommentReaction.objects.filter(comment=self, reactor=info.context.user).exists():
+            return True
+
+        return False
+
+    def resolve_reaction_count(self, info):
+        return CommentReaction.objects.filter(comment=self).count()
+
+
 
 class ThreadType(DjangoObjectType):
     class Meta:
@@ -136,24 +199,101 @@ class ThreadType(DjangoObjectType):
         return Comment.objects.filter(thread_id=self.id)
 
 
-def check_csrf(f):
+class ReactionGrapheneType(DjangoObjectType):
+    class Meta:
+        model = ReactionType
 
-    def wrapper(cls, self, info, **kwargs):
-        if settings.CSRF_COOKIE_NAME in info.context.COOKIES and \
-                'X-Csrftoken' in info.context.headers:
 
-            csrf_cookie = info.context.COOKIES[settings.CSRF_COOKIE_NAME]
-            csrf_token = _sanitize_token(info.context.headers['X-Csrftoken'])
+class CommentReactionType(DjangoObjectType):
+    class Meta:
+        model = CommentReaction
 
-            if _compare_salted_tokens(csrf_cookie, csrf_token):
-                return f(cls, self, info, **kwargs)
-            else:
-                raise GraphQLError("CSRF verification failed.")
 
+class UpdateComment(graphene.Mutation):
+    thread = graphene.Field(ThreadType)
+
+    class Arguments:
+        comment = graphene.String(required=True)
+        body = graphene.String()
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, **kwargs):
+
+        comment = kwargs.get('comment')
+        body = kwargs.get('body')
+
+        if Comment.objects.filter(id=comment).exists() is False:
+            raise GraphQLError("Target comment does not exist! Please refresh or try again later")
+
+        target_comment = Comment.objects.get(id=comment)
+
+        if target_comment.commenter != info.context.user:
+            raise GraphQLError("You are not authorized to update this comment")
+
+        target_comment.body = body
+        target_comment.is_edited = True
+        target_comment.save()
+
+        return UpdateComment(thread=target_comment.thread)
+
+
+class SetCommentReaction(graphene.Mutation):
+    comment = graphene.Field(CommentType)
+
+    class Arguments:
+        comment = graphene.String(required=True)
+        reaction_type = graphene.String()
+        delete = graphene.Boolean()
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, **kwargs):
+
+        comment = kwargs.get('comment')
+        reaction_type = kwargs.get('reaction_type')
+        delete = kwargs.get('delete')
+
+        if Comment.objects.filter(id=comment).exists() is False:
+            raise GraphQLError("Target comment does not exist! Please refresh or try again later")
+
+        target_comment = Comment.objects.get(id=comment)
+
+        if ReactionType.objects.filter(slug=reaction_type).exists() is False:
+            raise GraphQLError("Reaction type is invalid")
+
+        target_reaction_type = ReactionType.objects.get(slug=reaction_type)
+
+        if CommentReaction.objects.filter(comment=target_comment, reactor=info.context.user).exists():
+            reaction = CommentReaction.objects.get(comment=target_comment, reactor=info.context.user)
+
+            logging.error(delete)
+
+            if delete is True:
+                reaction.delete()
+                return SetCommentReaction(comment=target_comment)
+
+            reaction.reaction_type = target_reaction_type
+            reaction.save()
         else:
-            raise GraphQLError("CSRF verification failed.")
+            reaction = CommentReaction(comment=target_comment, reactor=info.context.user, reaction_type=target_reaction_type)
+            reaction.save()
 
-    return wrapper
+        return SetCommentReaction(comment=target_comment)
+
+
+class BaseQuery(graphene.ObjectType):
+    reaction_types = graphene.List(ReactionGrapheneType)
+
+    def resolve_reaction_types(self, info):
+        return ReactionType.objects.all()
+
+
+class BaseMutation(graphene.ObjectType):
+    update_comment = UpdateComment.Field()
+    set_comment_reaction = SetCommentReaction.Field()
 
 
 def GQLRatelimitKey(group, request):
@@ -256,30 +396,6 @@ def create_presigned_url(object_name, expiration=3600):
 
     # The response contains the presigned URL
     return response
-
-
-class CountryType(DjangoObjectType):
-    class Meta:
-        model = Country
-
-
-class IdentityType(DjangoObjectType):
-    class Meta:
-        model = Identity
-
-
-class NameWithPriorityInput(graphene.InputObjectType):
-    name = graphene.String(required=True)
-    priority = graphene.Int(required=True)
-
-
-class LinkInput(NameWithPriorityInput):
-    url = graphene.String(required=True)
-
-
-class UserInput(graphene.InputObjectType):
-    username = graphene.String(required=True)
-    priority = graphene.Int(required=True)
 
 
 def send_membership_email(organization_name, invite_type, invitee_email):

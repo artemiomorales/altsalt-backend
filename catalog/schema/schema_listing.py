@@ -994,12 +994,16 @@ class CreateListingThreadReply(graphene.Mutation):
         target_thread = Thread.objects.get(id=thread)
 
         can_reply = False
-        creator_bylines = ListingCreatorByline.objects.filter(listing=target_listing)
 
-        for creator_byline in creator_bylines:
-            if creator_byline.user == info.context.user:
-                can_reply = True
-                break
+        if target_thread.originator == info.context.user:
+            can_reply = True
+
+        if can_reply is False:
+            creator_bylines = ListingCreatorByline.objects.filter(listing=target_listing)
+            for creator_byline in creator_bylines:
+                if creator_byline.user == info.context.user:
+                    can_reply = True
+                    break
 
         if can_reply is False:
             collaborator_bylines = ListingCollaboratorByline.objects.filter(listing=target_listing)
@@ -1009,7 +1013,7 @@ class CreateListingThreadReply(graphene.Mutation):
                     break
 
         if can_reply is False:
-            raise GraphQLError("Only creators and collaborators may reply to threads")
+            raise GraphQLError("Only original posters, creators, and collaborators may reply to threads")
 
         if body.strip() == '':
             raise GraphQLError("Comment body must not be empty")
@@ -1020,36 +1024,6 @@ class CreateListingThreadReply(graphene.Mutation):
         return CreateListingThreadReply(listing=target_listing)
 
 
-class UpdateComment(graphene.Mutation):
-    thread = graphene.Field(ThreadType)
-
-    class Arguments:
-        comment = graphene.String(required=True)
-        body = graphene.String()
-
-    @classmethod
-    @check_csrf
-    @login_required
-    def mutate(cls, self, info, **kwargs):
-
-        comment = kwargs.get('comment')
-        body = kwargs.get('body')
-
-        if Comment.objects.filter(id=comment).exists() is False:
-            raise GraphQLError("Target comment does not exist! Please refresh or try again later")
-
-        target_comment = Comment.objects.get(id=comment)
-
-        if target_comment.commenter != info.context.user:
-            raise GraphQLError("You are not authorized to update this comment")
-
-        target_comment.body = body
-        target_comment.is_edited = True
-        target_comment.save()
-
-        return UpdateComment(thread=target_comment.thread)
-
-
 class ListingMutation(graphene.ObjectType):
     create_listing = CreateListing.Field()
     update_listing = UpdateListing.Field()
@@ -1057,4 +1031,3 @@ class ListingMutation(graphene.ObjectType):
     update_listing_approval = UpdateListingApproval.Field()
     create_listing_thread = CreateListingThread.Field()
     create_listing_thread_reply = CreateListingThreadReply.Field()
-    update_comment = UpdateComment.Field()
