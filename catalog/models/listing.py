@@ -19,7 +19,7 @@ class Listing(models.Model):
     title = models.CharField(max_length=100)
     short_name = models.CharField(max_length=34, default="", blank=True)
     description = models.TextField(default="", blank=True)
-    price = models.ForeignKey("Price", null=True, blank=True, on_delete=models.PROTECT)
+    price = models.ForeignKey("Price", null=True, blank=True, on_delete=models.SET_NULL)
     format = models.ManyToManyField(
         "Format",
         through='ListingFormat'
