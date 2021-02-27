@@ -127,7 +127,7 @@ class UserType(DjangoObjectType):
     submissions = graphene.List('catalog.schema.schema_submission.SubmissionType')
     invitations_remaining = graphene.Int()
     unread_notifications_count = graphene.Int()
-    notifications = graphene.List(NotificationType)
+    notifications = graphene.List(NotificationType, count=graphene.Int())
 
     def resolve_listings(self, info):
         return ListingCreatorByline.objects.filter(user_id=self.id)
@@ -195,9 +195,14 @@ class UserType(DjangoObjectType):
 
         return None
 
-    def resolve_notifications(self, info):
+    def resolve_notifications(self, info, **kwargs):
+
+        count = kwargs.get('count')
+
         if info.context.user == self:
-            return Notification.objects.filter(recipient=self)[:10]
+            if count is not None and count != -1:
+                return Notification.objects.filter(recipient=self)[:count]
+            return Notification.objects.filter(recipient=self)
 
         return None
 
