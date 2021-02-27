@@ -643,9 +643,14 @@ def CreateAccountRequestValid(invite_email, invite_token):
     dotenv_path = join(dirname(__file__), '.env')
     load_dotenv(dotenv_path)
 
-    signups_open = True if os.environ.get('SIGNUPS_OPEN') == 'True' else False
+    open_signups_enabled = True if os.environ.get('OPEN_SIGNUPS_ENABLED') == 'True' else False
 
-    if signups_open is True and invite_token == os.environ.get('SIGNUP_CODE'):
+    if open_signups_enabled:
+        return True
+
+    closed_signups_enabled = True if os.environ.get('CLOSED_SIGNUPS_ENABLED') == 'True' else False
+
+    if closed_signups_enabled is True and invite_token == os.environ.get('SIGNUP_CODE'):
         return True
 
     invitation = Invitation.objects.get(email=invite_email, redeemed=False)
