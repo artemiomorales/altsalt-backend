@@ -71,6 +71,24 @@ class User(AbstractUser):
         db_table = PROJECT_PREFIX + 'user'
 
 
+class NotificationSettings(models.Model):
+
+    class Frequency(models.TextChoices):
+        DAILY = 'D', _('Daily')
+        SEMIWEEKLY = 'SW', _('Semiweekly')
+        WEEKLY = 'W', _('Weekly')
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    frequency = models.CharField(
+        max_length=2,
+        choices=Frequency.choices,
+        default=Frequency.SEMIWEEKLY,
+    )
+
+    class Meta:
+        db_table = PROJECT_PREFIX + 'notification_settings'
+
+
 class UserProfileImage(CustomImage):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     original = models.ImageField(storage=

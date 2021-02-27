@@ -8,6 +8,8 @@ from django.template.defaultfilters import slugify
 from catalog.constants import RESPONSIVE_SIZES
 from catalog.backends import CatalogImageStorage
 from django.utils import timezone
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 # Image Handling
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES
@@ -168,6 +170,13 @@ class Thread(models.Model):
     timestamp = models.DateTimeField(default=timezone.now)
     originator = models.ForeignKey('User', on_delete=models.SET_NULL, null=True)
 
+    def get_root_comment(self):
+
+        if Comment.objects.filter(thread=self, is_root=True).exists():
+            return Comment.objects.get(thread=self, is_root=True)
+
+        return None
+
     def __str__(self):
         username = ''
         if self.originator is not None:
@@ -177,8 +186,9 @@ class Thread(models.Model):
 
         if ListingThread.objects.filter(thread=self).exists():
             listing_thread = ListingThread.objects.get(thread=self)
+            return "{0} - {1}".format(listing_thread.listing.title, username)
 
-        return "{0} - {1}".format(listing_thread.listing.title, username)
+        return self.id
 
     class Meta:
         db_table = TABLE_PREFIX + 'thread'
@@ -215,6 +225,22 @@ class CommentReaction(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['comment', 'reactor'], name='comment_reactor_link')
         ]
+
+
+class Notification(models.Model):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    notifier = models.ForeignKey('User', on_delete=models.CASCADE, related_name="notifier")
+    recipient = models.ForeignKey('User', on_delete=models.CASCADE, related_name="recipient")
+    timestamp = models.DateTimeField(default=timezone.now)
+    is_read = models.BooleanField(default=False)
+
+    def __str__(self):
+        return "{0} - {1} from {2} - {3}".format(self.recipient.username, self.content_type.name, self.notifier.username, self.id)
+
+    class Meta:
+        ordering = ['-timestamp']
 
 
 def catalog_media_path(media_type, instance_id):

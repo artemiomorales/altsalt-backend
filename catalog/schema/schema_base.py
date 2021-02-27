@@ -1,10 +1,11 @@
 import graphene
-from catalog.models.base import Country, Identity, Thread, Comment, ReactionType, CommentReaction
-from catalog.models.listing import Price
-from graphene_django.types import DjangoObjectType
+from catalog.models.base import Country, Identity, Thread, Comment, ReactionType, CommentReaction, Notification
+from catalog.models.listing import Price, ListingThread
+from graphene_django.types import DjangoObjectType, ObjectType
 from django.conf import settings
 from django.middleware.csrf import _sanitize_token, _compare_salted_tokens
 from graphql import GraphQLError
+from graphene.types import Scalar
 
 import os
 import base64
@@ -13,6 +14,7 @@ from django.core.files.base import ContentFile
 from django.core.files.uploadhandler import InMemoryUploadedFile
 from io import BytesIO
 from django.utils import timezone
+from django.template.defaultfilters import slugify
 
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, get_image_buffer
 from botocore.exceptions import ClientError
@@ -150,6 +152,88 @@ class UserInput(graphene.InputObjectType):
     priority = graphene.Int(required=True)
 
 
+class URLComponentsType(ObjectType):
+    listing = graphene.Field('catalog.schema.schema_listing.ListingType')
+    thread = graphene.Field('catalog.schema.schema_base.ThreadType')
+    comment = graphene.Field('catalog.schema.schema_base.CommentType')
+
+
+class NotificationType(DjangoObjectType):
+    class Meta:
+        model = Notification
+
+    type = graphene.String()
+    message = graphene.String()
+    url_components = graphene.Field(URLComponentsType)
+
+    def resolve_type(self, info):
+        notification = Notification.objects.get(id=self.id)
+        model = notification.content_type.model_class()
+
+        if model is ListingThread:
+            return 'comment'
+
+        if model is Comment:
+            return 'reply'
+
+        if model is CommentReaction:
+            return 'reaction'
+
+        return None
+
+    def resolve_message(self, info):
+        notification = Notification.objects.get(id=self.id)
+        model = notification.content_type.model_class()
+
+        def get_thread_string(thread):
+            if thread.get_root_comment() is not None:
+                return thread.get_root_comment().body
+
+            return ''
+
+        if model is ListingThread:
+            return '{0} resonated on your listing {1}: “{2}”'.format(notification.notifier.display_name,
+                                                           notification.content_object.listing.title,
+                                                           get_thread_string(notification.content_object.thread))
+
+        if model is Comment:
+            return '{0} replied on a thread you\'re a part of: "{1}”'.format(notification.notifier.display_name,
+                                                           get_thread_string(notification.content_object.thread))
+        if model is CommentReaction:
+            return '{0} reacted to your resonance "{1}"'.format(notification.notifier.display_name,
+                                                                          notification.content_object.comment.body)
+
+        return None
+
+    def resolve_url_components(self, info):
+        notification = Notification.objects.get(id=self.id)
+        model = notification.content_type.model_class()
+
+        if model is ListingThread:
+            return {'listing': notification.content_object.listing,
+                    'thread': notification.content_object.thread,
+                    'comment': None
+                    }
+
+        if model is Comment and\
+                ListingThread.objects.filter(thread=notification.content_object.thread).exists():
+            listing_thread = ListingThread.objects.get(thread=notification.content_object.thread)
+            return {'listing': listing_thread.listing,
+                    'thread': notification.content_object.thread,
+                    'comment': notification.content_object
+                    }
+
+        if model is CommentReaction and\
+                ListingThread.objects.filter(thread=notification.content_object.comment.thread).exists():
+            listing_thread = ListingThread.objects.get(thread=notification.content_object.comment.thread)
+            return {'listing': listing_thread.listing,
+                    'thread': notification.content_object.comment.thread,
+                    'comment': notification.content_object.comment
+                    }
+
+        return None
+
+
 class CommentType(DjangoObjectType):
     class Meta:
         model = Comment
@@ -185,7 +269,6 @@ class CommentType(DjangoObjectType):
 
     def resolve_reaction_count(self, info):
         return CommentReaction.objects.filter(comment=self).count()
-
 
 
 class ThreadType(DjangoObjectType):
@@ -269,8 +352,6 @@ class SetCommentReaction(graphene.Mutation):
         if CommentReaction.objects.filter(comment=target_comment, reactor=info.context.user).exists():
             reaction = CommentReaction.objects.get(comment=target_comment, reactor=info.context.user)
 
-            logging.error(delete)
-
             if delete is True:
                 reaction.delete()
                 return SetCommentReaction(comment=target_comment)
@@ -280,6 +361,11 @@ class SetCommentReaction(graphene.Mutation):
         else:
             reaction = CommentReaction(comment=target_comment, reactor=info.context.user, reaction_type=target_reaction_type)
             reaction.save()
+
+        if info.context.user != target_comment.commenter:
+            notification = Notification(content_object=reaction, notifier=info.context.user,
+                                        recipient=target_comment.commenter)
+            notification.save()
 
         return SetCommentReaction(comment=target_comment)
 

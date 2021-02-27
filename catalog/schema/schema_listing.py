@@ -964,6 +964,22 @@ class CreateListingThread(graphene.Mutation):
         new_comment = Comment(thread=new_thread, commenter=info.context.user, body=body, is_root=True)
         new_comment.save()
 
+        # Create notifications
+
+        creator_bylines = ListingCreatorByline.objects.filter(listing=target_listing)
+        for creator_byline in creator_bylines:
+            if info.context.user != creator_byline.user:
+                notification = Notification(content_object=new_listing_thread, notifier=info.context.user,
+                                            recipient=creator_byline.user)
+                notification.save()
+
+        collaborator_bylines = ListingCollaboratorByline.objects.filter(listing=target_listing)
+        for collaborator_byline in collaborator_bylines:
+            if info.context.user != collaborator_byline.user:
+                notification = Notification(content_object=new_listing_thread, notifier=info.context.user,
+                                            recipient=collaborator_byline.user)
+                notification.save()
+
         return CreateListingThread(listing=target_listing)
 
 
@@ -1020,6 +1036,21 @@ class CreateListingThreadReply(graphene.Mutation):
 
         new_comment = Comment(thread=target_thread, commenter=info.context.user, body=body, is_root=False)
         new_comment.save()
+
+        # Create notifications
+        thread_comments = Comment.objects.filter(thread=target_thread)
+        thread_subscribers = []
+        for thread_comment in thread_comments:
+            if info.context.user != thread_comment.commenter and thread_comment.commenter not in thread_subscribers:
+                thread_subscribers.append(thread_comment.commenter)
+
+        import logging
+        logging.error(thread_subscribers)
+
+        for subscriber in thread_subscribers:
+            notification = Notification(content_object=new_comment, notifier=info.context.user,
+                                        recipient=subscriber)
+            notification.save()
 
         return CreateListingThreadReply(listing=target_listing)
 

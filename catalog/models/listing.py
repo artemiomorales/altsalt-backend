@@ -19,7 +19,7 @@ class Listing(models.Model):
     title = models.CharField(max_length=100)
     short_name = models.CharField(max_length=34, default="", blank=True)
     description = models.TextField(default="", blank=True)
-    price = models.ForeignKey("Price", null=True, blank=True, on_delete=models.SET_NULL)
+    price = models.ForeignKey("Price", null=True, blank=True, on_delete=models.PROTECT)
     format = models.ManyToManyField(
         "Format",
         through='ListingFormat'
@@ -59,7 +59,7 @@ class Listing(models.Model):
         through='ListingTag'
     )
     content_rating = models.ForeignKey("ContentRating", null=True, blank=True, on_delete=models.PROTECT)
-    seo_category = models.ForeignKey("SeoCategory", null=True, blank=True, on_delete=models.CASCADE)
+    seo_category = models.ForeignKey("SeoCategory", null=True, blank=True, on_delete=models.SET_NULL)
 
     def __str__(self):
         return self.title
@@ -357,7 +357,7 @@ class ListingThread(models.Model):
     timestamp = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return "{0} - {1}".format(self.listing.title, self.thread.originator)
+        return "{0} - {1} - {2}".format(self.listing.title, self.thread.originator, self.id)
 
     class Meta:
         db_table = TABLE_PREFIX + 'listing_thread'

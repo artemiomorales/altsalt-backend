@@ -1,5 +1,6 @@
 from datetime import date
 from django.contrib.auth import get_user_model
+from catalog.models.base import Notification
 from catalog.models.cms import *
 from catalog.models.user import *
 from catalog.models.listing import *
@@ -10,7 +11,7 @@ import graphene
 from graphene_django.types import DjangoObjectType
 from graphql_jwt.decorators import login_required, token_auth
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
-    NameWithPriorityInput, UserInput, send_membership_email, ratelimit
+    NameWithPriorityInput, UserInput, send_membership_email, ratelimit, NotificationType
 from .schema_cms import ArticleBylineType
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 
@@ -46,8 +47,6 @@ from graphql_jwt.refresh_token.models import RefreshToken
 
 from catalog.constants import get_date_from_string
 
-from datetime import datetime
-import logging
 
 #########
 # TYPES #
@@ -127,6 +126,8 @@ class UserType(DjangoObjectType):
     members = graphene.List(OrganizationMemberType)
     submissions = graphene.List('catalog.schema.schema_submission.SubmissionType')
     invitations_remaining = graphene.Int()
+    unread_notifications_count = graphene.Int()
+    notifications = graphene.List(NotificationType)
 
     def resolve_listings(self, info):
         return ListingCreatorByline.objects.filter(user_id=self.id)
@@ -187,6 +188,18 @@ class UserType(DjangoObjectType):
 
         invitation_count = Invitation.objects.filter(requester=self).count()
         return 2 - invitation_count
+
+    def resolve_unread_notifications_count(self, info):
+        if info.context.user == self:
+            return Notification.objects.filter(recipient=self, is_read=False).count()
+
+        return None
+
+    def resolve_notifications(self, info):
+        if info.context.user == self:
+            return Notification.objects.filter(recipient=self)[:10]
+
+        return None
 
 
 #########
@@ -504,6 +517,34 @@ class UpdateUser(graphene.Mutation):
         target_user.save()
 
         return UpdateUser(user=target_user)
+
+
+#######################
+# UPDATE NOTIFICATION #
+#######################
+
+class UpdateNotifications(graphene.Mutation):
+    user = graphene.Field(UserType)
+
+    class Arguments:
+        notifications = graphene.List(graphene.String)
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, **kwargs):
+
+        target_notifications = kwargs.get('notifications')
+
+        ## For now, this mutation just marks all as read
+        if target_notifications is None:
+            notifications = Notification.objects.filter(recipient=info.context.user)
+            for notification in notifications:
+                notification.is_read = True
+                notification.save()
+            return UpdateNotifications(user=info.context.user)
+
+        return None
 
 
 ##################
@@ -1012,6 +1053,7 @@ class UserQuery(graphene.ObjectType):
 class UserMutation(graphene.ObjectType):
     create_user = CreateUser.Field()
     update_user = UpdateUser.Field()
+    update_notifications = UpdateNotifications.Field()
     confirm_byline = ConfirmByline.Field()
     confirm_membership = ConfirmMembership.Field()
     log_in = LogIn.Field()

@@ -288,6 +288,11 @@ class InvitationAdmin(admin.ModelAdmin):
     pass
 
 
+@admin.register(Price)
+class PriceAdmin(admin.ModelAdmin):
+    pass
+
+
 @admin.register(PriceType)
 class PriceTypeAdmin(admin.ModelAdmin):
     pass
@@ -359,6 +364,16 @@ class ThreadAdmin(admin.ModelAdmin):
     pass
 
 
+@admin.register(ListingThread)
+class ListingThreadAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    pass
+
+
 @admin.register(ReactionType)
 class ReactionTypeAdmin(admin.ModelAdmin):
     pass
@@ -366,4 +381,14 @@ class ReactionTypeAdmin(admin.ModelAdmin):
 
 @admin.register(CommentReaction)
 class CommentReactionAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(NotificationSettings)
+class NotificationSettingsAdmin(admin.ModelAdmin):
     pass
