@@ -392,8 +392,6 @@ def ratelimit(group=None, key=None, rate=None, message="Permission denied"):
             request = info.context
             old_limited = getattr(request, "limited", False)
 
-            logging.error(kwargs)
-
             new_key = key
             if key and key.startswith("gql:"):
                 _key = key.split("gql:")[1]
@@ -423,8 +421,6 @@ def ratelimit(group=None, key=None, rate=None, message="Permission denied"):
 def save_pdf_data(model_instance, model_attribute, file_data, file_name):
     prefix, filestr = file_data.split(';base64,')
     mime_type = prefix.split('/')[-1]
-
-    logging.error(mime_type)
 
     if 'pdf' not in mime_type:
         raise TypeError('File must be in PDF format')

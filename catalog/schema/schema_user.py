@@ -239,6 +239,9 @@ class LogIn(graphql_jwt.ObtainJSONWebToken):
     @classmethod
     @check_csrf
     def resolve(cls, root, info, **kwargs):
+        if info.context.user.is_candidate:
+            raise GraphQLError("Email address not verified! Please click the link we sent "
+                               "to your email to finish creating your account.")
         return cls(user=info.context.user)
 
 
@@ -635,7 +638,7 @@ class ConfirmMembership(graphene.Mutation):
 ####################
 
 
-def CreateAccountRequestValid(invite_email, invite_token):
+def CreateUserRequestValid(email, invite_token=''):
 
     from os.path import join, dirname
     from dotenv import load_dotenv
@@ -643,17 +646,12 @@ def CreateAccountRequestValid(invite_email, invite_token):
     dotenv_path = join(dirname(__file__), '.env')
     load_dotenv(dotenv_path)
 
-    open_signups_enabled = True if os.environ.get('OPEN_SIGNUPS_ENABLED') == 'True' else False
-
-    if open_signups_enabled:
-        return True
-
     closed_signups_enabled = True if os.environ.get('CLOSED_SIGNUPS_ENABLED') == 'True' else False
 
     if closed_signups_enabled is True and invite_token == os.environ.get('SIGNUP_CODE'):
         return True
 
-    invitation = Invitation.objects.get(email=invite_email, redeemed=False)
+    invitation = Invitation.objects.get(email=email, redeemed=False)
 
     if invitation is None:
         return False
@@ -717,7 +715,7 @@ class SendInvitation(graphene.Mutation):
         from_email = Email(email="info@altsalt.com", name="AltSalt")
         to_email = To(invite_email)
 
-        sign_up_url = '{0}/user/signup'.format(os.environ.get('BASE_URL'));
+        sign_up_url = '{0}/user/signup'.format(os.environ.get('BASE_URL'))
         redeem_url = (sign_up_url + '?inviteEmail={0}&inviteToken={1}').format(invite_email, invite_token)
 
         mail = Mail(from_email, to_email, subject)
@@ -725,6 +723,7 @@ class SendInvitation(graphene.Mutation):
             'subject': subject,
             'title': title,
             'message': message,
+            'button_text': 'Create Account',
             'sign_up_url': sign_up_url,
             'redeem_url': redeem_url,
             'token': invite_token
@@ -755,13 +754,43 @@ class VerifyInvitation(graphene.Mutation):
                        " Please try again later.")
     @check_csrf
     def mutate(cls, self, info, invite_email, invite_token):
-        if CreateAccountRequestValid(invite_email, invite_token) is True:
+        if CreateUserRequestValid(invite_email, invite_token) is True:
             return VerifyInvitation(success=True)
 
         return VerifyInvitation(success=False)
 
 
-def creation_user_mutate_wrapper(f):
+def validate_and_create_user(invite_email, username, first_name, last_name, password, is_candidate):
+    if get_user_model().objects.filter(email=invite_email).exists() is True:
+        existing_user = get_user_model().objects.get(email=invite_email)
+        if existing_user.is_candidate:
+            existing_user.delete()
+        else:
+            raise GraphQLError('User with specified email already exists')
+
+    if get_user_model().objects.filter(username=username).exists() is True or \
+            is_restricted_username(username) is True or \
+            is_restricted_fragment(username) is True:
+        raise GraphQLError('Username is not available')
+
+    if re.match('^[a-zA-Z0-9_.-]+$', username) is None:
+        raise GraphQLError('Username may only contain letters, numbers, hyphens, underscores, and periods')
+
+    new_user = get_user_model()(
+        first_name=first_name,
+        last_name=last_name,
+        display_name=first_name + ' ' + last_name,
+        username=username.lower(),
+        email=invite_email,
+        is_candidate=is_candidate
+    )
+    new_user.set_password(password)
+    new_user.save()
+
+    return new_user
+
+
+def create_user_mutate_wrapper(f):
     @wraps(f)
     @setup_jwt_cookie
     @csrf_rotation
@@ -774,30 +803,12 @@ def creation_user_mutate_wrapper(f):
         last_name = kwargs.get('last_name')
         password = kwargs.get('password')
 
-        if CreateAccountRequestValid(invite_email, invite_token) is False:
+
+        if CreateUserRequestValid(invite_email, invite_token) is False:
             raise GraphQLError('Invitation is invalid')
 
         else:
-            if get_user_model().objects.filter(username=username).exists() is True or \
-               is_restricted_username(username) is True or \
-               is_restricted_fragment(username) is True:
-                raise GraphQLError('Username is not available')
-
-            if get_user_model().objects.filter(email=invite_email).exists() is True:
-                raise GraphQLError('User with specified email already exists')
-
-            if re.match('^[a-zA-Z0-9_.-]+$', username) is None:
-                raise GraphQLError('Username may only contain letters, numbers, hyphens, underscores, and periods')
-
-            new_user = get_user_model()(
-                first_name=first_name,
-                last_name=last_name,
-                display_name=first_name + ' ' + last_name,
-                username=username.lower(),
-                email=invite_email
-            )
-            new_user.set_password(password)
-            new_user.save()
+            new_user = validate_and_create_user(invite_email, username, first_name, last_name, password, False)
 
             invitation = Invitation.objects.get(email=invite_email)
             invitation.redeemed = True
@@ -827,10 +838,125 @@ class CreateUser(ResolveMixin, JSONWebTokenMixin, graphene.Mutation):
         password = graphene.String(required=True)
 
     @classmethod
+    @ratelimit(group="create_user", key="ip", rate="5/hr",
+               message="Max number of requests reached. Your device has been temporarily restricted."
+                       " Please try again later.")
     @check_csrf
-    @creation_user_mutate_wrapper
+    @create_user_mutate_wrapper
     def mutate(cls, root, info, **kwargs):
         return cls.resolve(root, info, **kwargs)
+
+
+class CreateCandidateUser(graphene.Mutation):
+    email = graphene.String()
+
+    class Arguments:
+        email = graphene.String(required=True)
+        first_name = graphene.String(required=True)
+        last_name = graphene.String(required=True)
+        username = graphene.String(required=True)
+        password = graphene.String(required=True)
+
+    @classmethod
+    @check_csrf
+    def mutate(cls, root, info, **kwargs):
+        email = kwargs.get('email')
+        username = kwargs.get('username')
+        first_name = kwargs.get('first_name')
+        last_name = kwargs.get('last_name')
+        password = kwargs.get('password')
+
+        from os.path import join, dirname
+        from dotenv import load_dotenv
+
+        dotenv_path = join(dirname(__file__), '.env')
+        load_dotenv(dotenv_path)
+
+        open_signups_enabled = True if os.environ.get('OPEN_SIGNUPS_ENABLED') == 'True' else False
+        if not open_signups_enabled:
+            raise GraphQLError('Open signups are closed! Please try applying for an account')
+
+        else:
+            candidate_user = validate_and_create_user(email, username, first_name, last_name, password, True)
+            candidate_token = GenerateRandomString()
+
+            sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+            from_email = Email(email="info@altsalt.com", name="AltSalt")
+            to_email = To(email)
+
+            sign_up_url = '{0}/user/verify-account'.format(os.environ.get('BASE_URL'))
+            redeem_url = (sign_up_url + '?email={0}&token={1}').format(email, candidate_token)
+            subject = 'Verify your AltSalt account'
+
+            mail = Mail(from_email, to_email, subject)
+            mail.dynamic_template_data = {
+                'subject': subject,
+                'title': 'Welcome to AltSalt',
+                'message': 'Hi there! To finish setting up your AltSalt account, please click the button below.',
+                'sign_up_url': sign_up_url,
+                'redeem_url': redeem_url,
+                'token': candidate_token
+            }
+            mail.template_id = 'd-171f495feafe4472b043d3de1233b998'
+            response = sg.client.mail.send.post(request_body=mail.get())
+
+            candidate_user.candidate_token = make_password(candidate_token)
+            candidate_user.save()
+
+            return CreateCandidateUser(email=email)
+
+
+def verify_candidate_user_mutate_wrapper(f):
+    @wraps(f)
+    @setup_jwt_cookie
+    @csrf_rotation
+    @refresh_expiration
+    def wrapper(cls, root, info, **kwargs):
+        email = kwargs.get('email')
+        token = kwargs.get('token')
+
+        if get_user_model().objects.filter(email=email, is_candidate=True).exists():
+
+            user = get_user_model().objects.get(email=email, is_candidate=True)
+
+            encrypted_token = user.candidate_token
+            if check_password(token, encrypted_token) is True:
+
+                user.is_candidate = False
+                user.save()
+
+                context = info.context
+                context._jwt_token_auth = True
+
+                if hasattr(context, 'user'):
+                    context.user = user
+
+                result = f(cls, root, info, **kwargs)
+                signals.token_issued.send(sender=cls, request=context, user=user)
+                return maybe_thenable((context, user, result), on_token_auth_resolve)
+            else:
+                raise GraphQLError("Token is invalid. Did you type the code in correctly?")
+        else:
+            raise GraphQLError("Request is invalid")
+
+    return wrapper
+
+
+class VerifyCandidateUser(ResolveMixin, JSONWebTokenMixin, graphene.Mutation):
+
+    class Arguments:
+        email = graphene.String(required=True)
+        token = graphene.String(required=True)
+
+    @classmethod
+    @ratelimit(group="create_user", key="ip", rate="5/hr",
+               message="Max number of requests reached. Your device has been temporarily restricted."
+                       " Please try again later.")
+    @check_csrf
+    @verify_candidate_user_mutate_wrapper
+    def mutate(cls, root, info, **kwargs):
+        return cls.resolve(root, info, **kwargs)
+
 
 
 ##################
@@ -1062,6 +1188,8 @@ class UserQuery(graphene.ObjectType):
 
 class UserMutation(graphene.ObjectType):
     create_user = CreateUser.Field()
+    create_candidate_user = CreateCandidateUser.Field()
+    verify_candidate_user = VerifyCandidateUser.Field()
     update_user = UpdateUser.Field()
     update_notifications = UpdateNotifications.Field()
     confirm_byline = ConfirmByline.Field()

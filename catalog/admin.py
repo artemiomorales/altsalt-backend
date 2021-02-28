@@ -134,7 +134,7 @@ class CustomUserAdmin(UserAdmin):
          )
 
     fieldsets = (
-        (None, {'fields': ('username', 'password', 'email', 'first_name', 'last_name', 'is_moderator', 'is_verified')}),
+        (None, {'fields': ('username', 'password', 'email', 'first_name', 'last_name', 'is_candidate', 'is_moderator', 'is_verified')}),
         (_('Profile'), {'fields':
                             ('display_name',
                              'short_name',

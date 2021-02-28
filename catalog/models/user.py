@@ -6,6 +6,8 @@ from django.db.models import Q
 from django.utils.translation import gettext, gettext_lazy as _
 from catalog.backends import ThumbnailImageStorage
 
+from django.contrib.auth.models import UnicodeUsernameValidator
+
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
@@ -19,6 +21,8 @@ class User(AbstractUser):
     occupation = models.CharField(max_length=50, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     show_age = models.BooleanField(default=False)
+    is_candidate = models.BooleanField(default=False)
+    candidate_token = models.CharField(max_length=120, default='', blank=True)
     is_organization = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
     is_moderator = models.BooleanField(default=False)

@@ -1044,9 +1044,6 @@ class CreateListingThreadReply(graphene.Mutation):
             if info.context.user != thread_comment.commenter and thread_comment.commenter not in thread_subscribers:
                 thread_subscribers.append(thread_comment.commenter)
 
-        import logging
-        logging.error(thread_subscribers)
-
         for subscriber in thread_subscribers:
             notification = Notification(content_object=new_comment, notifier=info.context.user,
                                         recipient=subscriber)
