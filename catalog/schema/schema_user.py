@@ -47,6 +47,9 @@ from graphql_jwt.refresh_token.models import RefreshToken
 
 from catalog.constants import get_date_from_string
 
+# recaptcha
+import requests
+
 
 #########
 # TYPES #
@@ -856,6 +859,7 @@ class CreateCandidateUser(graphene.Mutation):
         last_name = graphene.String(required=True)
         username = graphene.String(required=True)
         password = graphene.String(required=True)
+        recaptcha = graphene.String(required=True)
 
     @classmethod
     @check_csrf
@@ -865,6 +869,7 @@ class CreateCandidateUser(graphene.Mutation):
         first_name = kwargs.get('first_name')
         last_name = kwargs.get('last_name')
         password = kwargs.get('password')
+        recaptcha = kwargs.get('recaptcha')
 
         from os.path import join, dirname
         from dotenv import load_dotenv
@@ -874,36 +879,47 @@ class CreateCandidateUser(graphene.Mutation):
 
         open_signups_enabled = True if os.environ.get('OPEN_SIGNUPS_ENABLED') == 'True' else False
         if not open_signups_enabled:
-            raise GraphQLError('Open signups are closed! Please try applying for an account')
+            raise GraphQLError('Open signups are closed! Please try applying for an account.')
 
-        else:
-            candidate_user = validate_and_create_user(email, username, first_name, last_name, password, True)
-            candidate_token = GenerateRandomString()
+        url = 'https://www.google.com/recaptcha/api/siteverify'
+        values = {
+            'secret': os.environ.get('RECAPTCHA_SECRET_KEY'),
+            'response': recaptcha
+        }
 
-            sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
-            from_email = Email(email="info@altsalt.com", name="AltSalt")
-            to_email = To(email)
+        result = requests.post(url, data=values).json()
 
-            sign_up_url = '{0}/user/verify-account'.format(os.environ.get('BASE_URL'))
-            redeem_url = (sign_up_url + '?email={0}&token={1}').format(email, candidate_token)
-            subject = 'Verify your AltSalt account'
+        if not result['success']:
+            raise GraphQLError('Captcha is invalid. Please try again.')
 
-            mail = Mail(from_email, to_email, subject)
-            mail.dynamic_template_data = {
-                'subject': subject,
-                'title': 'Welcome to AltSalt',
-                'message': 'Hi there! To finish setting up your AltSalt account, please click the button below.',
-                'sign_up_url': sign_up_url,
-                'redeem_url': redeem_url,
-                'token': candidate_token
-            }
-            mail.template_id = 'd-171f495feafe4472b043d3de1233b998'
-            response = sg.client.mail.send.post(request_body=mail.get())
+        candidate_user = validate_and_create_user(email, username, first_name, last_name, password, True)
+        candidate_token = GenerateRandomString()
 
-            candidate_user.candidate_token = make_password(candidate_token)
-            candidate_user.save()
+        sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+        from_email = Email(email="info@altsalt.com", name="AltSalt")
+        to_email = To(email)
 
-            return CreateCandidateUser(email=email)
+        sign_up_url = '{0}/user/verify-account'.format(os.environ.get('BASE_URL'))
+        redeem_url = (sign_up_url + '?email={0}&token={1}').format(email, candidate_token)
+        subject = 'Verify your AltSalt account'
+
+        mail = Mail(from_email, to_email, subject)
+        mail.dynamic_template_data = {
+            'subject': subject,
+            'title': 'Welcome to AltSalt',
+            'message': 'Hi there! To finish setting up your AltSalt account, please click the button below.',
+            'button_text': 'Verify Account',
+            'sign_up_url': sign_up_url,
+            'redeem_url': redeem_url,
+            'token': candidate_token
+        }
+        mail.template_id = 'd-171f495feafe4472b043d3de1233b998'
+        response = sg.client.mail.send.post(request_body=mail.get())
+
+        candidate_user.candidate_token = make_password(candidate_token)
+        candidate_user.save()
+
+        return CreateCandidateUser(email=email)
 
 
 def verify_candidate_user_mutate_wrapper(f):
