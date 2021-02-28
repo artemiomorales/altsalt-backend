@@ -50,6 +50,7 @@ class Article(models.Model):
         super(Article, self).save(*args, **kwargs)
 
     class Meta:
+        ordering = ['-publish_date']
         db_table = TABLE_PREFIX + 'article'
 
 
