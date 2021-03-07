@@ -162,7 +162,7 @@ class CustomUserAdmin(UserAdmin):
     )
 
     inline_type = 'tabular'
-    inline_reverse = ['notification_settings', 'user_profile_image', 'listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture', 'organization_member']
+    inline_reverse = ['user_profile_image', 'listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture', 'organization_member']
     inlines = [NotificationSettingsInline, UserProfileImageInline, RoleInline, MemberInline, ListingCreationBylineInlineForUser, ListingCollaboratorBylineInlineForUser,
                UserCountryInline, UserIdentityInline, UserLinkInline]
 
