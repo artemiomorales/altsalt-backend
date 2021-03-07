@@ -314,4 +314,3 @@ def article_cover_image_path(instance, filename):
 def media_upload_path(instance, filename):
     date = datetime.datetime.now()
     return (catalog_media_path(instance.user_id) + "/uploads/{0}-{1}").format(date.strftime("%f"), filename)
-

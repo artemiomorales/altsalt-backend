@@ -8,7 +8,7 @@ from catalog.models.submission import *
 
 import re
 import graphene
-from graphene_django.types import DjangoObjectType
+from graphene_django.types import DjangoObjectType, ObjectType
 from graphql_jwt.decorators import login_required, token_auth
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
     NameWithPriorityInput, UserInput, send_membership_email, ratelimit, NotificationType
@@ -49,6 +49,12 @@ from catalog.constants import get_date_from_string
 
 # recaptcha
 import requests
+
+from os.path import join, dirname
+from dotenv import load_dotenv
+
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
 
 
 #########
@@ -109,11 +115,38 @@ class UserProfileImageType(DjangoObjectType, BaseImageTypeMixin):
         model = UserProfileImage
 
 
+class NotificationSettingsComponentsType(ObjectType):
+    label = graphene.String()
+    value = graphene.String()
+    description = graphene.String()
+
+
+class NotificationSettingsType(DjangoObjectType):
+    class Meta:
+        model = NotificationSettings
+
+    frequency = graphene.Field(NotificationSettingsComponentsType)
+    choices = graphene.List(NotificationSettingsComponentsType)
+
+    def resolve_frequency(self, info):
+        return {'label': dict(self.Frequency.choices)[self.frequency],
+                'value': self.frequency,
+                'description': self.get_frequency_description(self.frequency)}
+
+    def resolve_choices(self, info):
+        choices_array = []
+        for value in self.Frequency.values:
+            choices_array.append({'label': dict(self.Frequency.choices)[value],
+                                  'value': value,
+                                  'description': self.get_frequency_description(value)})
+        return choices_array
+
+
 class UserType(DjangoObjectType):
     class Meta:
         model = get_user_model()
         fields = ('id', 'is_moderator', 'is_verified', 'username', 'first_name', 'display_name', 'short_name', 'occupation',
-                  'description', 'is_organization', 'date_of_birth', 'show_age', 'pronouns', 'location', 'date_joined')
+                  'description', 'is_organization', 'date_of_birth', 'show_age', 'pronouns', 'location', 'date_joined', 'is_superuser')
 
     profile_image = graphene.Field(UserProfileImageType)
     listings = graphene.List(ListingCreatorBylineType)
@@ -131,6 +164,7 @@ class UserType(DjangoObjectType):
     invitations_remaining = graphene.Int()
     unread_notifications_count = graphene.Int()
     notifications = graphene.List(NotificationType, count=graphene.Int())
+    notification_settings = graphene.Field(NotificationSettingsType)
 
     def resolve_listings(self, info):
         return ListingCreatorByline.objects.filter(user_id=self.id)
@@ -208,6 +242,9 @@ class UserType(DjangoObjectType):
             return Notification.objects.filter(recipient=self)
 
         return None
+
+    def resolve_notification_settings(self, info):
+        return self.notificationsettings
 
 
 #########
@@ -974,10 +1011,56 @@ class VerifyCandidateUser(ResolveMixin, JSONWebTokenMixin, graphene.Mutation):
         return cls.resolve(root, info, **kwargs)
 
 
+################################
+# UPDATE NOTIFICATION SETTINGS #
+################################
+
+
+class UpdateNotificationSettings(graphene.Mutation):
+    user = graphene.Field(UserType)
+
+    class Arguments:
+        frequency = graphene.String(required=True)
+        user_id = graphene.String()
+        request_id = graphene.String()
+        token = graphene.String()
+
+    @classmethod
+    @ratelimit(group="update_notification_settings", key="ip", rate="30/hr",
+               message="Max number of requests reached. Your device has been temporarily restricted."
+                       " Please try again later.")
+    @check_csrf
+    def mutate(cls, self, info, **kwargs):
+
+        notification_settings = None
+
+        if info.context.user.is_authenticated is True:
+            notification_settings = NotificationSettings.objects.get(user=info.context.user)
+
+        else:
+            user_id = kwargs.get('user_id')
+            request_id = kwargs.get('request_id')
+            token = kwargs.get('token')
+
+            if user_id is not None and request_id is not None and token is not None and\
+               NotificationSettingsAuthorizedUpdate.objects.filter(user_id=user_id, id=request_id).exists():
+                    authorized_update = NotificationSettingsAuthorizedUpdate.objects.get(user_id=user_id, id=request_id)
+                    encrypted_token = authorized_update.token
+                    if check_password(token, encrypted_token) is True:
+                        notification_settings = NotificationSettings.objects.get(user_id=user_id)
+
+        frequency = kwargs.get('frequency')
+
+        if notification_settings is not None:
+            notification_settings.frequency = frequency
+            notification_settings.save()
+            return UpdateNotificationSettings(user=notification_settings.user)
+
 
 ##################
 # RESET PASSWORD #
 ##################
+
 
 def ResetPasswordRequestValid(email, token):
 
@@ -1091,6 +1174,10 @@ class ResetPassword(graphene.Mutation):
             return ResetPassword(success=True)
 
 
+############
+# FEEDBACK #
+############
+
 class SendFeedback(graphene.Mutation):
     success = graphene.Boolean()
 
@@ -1143,6 +1230,74 @@ class SendFeedback(graphene.Mutation):
         return SendFeedback(success=True)
 
 
+###################
+# SEND NEWSLETTER #
+###################
+
+class SendNewsletter(graphene.Mutation):
+    success = graphene.Boolean()
+
+    class Arguments:
+        subject = graphene.String(required=True)
+        preview_text = graphene.String(required=True)
+        is_test = graphene.Boolean(required=True)
+        category = graphene.String()
+
+    @classmethod
+    # @ratelimit(group="send_feedback", key="ip", rate="5/d",
+    #            message="Max number of messages sent. Your device has been temporarily restricted."
+    #                    " You can try Discord, or emailing us at info@altsalt.com.")
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, **kwargs):
+
+        if info.context.user.is_superuser is False:
+            raise GraphQLError("You are not authorized to perform this action")
+
+        sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+
+        from_confirmation_email = Email(email="artemio@altsalt.com", name="AltSalt")
+        subject = kwargs.get('subject')
+        preview_text = kwargs.get('preview_text')
+        is_test = kwargs.get('is_test')
+        category = kwargs.get('category')
+
+        all_users = User.objects.all()
+        for user in all_users:
+            notification_settings = NotificationSettings.objects.get(user=user)
+
+            if is_test is True and user.is_superuser is False:
+                continue
+
+            if notification_settings.frequency == notification_settings.Frequency.OFF:
+                continue
+
+            token = GenerateRandomString()
+            notification_settings_authorized_update = NotificationSettingsAuthorizedUpdate(user=user,
+                                                                                         token=make_password(token))
+            notification_settings_authorized_update.save()
+
+            email_preferences_url = "{0}/user/email-preferences?id={1}&requestId={2}&token={3}".format(
+                os.environ.get('BASE_URL'), user.id, notification_settings_authorized_update.id, token)
+            unsubscribe_url = "{0}&frequency={1}".format(email_preferences_url, notification_settings.Frequency.OFF)
+
+            to_confirmation_email = To(user.email)
+            newsletter_email = Mail(from_confirmation_email, to_confirmation_email, subject)
+            newsletter_email.dynamic_template_data = {
+                "subject": subject,
+                "preview_text": preview_text,
+                "email_preferences_url": email_preferences_url,
+                "unsubscribe_url": unsubscribe_url
+            }
+            if category is not None:
+                newsletter_email.category = Category(category)
+            newsletter_email.template_id = 'd-ff20f481a8d8470484706736e3f86a54'
+            newsletter_response = sg.client.mail.send.post(request_body=newsletter_email.get())
+
+        return SendNewsletter(success=True)
+
+
+
 #######################
 # JWT / REFRESH TOKEN #
 #######################
@@ -1180,7 +1335,7 @@ class CustomRevokeToken(graphql_jwt.Revoke):
 class UserQuery(graphene.ObjectType):
     me = graphene.Field(UserType)
     all_users = graphene.List(UserType)
-    user = graphene.Field(UserType, username=graphene.String())
+    user = graphene.Field(UserType, username=graphene.String(), id=graphene.String())
 
     def resolve_me(self, info):
         authuser = info.context.user
@@ -1195,9 +1350,13 @@ class UserQuery(graphene.ObjectType):
     def resolve_user(self, info, **kwargs):
 
         username = kwargs.get('username')
+        id = kwargs.get('id')
 
-        if username is not None:
+        if username is not None and get_user_model().objects.filter(username=username).exists():
             return get_user_model().objects.get(username=username)
+
+        if id is not None and get_user_model().objects.filter(id=int(id)).exists():
+            return get_user_model().objects.get(id=int(id))
 
         return None
 
@@ -1208,6 +1367,7 @@ class UserMutation(graphene.ObjectType):
     verify_candidate_user = VerifyCandidateUser.Field()
     update_user = UpdateUser.Field()
     update_notifications = UpdateNotifications.Field()
+    update_notification_settings = UpdateNotificationSettings.Field()
     confirm_byline = ConfirmByline.Field()
     confirm_membership = ConfirmMembership.Field()
     log_in = LogIn.Field()
@@ -1216,6 +1376,7 @@ class UserMutation(graphene.ObjectType):
     revoke_token = CustomRevokeToken.Field()
     send_invitation = SendInvitation.Field()
     verify_invitation = VerifyInvitation.Field()
+    send_newsletter = SendNewsletter.Field()
     create_reset_password_request = CreateResetPasswordRequest.Field()
     verify_reset_password_request = VerifyResetPasswordRequest.Field()
     reset_password = ResetPassword.Field()

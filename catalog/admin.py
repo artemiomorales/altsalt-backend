@@ -62,6 +62,12 @@ class ListingPreviewImageInline(SingleInline):
     pass
 
 
+class NotificationSettingsInline(SingleInline):
+    model = NotificationSettings
+    fields = ('frequency',)
+    pass
+
+
 class ListingCreationBylineInlineForListing(SingleInline):
     model = ListingCreatorByline
     fk_name = 'listing'
@@ -118,6 +124,7 @@ class MemberInline(SingleInline):
 
 
 
+
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     model = User
@@ -134,7 +141,8 @@ class CustomUserAdmin(UserAdmin):
          )
 
     fieldsets = (
-        (None, {'fields': ('username', 'password', 'email', 'first_name', 'last_name', 'is_candidate', 'is_moderator', 'is_verified')}),
+        (None, {'fields': ('username', 'password', 'email', 'first_name', 'last_name',
+                           'is_candidate', 'is_moderator', 'is_verified')}),
         (_('Profile'), {'fields':
                             ('display_name',
                              'short_name',
@@ -154,8 +162,8 @@ class CustomUserAdmin(UserAdmin):
     )
 
     inline_type = 'tabular'
-    inline_reverse = ['user_profile_image, listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture', 'organization_member']
-    inlines = [UserProfileImageInline, RoleInline, MemberInline, ListingCreationBylineInlineForUser, ListingCollaboratorBylineInlineForUser,
+    inline_reverse = ['notification_settings', 'user_profile_image', 'listing_creation_bylines', 'listing_collaborator_bylines', 'user_culture', 'organization_member']
+    inlines = [NotificationSettingsInline, UserProfileImageInline, RoleInline, MemberInline, ListingCreationBylineInlineForUser, ListingCollaboratorBylineInlineForUser,
                UserCountryInline, UserIdentityInline, UserLinkInline]
 
     def get_inline_instances(self, request, obj=None):
@@ -391,4 +399,9 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(NotificationSettings)
 class NotificationSettingsAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(NotificationSettingsAuthorizedUpdate)
+class NotificationSettingsAuthorizedUpdateAdmin(admin.ModelAdmin):
     pass

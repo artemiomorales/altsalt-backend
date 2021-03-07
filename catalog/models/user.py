@@ -6,8 +6,6 @@ from django.db.models import Q
 from django.utils.translation import gettext, gettext_lazy as _
 from catalog.backends import ThumbnailImageStorage
 
-from django.contrib.auth.models import UnicodeUsernameValidator
-
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
@@ -66,6 +64,11 @@ class User(AbstractUser):
             # Newly created object, so display name
             self.display_name = self.first_name + ' ' + self.last_name
 
+        if self.notification_settings is None:
+            new_notification_settings = NotificationSettings(user=self)
+            new_notification_settings.save()
+            self.notification_settings = new_notification_settings
+
         super(User, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -77,20 +80,55 @@ class User(AbstractUser):
 
 class NotificationSettings(models.Model):
 
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+    )
+
     class Frequency(models.TextChoices):
         DAILY = 'D', _('Daily')
         SEMIWEEKLY = 'SW', _('Semiweekly')
         WEEKLY = 'W', _('Weekly')
+        OFF = 'X', _('OFF')
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     frequency = models.CharField(
         max_length=2,
         choices=Frequency.choices,
         default=Frequency.SEMIWEEKLY,
     )
 
+    def get_frequency_description(self, value):
+        if value == self.Frequency.DAILY:
+            return 'Sunday newsletter and daily digest'
+
+        if value == self.Frequency.SEMIWEEKLY:
+            return 'Sunday newsletter and midweek digest'
+
+        if value == self.Frequency.WEEKLY:
+            return 'Sunday newsletter'
+
+        return ''
+
+    def __str__(self):
+        return "{0} - {1}".format(self.user, self.frequency)
+
     class Meta:
         db_table = PROJECT_PREFIX + 'notification_settings'
+
+
+class NotificationSettingsAuthorizedUpdate(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    token = models.CharField(max_length=120)
+
+    def __str__(self):
+        return "{0}".format(self.user)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'notification_settings_authorized_update'
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'token'], name='user_notification_settings_update_pair')
+        ]
 
 
 class UserProfileImage(CustomImage):

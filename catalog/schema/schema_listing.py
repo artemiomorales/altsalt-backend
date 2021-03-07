@@ -150,7 +150,7 @@ class ListingLanguageType(DjangoObjectType):
 class ListingCountryRepresentedType(DjangoObjectType):
     class Meta:
         model = ListingCountryRepresented
-        exclude = ('culture',)
+        exclude = ('country',)
 
     item = graphene.Field(CountryType)
 
@@ -285,7 +285,7 @@ class ListingType(DjangoObjectType):
         return True
 
     def resolve_moderator_authentication(self, info):
-        if info.context.user.is_authenticated and info.context.user.is_moderator:
+        if info.context.user.is_authenticated is True and info.context.user.is_moderator is True:
             return True
         return False
 
