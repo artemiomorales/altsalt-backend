@@ -881,7 +881,7 @@ class CreateUser(ResolveMixin, JSONWebTokenMixin, graphene.Mutation):
         password = graphene.String(required=True)
 
     @classmethod
-    @ratelimit(group="create_user", key="ip", rate="5/hr",
+    @ratelimit(group="create_user", key="ip", rate="12/hr",
                message="Max number of requests reached. Your device has been temporarily restricted."
                        " Please try again later.")
     @check_csrf

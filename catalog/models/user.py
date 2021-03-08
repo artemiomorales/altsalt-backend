@@ -64,12 +64,12 @@ class User(AbstractUser):
             # Newly created object, so display name
             self.display_name = self.first_name + ' ' + self.last_name
 
-        if self.notificationsettings is None:
+        super(User, self).save(*args, **kwargs)
+
+        if NotificationSettings.objects.filter(user=self).exists() is False:
             new_notification_settings = NotificationSettings(user=self)
             new_notification_settings.save()
             self.notificationsettings = new_notification_settings
-
-        super(User, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.username
