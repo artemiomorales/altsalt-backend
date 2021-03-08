@@ -210,8 +210,8 @@ class Invitation(models.Model):
 
     def __str__(self):
         if getattr(self, 'requester') is not None:
-            return self.requester.username
-        return '-'
+            return "{0} - {1}".format(self.requester.username, self.email)
+        return self.email
 
     class Meta:
         db_table = TABLE_PREFIX + 'invitation'
