@@ -778,6 +778,7 @@ class SendInvitation(graphene.Mutation):
 
         else:
             mail.category = Category('Invitation {0}'.format(os.environ.get('BASE_URL')))
+            response = sg.client.mail.send.post(request_body=mail.get())
             new_invitation = Invitation(email=invite_email, token=make_password(invite_token), requester=info.context.user)
             new_invitation.save()
             return SendInvitation(user=info.context.user)
