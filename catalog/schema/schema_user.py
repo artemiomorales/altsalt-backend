@@ -769,13 +769,15 @@ class SendInvitation(graphene.Mutation):
             'token': invite_token
         }
         mail.template_id = 'd-171f495feafe4472b043d3de1233b998'
-        response = sg.client.mail.send.post(request_body=mail.get())
 
         if is_test:
+            mail.category = Category('Invitation Test {0}'.format(os.environ.get('BASE_URL')))
+            response = sg.client.mail.send.post(request_body=mail.get())
             new_invitation = Invitation(email=invite_email, token=make_password(invite_token), requester=info.context.user)
             return SendInvitation(user=info.context.user)
 
         else:
+            mail.category = Category('Invitation {0}'.format(os.environ.get('BASE_URL')))
             new_invitation = Invitation(email=invite_email, token=make_password(invite_token), requester=info.context.user)
             new_invitation.save()
             return SendInvitation(user=info.context.user)
