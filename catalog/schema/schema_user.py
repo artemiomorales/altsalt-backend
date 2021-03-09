@@ -5,20 +5,20 @@ from catalog.models.cms import *
 from catalog.models.user import *
 from catalog.models.listing import *
 from catalog.models.submission import *
+from catalog.utils import GenerateRandomString
 
 import re
 import graphene
 from graphene_django.types import DjangoObjectType, ObjectType
 from graphql_jwt.decorators import login_required, token_auth
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
-    NameWithPriorityInput, UserInput, send_membership_email, ratelimit, NotificationType
+    NameWithPriorityInput, UserInput, send_membership_email, ratelimit, NotificationType, send_welcome_email
 from .schema_cms import ArticleBylineType
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
 
 from django.contrib.auth.hashers import make_password, check_password
 import os
-import random
-import string
+
 from graphql import GraphQLError
 from django.template.defaultfilters import slugify
 
@@ -49,6 +49,7 @@ from catalog.constants import get_date_from_string
 
 # recaptcha
 import requests
+
 
 from os.path import join, dirname
 from dotenv import load_dotenv
@@ -252,9 +253,7 @@ class UserType(DjangoObjectType):
 #########
 
 
-def GenerateRandomString():
-    letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for i in range(12))
+
 
 
 
@@ -846,7 +845,6 @@ def create_user_mutate_wrapper(f):
         last_name = kwargs.get('last_name')
         password = kwargs.get('password')
 
-
         if CreateUserRequestValid(invite_email, invite_token) is False:
             raise GraphQLError('Invitation is invalid')
 
@@ -856,6 +854,11 @@ def create_user_mutate_wrapper(f):
             invitation = Invitation.objects.get(email=invite_email)
             invitation.redeemed = True
             invitation.save()
+
+            try:
+                send_welcome_email(new_user, False)
+            except:
+                pass
 
             context = info.context
             context._jwt_token_auth = True
@@ -1300,6 +1303,41 @@ class SendNewsletter(graphene.Mutation):
         return SendNewsletter(success=True)
 
 
+######################
+# SEND WELCOME EMAIL #
+######################
+
+class SendWelcomeEmail(graphene.Mutation):
+    success = graphene.Boolean()
+
+    class Arguments:
+        email = graphene.String(required=True)
+        is_test = graphene.Boolean(required=True)
+
+    @classmethod
+    # @ratelimit(group="send_feedback", key="ip", rate="5/d",
+    #            message="Max number of messages sent. Your device has been temporarily restricted."
+    #                    " You can try Discord, or emailing us at info@altsalt.com.")
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, **kwargs):
+
+        if info.context.user.is_superuser is False:
+            raise GraphQLError("You are not authorized to perform this action")
+
+        email = kwargs.get('email')
+        is_test = kwargs.get('is_test')
+
+        if is_test:
+            return send_welcome_email(info.context.user, is_test)
+
+        else:
+            if get_user_model().objects.filter(email=email).exists() is False:
+                raise GraphQLError("Target user does not exist")
+
+            user = get_user_model().objects.get(email=email)
+            return send_welcome_email(user, is_test)
+
 
 #######################
 # JWT / REFRESH TOKEN #
@@ -1380,6 +1418,7 @@ class UserMutation(graphene.ObjectType):
     send_invitation = SendInvitation.Field()
     verify_invitation = VerifyInvitation.Field()
     send_newsletter = SendNewsletter.Field()
+    send_welcome_email = SendWelcomeEmail.Field()
     create_reset_password_request = CreateResetPasswordRequest.Field()
     verify_reset_password_request = VerifyResetPasswordRequest.Field()
     reset_password = ResetPassword.Field()

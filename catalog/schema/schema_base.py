@@ -1,6 +1,9 @@
 import graphene
 from catalog.models.base import Country, Identity, Thread, Comment, ReactionType, CommentReaction, Notification
 from catalog.models.listing import Price, ListingThread
+from catalog.models.user import NotificationSettings, NotificationSettingsAuthorizedUpdate
+from catalog.utils import GenerateRandomString
+from django.contrib.auth.hashers import make_password
 from graphene_django.types import DjangoObjectType, ObjectType
 from django.conf import settings
 from django.middleware.csrf import _sanitize_token, _compare_salted_tokens
@@ -35,6 +38,13 @@ from sendgrid.helpers.mail import *
 # Rate limiting
 
 from ratelimit.core import is_ratelimited
+
+
+from os.path import join, dirname
+from dotenv import load_dotenv
+
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
 
 
 def check_csrf(f):
@@ -629,3 +639,35 @@ def send_submission_rejected_email(target_username, submission_title, target_ema
     }
     mail.template_id = 'd-7bbf18f8831c4783be50a0ab93f4d8ac'
     response = sg.client.mail.send.post(request_body=mail.get())
+
+
+def send_welcome_email(user, is_test):
+    sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+
+    from_confirmation_email = Email(email="artemio@altsalt.com", name="AltSalt")
+
+    token = GenerateRandomString()
+    notification_settings_authorized_update = NotificationSettingsAuthorizedUpdate(user=user,
+                                                                                   token=make_password(token))
+    notification_settings_authorized_update.save()
+
+    email_preferences_url = "{0}/user/email-preferences?id={1}&requestId={2}&token={3}".format(
+        os.environ.get('BASE_URL'), user.id, notification_settings_authorized_update.id, token)
+    unsubscribe_url = "{0}&frequency={1}".format(email_preferences_url, NotificationSettings.Frequency.OFF)
+
+    to_confirmation_email = To(user.email)
+    welcome_email = Mail(from_confirmation_email, to_confirmation_email)
+    welcome_email.dynamic_template_data = {
+        "email_preferences_url": email_preferences_url,
+        "unsubscribe_url": unsubscribe_url
+    }
+
+    if is_test:
+        welcome_email.category = Category('Welcome Email Test {0}'.format(os.environ.get('BASE_URL')))
+    else:
+        welcome_email.category = Category('Welcome Email {0}'.format(os.environ.get('BASE_URL')))
+
+    welcome_email.template_id = 'd-8b1a6243a78644e6a985c51fc2a4c1ee'
+    response = sg.client.mail.send.post(request_body=welcome_email.get())
+
+    return True
