@@ -142,7 +142,7 @@ class CustomUserAdmin(UserAdmin):
 
     fieldsets = (
         (None, {'fields': ('username', 'password', 'email', 'first_name', 'last_name',
-                           'is_candidate', 'is_moderator', 'is_verified')}),
+                           'is_candidate', 'is_moderator', 'is_verified', 'signup_code')}),
         (_('Profile'), {'fields':
                             ('display_name',
                              'short_name',
@@ -404,4 +404,9 @@ class NotificationSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(NotificationSettingsAuthorizedUpdate)
 class NotificationSettingsAuthorizedUpdateAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(SignupCode)
+class SignupCodeAdmin(admin.ModelAdmin):
     pass

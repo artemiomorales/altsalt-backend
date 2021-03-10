@@ -59,6 +59,8 @@ class User(AbstractUser):
         through='OrganizationMember'
     )
 
+    signup_code = models.ForeignKey("SignupCode", null=True, blank=True, on_delete=models.SET_NULL)
+
     def save(self, *args, **kwargs):
         if not self.id:
             # Newly created object, so display name
@@ -76,6 +78,17 @@ class User(AbstractUser):
 
     class Meta:
         db_table = PROJECT_PREFIX + 'user'
+
+
+class SignupCode(models.Model):
+    code = models.CharField(max_length=30, blank=False)
+    active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.code
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'signup_code'
 
 
 class NotificationSettings(models.Model):
