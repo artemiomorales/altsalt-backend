@@ -236,6 +236,97 @@ class Notification(models.Model):
     timestamp = models.DateTimeField(default=timezone.now)
     is_read = models.BooleanField(default=False)
 
+    def get_type(self):
+        from catalog.models.listing import ListingThread
+        notification = Notification.objects.get(id=self.id)
+        model = notification.content_type.model_class()
+
+        if model is ListingThread:
+            return 'comment'
+
+        if model is Comment:
+            return 'reply'
+
+        if model is CommentReaction:
+            return 'reaction'
+
+        return None
+
+    def get_simple_message(self):
+        from catalog.models.listing import ListingThread
+        model = self.content_type.model_class()
+
+        if model is ListingThread:
+            return '{0} resonated on your listing {1}'.format(self.notifier.display_name,
+                                                                     self.content_object.listing.title)
+        if model is Comment:
+            listing_title = ''
+            if ListingThread.objects.filter(thread=self.content_object.thread).exists():
+                listing_thread = ListingThread.objects.get(thread=self.content_object.thread)
+                listing_title = listing_thread.listing.title
+            return '{0} replied on a thread you\'re a part of on {1}'.format(self.notifier.display_name,
+                                                                             listing_title)
+        if model is CommentReaction:
+            listing_title = ''
+            if ListingThread.objects.filter(thread=self.content_object.comment.thread).exists():
+                listing_thread = ListingThread.objects.get(thread=self.content_object.comment.thread)
+                listing_title = listing_thread.listing.title
+            return '{0} reacted to your resonance on {1}'.format(self.notifier.display_name,
+                                                                listing_title)
+
+        return None
+
+    def get_message(self):
+        from catalog.models.listing import ListingThread
+        model = self.content_type.model_class()
+
+        def get_thread_string(thread):
+            if thread.get_root_comment() is not None:
+                return thread.get_root_comment().body
+
+            return ''
+
+        if model is ListingThread:
+            return '{0} resonated on your listing {1}: “{2}”'.format(self.notifier.display_name,
+                                                                     self.content_object.listing.title,
+                                                                     get_thread_string(
+                                                                         self.content_object.thread))
+        if model is Comment:
+            return '{0} replied on a thread you\'re a part of: "{1}”'.format(self.notifier.display_name,
+                                                                             get_thread_string(
+                                                                                 self.content_object.thread))
+        if model is CommentReaction:
+            return '{0} reacted to your resonance "{1}"'.format(self.notifier.display_name,
+                                                                self.content_object.comment.body)
+
+        return None
+
+    def get_url_components(self):
+        from catalog.models.listing import ListingThread
+        notification = Notification.objects.get(id=self.id)
+        model = notification.content_type.model_class()
+
+        if model is ListingThread:
+            return {'listing': notification.content_object.listing,
+                    'thread': notification.content_object.thread,
+                    'comment': None
+                    }
+        if model is Comment and \
+                ListingThread.objects.filter(thread=notification.content_object.thread).exists():
+            listing_thread = ListingThread.objects.get(thread=notification.content_object.thread)
+            return {'listing': listing_thread.listing,
+                    'thread': notification.content_object.thread,
+                    'comment': notification.content_object
+                    }
+        if model is CommentReaction and \
+                ListingThread.objects.filter(thread=notification.content_object.comment.thread).exists():
+            listing_thread = ListingThread.objects.get(thread=notification.content_object.comment.thread)
+            return {'listing': listing_thread.listing,
+                    'thread': notification.content_object.comment.thread,
+                    'comment': notification.content_object.comment
+                    }
+        return None
+
     def __str__(self):
         return "{0} - {1} from {2} - {3}".format(self.recipient.username, self.content_type.name, self.notifier.username, self.id)
 

@@ -50,6 +50,7 @@ from catalog.constants import get_date_from_string
 # recaptcha
 import requests
 
+from catalog.tasks import send_digest_email
 
 from os.path import join, dirname
 from dotenv import load_dotenv
@@ -1276,9 +1277,6 @@ class SendNewsletter(graphene.Mutation):
         category = graphene.String()
 
     @classmethod
-    # @ratelimit(group="send_feedback", key="ip", rate="5/d",
-    #            message="Max number of messages sent. Your device has been temporarily restricted."
-    #                    " You can try Discord, or emailing us at info@altsalt.com.")
     @check_csrf
     @login_required
     def mutate(cls, self, info, **kwargs):
@@ -1341,9 +1339,6 @@ class SendWelcomeEmail(graphene.Mutation):
         is_test = graphene.Boolean(required=True)
 
     @classmethod
-    # @ratelimit(group="send_feedback", key="ip", rate="5/d",
-    #            message="Max number of messages sent. Your device has been temporarily restricted."
-    #                    " You can try Discord, or emailing us at info@altsalt.com.")
     @check_csrf
     @login_required
     def mutate(cls, self, info, **kwargs):
@@ -1363,6 +1358,31 @@ class SendWelcomeEmail(graphene.Mutation):
 
             user = get_user_model().objects.get(email=email)
             return send_welcome_email(user, is_test)
+
+#####################
+# SEND DIGEST EMAIL #
+#####################
+
+
+class SendDigestEmail(graphene.Mutation):
+    success = graphene.Boolean()
+
+    class Arguments:
+        emails = graphene.List(graphene.String)
+        is_test = graphene.Boolean(required=True)
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, **kwargs):
+
+        if info.context.user.is_superuser is False:
+            raise GraphQLError("You are not authorized to perform this action")
+
+        emails = kwargs.get('emails')
+        is_test = kwargs.get('is_test')
+
+        return send_digest_email(emails, is_test)
 
 
 #######################
@@ -1445,6 +1465,7 @@ class UserMutation(graphene.ObjectType):
     verify_user_creation_code = VerifyUserCreationCode.Field()
     send_newsletter = SendNewsletter.Field()
     send_welcome_email = SendWelcomeEmail.Field()
+    send_digest_email = SendDigestEmail.Field()
     create_reset_password_request = CreateResetPasswordRequest.Field()
     verify_reset_password_request = VerifyResetPasswordRequest.Field()
     reset_password = ResetPassword.Field()

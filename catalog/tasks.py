@@ -9,14 +9,22 @@ import os
 from os.path import join, dirname
 from dotenv import load_dotenv
 
+# EMAILS
+import sendgrid
+from sendgrid.helpers.mail import *
+
+from django.contrib.auth import get_user_model
+from catalog.utils import GenerateRandomString
+from django.contrib.auth.hashers import make_password
+import datetime
+
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
-
-import logging
 
 
 def clean_bucket(dry_run=True):
 
+    import logging
     from catalog.models import Listing
     from catalog.models import ListingCoverImage, ListingPreviewImage
     from catalog.models.user import User, UserProfileImage
@@ -157,3 +165,76 @@ def generate_thumbnails(target_model, target_id, mime_type, filename, extension)
                 responsive_image.thumbnail((target_width * responsive_size, target_height * responsive_size))
                 responsive_buffer = get_image_buffer(responsive_image, mime_type)
                 storage.save(responsive_name, responsive_buffer)
+
+
+def send_digest_email(target_emails, is_test):
+    from catalog.models.base import Notification
+    from catalog.models.user import NotificationSettings, NotificationSettingsAuthorizedUpdate
+    from graphql import GraphQLError
+    sg = sendgrid.SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+
+    from_confirmation_email = Email(email="info@altsalt.com", name="AltSalt")
+    day_of_week = datetime.datetime.today()
+
+    all_users = get_user_model().objects.all()
+    for user in all_users:
+
+        notification_settings = NotificationSettings.objects.get(user=user)
+
+        if target_emails is not None and user.email not in target_emails:
+            continue
+
+        # Do not send on Sunday
+        if day_of_week == 6:
+            raise GraphQLError("Cannot send digest email on Sunday")
+
+        # Thursday
+        if day_of_week == 3 and\
+                notification_settings.frequency != NotificationSettings.Frequency.SEMIWEEKLY:
+            continue
+
+        # Monday through Wednesday, Friday through Saturday
+        if day_of_week == 0 or day_of_week == 1 or day_of_week == 2 or day_of_week == 4 or day_of_week == 5 and\
+                notification_settings.frequency != NotificationSettings.Frequency.DAILY:
+            continue
+
+        notifications = Notification.objects.filter(recipient=user, is_read=False)
+        if notifications.count() > 0:
+            notification_string = ''
+            for notification in notifications:
+                message = notification.get_simple_message()
+                notification_string += "• {0}<br>".format(message)
+
+            token = GenerateRandomString()
+            notification_settings_authorized_update = NotificationSettingsAuthorizedUpdate(user=user,
+                                                                                           token=make_password(token))
+            notification_settings_authorized_update.save()
+
+            email_preferences_url = "{0}/user/email-preferences?id={1}&requestId={2}&token={3}".format(
+                os.environ.get('BASE_URL'), user.id, notification_settings_authorized_update.id, token)
+            unsubscribe_url = "{0}&frequency={1}".format(email_preferences_url, NotificationSettings.Frequency.OFF)
+
+            if is_test:
+                to_confirmation_email = To('"artemio@altsalt.com')
+            else:
+                to_confirmation_email = To(user.email)
+            email = Mail(from_confirmation_email, to_confirmation_email)
+            email.dynamic_template_data = {
+                "subject": "New resonance on your listing(s)",
+                "username": user.display_name,
+                "count": notifications.count(),
+                "body": notification_string,
+                "login_url": '{0}/user/login'.format(os.environ.get('BASE_URL')),
+                "email_preferences_url": email_preferences_url,
+                "unsubscribe_url": unsubscribe_url
+            }
+
+            if is_test:
+                email.category = Category('Digest Test {0}'.format(os.environ.get('BASE_URL')))
+            else:
+                email.category = Category('Digest {0}'.format(os.environ.get('BASE_URL')))
+
+            email.template_id = 'd-a84a067e848846eca92049a278de4563'
+            response = sg.client.mail.send.post(request_body=email.get())
+
+    return True
