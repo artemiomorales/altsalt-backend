@@ -1296,9 +1296,6 @@ class SendNewsletter(graphene.Mutation):
         for user in all_users:
             notification_settings = NotificationSettings.objects.get(user=user)
 
-            if is_test is True and user.is_superuser is False:
-                continue
-
             if notification_settings.frequency == notification_settings.Frequency.OFF:
                 continue
 
@@ -1307,20 +1304,44 @@ class SendNewsletter(graphene.Mutation):
                                                                                          token=make_password(token))
             notification_settings_authorized_update.save()
 
+            notifications = Notification.objects.filter(recipient=user, is_read=False)
+            notification_string = 'No notifications yet. We have a few publications on AltSalt; if you have a moment, ' \
+                                  'you can try exercising your reciprocity muscle by resonating on a publication ' \
+                                  '(like the one above) and spreading some good vibes!'
+            if notifications.count() > 0:
+                notification_string = 'You have {0} unread notifications:<br><br>'.format(notifications.count())
+                for notification in notifications:
+                    message = notification.get_simple_message()
+                    notification_string += "• {0}<br>".format(message)
+                notification_string += '<br>If you have a moment, ' \
+                                       'you can try exercising your reciprocity muscle by ' \
+                                       'checking out the above (or another publication) and ' \
+                                       'spreading some good vibes!'
+
             email_preferences_url = "{0}/user/email-preferences?id={1}&requestId={2}&token={3}".format(
                 os.environ.get('BASE_URL'), user.id, notification_settings_authorized_update.id, token)
             unsubscribe_url = "{0}&frequency={1}".format(email_preferences_url, notification_settings.Frequency.OFF)
 
-            to_confirmation_email = To(user.email)
+            if is_test:
+                to_confirmation_email = To("artemio@altsalt.com")
+            else:
+                to_confirmation_email = To(user.email)
+
             newsletter_email = Mail(from_confirmation_email, to_confirmation_email, subject)
             newsletter_email.dynamic_template_data = {
                 "subject": subject,
                 "preview_text": preview_text,
+                "notifications": notification_string,
+                "login_url": '{0}/user/login'.format(os.environ.get('BASE_URL')),
                 "email_preferences_url": email_preferences_url,
-                "unsubscribe_url": unsubscribe_url
+                "unsubscribe_url": unsubscribe_url,
             }
             if category is not None:
-                newsletter_email.category = Category(category)
+                if is_test:
+                    newsletter_email.category = Category("{0} Test {1}".format(category, os.environ.get('BASE_URL')))
+                else:
+                    newsletter_email.category = Category("{0} {1}".format(category, os.environ.get('BASE_URL')))
+
             newsletter_email.template_id = 'd-ff20f481a8d8470484706736e3f86a54'
             newsletter_response = sg.client.mail.send.post(request_body=newsletter_email.get())
 
