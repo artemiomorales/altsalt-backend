@@ -1273,6 +1273,7 @@ class SendNewsletter(graphene.Mutation):
     class Arguments:
         subject = graphene.String(required=True)
         preview_text = graphene.String(required=True)
+        emails = graphene.List(graphene.String)
         is_test = graphene.Boolean(required=True)
         category = graphene.String()
 
@@ -1288,12 +1289,17 @@ class SendNewsletter(graphene.Mutation):
 
         from_confirmation_email = Email(email="artemio@altsalt.com", name="AltSalt")
         subject = kwargs.get('subject')
+        target_emails = kwargs.get('emails')
         preview_text = kwargs.get('preview_text')
         is_test = kwargs.get('is_test')
         category = kwargs.get('category')
 
         all_users = User.objects.all()
         for user in all_users:
+
+            if target_emails is not None and user.email not in target_emails:
+                continue
+
             notification_settings = NotificationSettings.objects.get(user=user)
 
             if notification_settings.frequency == notification_settings.Frequency.OFF:
