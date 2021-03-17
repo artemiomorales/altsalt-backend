@@ -188,13 +188,13 @@ def send_digest_email(target_emails, is_test):
         if day_of_week == 6:
             raise GraphQLError("Cannot send digest email on Sunday")
 
-        # Thursday
-        if day_of_week == 3 and\
+        # Wednesday
+        if day_of_week == 2 and\
                 notification_settings.frequency != NotificationSettings.Frequency.SEMIWEEKLY:
             continue
 
-        # Monday through Wednesday, Friday through Saturday
-        if day_of_week == 0 or day_of_week == 1 or day_of_week == 2 or day_of_week == 4 or day_of_week == 5 and\
+        # Monday through Tuesday, Thursday through Saturday
+        if day_of_week == 0 or day_of_week == 1 or day_of_week == 3 or day_of_week == 4 or day_of_week == 5 and\
                 notification_settings.frequency != NotificationSettings.Frequency.DAILY:
             continue
 
