@@ -34,9 +34,13 @@ class Article(models.Model):
     slug = models.SlugField(unique=True, blank=True)
     preview_text = models.TextField(max_length=200)
     body = models.TextField()
+    post_script = models.TextField(default="", blank=True)
     creation_date = models.DateField(default=utils.timezone.now)
     publish_date = models.DateField(default=utils.timezone.now)
     is_published = models.BooleanField(default=False)
+    is_announcement = models.BooleanField(default=False)
+    is_featured = models.BooleanField(default=False)
+    is_full_bleed = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title

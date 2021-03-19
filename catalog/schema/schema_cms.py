@@ -25,7 +25,8 @@ class ArticleType(DjangoObjectType):
 
     class Meta:
         model = Article
-        fields = ('id', 'title', 'slug', 'preview_text', 'featured_image', 'body',)
+        fields = ('id', 'title', 'slug', 'preview_text', 'featured_image', 'body', 'post_script',
+                  'is_published', 'is_announcement', 'is_featured', 'is_full_bleed',)
 
     def resolve_bylines(self, info):
         return ArticleByline.objects.filter(article_id=self.id)
