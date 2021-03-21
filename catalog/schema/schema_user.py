@@ -1336,7 +1336,7 @@ class SendNewsletter(graphene.Mutation):
                                   'you can try exercising your reciprocity muscle by resonating on a publication ' \
                                   '(like the one above) and spreading some good vibes.'
             if notifications.count() > 0:
-                notification_string = 'You have {0} notifications:<br><br>'.format(notifications.count())
+                notification_string = 'You have {0} notification(s):<br><br>'.format(notifications.count())
                 for notification in notifications:
                     message = strip_tags(notification.get_message())
                     notification_string += "• {0}<br><br>".format(message)
