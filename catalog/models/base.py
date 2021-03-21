@@ -296,7 +296,7 @@ class Notification(models.Model):
                                                                              get_thread_string(
                                                                                  self.content_object.thread))
         if model is CommentReaction:
-            return '{0} reacted to your resonance "{1}"'.format(self.notifier.display_name,
+            return '{0} reacted 🙏 to your resonance "{1}"'.format(self.notifier.display_name,
                                                                 self.content_object.comment.body)
 
         return None

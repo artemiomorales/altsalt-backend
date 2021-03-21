@@ -55,6 +55,9 @@ from catalog.tasks import send_digest_email
 from os.path import join, dirname
 from dotenv import load_dotenv
 
+from io import StringIO
+from html.parser import HTMLParser
+
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
@@ -62,6 +65,24 @@ load_dotenv(dotenv_path)
 #########
 # TYPES #
 #########
+
+class MLStripper(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.reset()
+        self.strict = False
+        self.convert_charrefs= True
+        self.text = StringIO()
+    def handle_data(self, d):
+        self.text.write(d)
+    def get_data(self):
+        return self.text.getvalue()
+
+
+def strip_tags(html):
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data()
 
 
 class OrganizationMemberType(DjangoObjectType):
@@ -1311,17 +1332,17 @@ class SendNewsletter(graphene.Mutation):
             notification_settings_authorized_update.save()
 
             notifications = Notification.objects.filter(recipient=user, is_read=False)
-            notification_string = 'No notifications yet. We have a few publications on AltSalt; if you have a moment, ' \
+            notification_string = 'Inbox clear! If you have a moment, ' \
                                   'you can try exercising your reciprocity muscle by resonating on a publication ' \
-                                  '(like the one above) and spreading some good vibes!'
+                                  '(like the one above) and spreading some good vibes.'
             if notifications.count() > 0:
-                notification_string = 'You have {0} unread notifications:<br><br>'.format(notifications.count())
+                notification_string = 'You have {0} notifications:<br><br>'.format(notifications.count())
                 for notification in notifications:
-                    message = notification.get_simple_message()
-                    notification_string += "• {0}<br>".format(message)
+                    message = strip_tags(notification.get_message())
+                    notification_string += "• {0}<br><br>".format(message)
                 notification_string += '<br>If you have a moment, ' \
                                        'you can try exercising your reciprocity muscle by ' \
-                                       'checking out the above (or another publication) and ' \
+                                       'replying to the above (or a publication) and ' \
                                        'spreading some good vibes!'
 
             email_preferences_url = "{0}/user/email-preferences?id={1}&requestId={2}&token={3}".format(
