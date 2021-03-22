@@ -73,6 +73,7 @@ class ListingUpload(CustomSaveMixin):
     file = models.FileField(storage=CatalogImageStorage(), upload_to=listing_upload_path, null=True, blank=True)
     allow_downloads = models.BooleanField(default=False)
     is_preview = models.BooleanField(default=False)
+    is_html = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         super(ListingUpload, self).save(*args, **kwargs)

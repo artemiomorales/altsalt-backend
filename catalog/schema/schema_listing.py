@@ -196,7 +196,7 @@ class ListingType(DjangoObjectType):
         fields = ('id', 'title', 'short_name', 'description', 'preview_images',
                   'length', 'price', 'content_rating', 'seo_category',
                   'is_published', 'is_approved', 'publication_date', 'date_added', 'is_editable',
-                  'show_custom_author', 'custom_author')
+                  'show_custom_author', 'custom_author', 'is_html')
 
     slug = graphene.String()
     cover_image = graphene.Field(ListingCoverImageType)
