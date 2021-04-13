@@ -5,7 +5,8 @@ import graphene
 from graphene_django.types import DjangoObjectType
 from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
     NameWithPriorityInput, UserInput, send_byline_email, save_pdf_data, ImageInput, PriceInput, ThreadType, \
-    UploadInput, PriceGrapheneType, send_listing_public_email
+    UploadInput, PriceGrapheneType, send_listing_public_email, TagType, FormatType, \
+    GenreType, DistributionTypeGrapheneType, LengthType, LanguageType, ContentRatingType, SeoCategoryType
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
 
@@ -62,16 +63,6 @@ class PriceTypeGrapheneType(DjangoObjectType):
         model = PriceType
 
 
-class FormatType(DjangoObjectType):
-    class Meta:
-        model = Format
-
-
-class TagType(DjangoObjectType):
-    class Meta:
-        model = Tag
-
-
 class ListingFormatType(DjangoObjectType):
     class Meta:
         model = ListingFormat
@@ -94,11 +85,6 @@ class ListingTagType(DjangoObjectType):
         return Tag.objects.get(id=self.tag_id)
 
 
-class DistributionTypeGrapheneType(DjangoObjectType):
-    class Meta:
-        model = DistributionType
-
-
 class ListingDistributionTypeGrapheneType(DjangoObjectType):
     class Meta:
         model = ListingDistributionType
@@ -110,16 +96,6 @@ class ListingDistributionTypeGrapheneType(DjangoObjectType):
         return DistributionType.objects.get(id=self.distribution_type_id)
 
 
-class LengthType(DjangoObjectType):
-    class Meta:
-        model = Length
-
-
-class GenreType(DjangoObjectType):
-    class Meta:
-        model = Genre
-
-
 class ListingGenreType(DjangoObjectType):
     class Meta:
         model = ListingGenre
@@ -129,11 +105,6 @@ class ListingGenreType(DjangoObjectType):
 
     def resolve_item(self, info):
         return Genre.objects.get(id=self.genre_id)
-
-
-class LanguageType(DjangoObjectType):
-    class Meta:
-        model = Language
 
 
 class ListingLanguageType(DjangoObjectType):
@@ -167,16 +138,6 @@ class ListingIdentityRepresentedType(DjangoObjectType):
 
     def resolve_item(self, info):
         return Identity.objects.get(id=self.identity_id)
-
-
-class ContentRatingType(DjangoObjectType):
-    class Meta:
-        model = ContentRating
-
-
-class SeoCategoryType(DjangoObjectType):
-    class Meta:
-        model = SeoCategory
 
 
 class ListingThreadType(DjangoObjectType):

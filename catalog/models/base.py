@@ -77,6 +77,74 @@ class Identity(NameSlug):
         ordering = ['name']
 
 
+class Format(NameSlug):
+    class Meta:
+        db_table = TABLE_PREFIX + 'format'
+
+
+class DistributionType(NameSlug):
+    priority = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['-priority']
+        db_table = TABLE_PREFIX + 'distribution_type'
+
+
+class Length(NameSlug):
+    priority = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'length'
+        ordering = ['-priority']
+
+
+class Genre(NameSlug):
+    class Meta:
+        db_table = TABLE_PREFIX + 'genre'
+
+
+class Language(NameSlug):
+    class Meta:
+        db_table = TABLE_PREFIX + 'language'
+
+
+class Tag(NameSlug):
+    class Meta:
+        db_table = TABLE_PREFIX + 'tag'
+
+
+class ContentRating(NameSlug):
+    class Meta:
+        db_table = TABLE_PREFIX + 'content_rating'
+
+
+class SeoCategory(models.Model):
+    name = models.CharField(max_length=55, unique=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'seo_category'
+
+
+class PriceType(NameSlug):
+    class Meta:
+        db_table = TABLE_PREFIX + 'price_type'
+
+
+class Price(models.Model):
+    price_type = models.ForeignKey(PriceType, on_delete=models.PROTECT)
+    amount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    details = models.CharField(max_length=100, blank=True)
+
+    def __str__(self):
+        return self.price_type.name + ' ' + self.amount.__str__()
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'price'
+
+
 class CustomSaveMixin(models.Model):
     _loaded_values = None
 

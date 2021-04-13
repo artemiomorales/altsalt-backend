@@ -2,7 +2,8 @@ import os
 from .base import \
     TABLE_PREFIX, listing_cover_image_path, listing_preview_image_path,\
     listing_upload_path, NameSlug, CustomImageAlttext, Link, Country, Identity, \
-    CustomSaveMixin
+    CustomSaveMixin, Format, DistributionType, Length, Genre, Language, Tag, \
+    PriceType, ContentRating, SeoCategory, Price
 from .user import User
 
 from django.db import models
@@ -136,11 +137,6 @@ class ListingCollaboratorByline(ListingByline):
         ]
 
 
-class Format(NameSlug):
-    class Meta:
-        db_table = TABLE_PREFIX + 'format'
-
-
 class ListingFormat(models.Model):
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name="listing")
     format = models.ForeignKey(Format, on_delete=models.CASCADE)
@@ -153,15 +149,6 @@ class ListingFormat(models.Model):
             models.UniqueConstraint(fields=['listing', 'format'], name='listing_format_link')
         ]
 
-
-class DistributionType(NameSlug):
-    priority = models.IntegerField(default=0)
-
-    class Meta:
-        ordering = ['-priority']
-        db_table = TABLE_PREFIX + 'distribution_type'
-
-
 class ListingDistributionType(models.Model):
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
     distribution_type = models.ForeignKey(DistributionType, on_delete=models.CASCADE)
@@ -171,19 +158,6 @@ class ListingDistributionType(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['listing', 'distribution_type'], name='listing_distribution_type_link')
         ]
-
-
-class Length(NameSlug):
-    priority = models.IntegerField(default=0)
-
-    class Meta:
-        db_table = TABLE_PREFIX + 'length'
-        ordering = ['-priority']
-
-
-class Genre(NameSlug):
-    class Meta:
-        db_table = TABLE_PREFIX + 'genre'
 
 
 class ListingGenre(models.Model):
@@ -197,11 +171,6 @@ class ListingGenre(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['listing', 'genre'], name='listing_genre_link')
         ]
-
-
-class Language(NameSlug):
-    class Meta:
-        db_table = TABLE_PREFIX + 'language'
 
 
 class ListingLanguage(models.Model):
@@ -243,11 +212,6 @@ class ListingIdentityRepresented(models.Model):
         ]
 
 
-class Tag(NameSlug):
-    class Meta:
-        db_table = TABLE_PREFIX + 'tag'
-
-
 class ListingTag(models.Model):
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
@@ -259,38 +223,6 @@ class ListingTag(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['listing', 'tag'], name='listing_tag_link')
         ]
-
-
-class PriceType(NameSlug):
-    class Meta:
-        db_table = TABLE_PREFIX + 'price_type'
-
-
-class Price(models.Model):
-    price_type = models.ForeignKey(PriceType, on_delete=models.PROTECT)
-    amount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    details = models.CharField(max_length=100, blank=True)
-
-    def __str__(self):
-        return self.price_type.name + ' ' + self.amount.__str__()
-
-    class Meta:
-        db_table = TABLE_PREFIX + 'price'
-
-
-class SeoCategory(models.Model):
-    name = models.CharField(max_length=55, unique=True)
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        db_table = TABLE_PREFIX + 'seo_category'
-
-
-class ContentRating(NameSlug):
-    class Meta:
-        db_table = TABLE_PREFIX + 'content_rating'
 
 
 class ListingCoverImage(CustomImageAlttext):

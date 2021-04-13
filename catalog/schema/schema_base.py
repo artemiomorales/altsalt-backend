@@ -1,5 +1,6 @@
 import graphene
-from catalog.models.base import Country, Identity, Thread, Comment, ReactionType, CommentReaction, Notification
+from catalog.models.base import Country, Identity, Thread, Comment, ReactionType, CommentReaction, Notification, Tag, \
+    Format, Genre, DistributionType, Length, Language, ContentRating, SeoCategory
 from catalog.models.listing import Price, ListingThread
 from catalog.models.user import NotificationSettings, NotificationSettingsAuthorizedUpdate
 from catalog.utils import GenerateRandomString
@@ -146,6 +147,46 @@ class CountryType(DjangoObjectType):
 class IdentityType(DjangoObjectType):
     class Meta:
         model = Identity
+
+
+class TagType(DjangoObjectType):
+    class Meta:
+        model = Tag
+
+
+class FormatType(DjangoObjectType):
+    class Meta:
+        model = Format
+
+
+class LengthType(DjangoObjectType):
+    class Meta:
+        model = Length
+
+
+class GenreType(DjangoObjectType):
+    class Meta:
+        model = Genre
+
+
+class LanguageType(DjangoObjectType):
+    class Meta:
+        model = Language
+
+
+class DistributionTypeGrapheneType(DjangoObjectType):
+    class Meta:
+        model = DistributionType
+
+
+class ContentRatingType(DjangoObjectType):
+    class Meta:
+        model = ContentRating
+
+
+class SeoCategoryType(DjangoObjectType):
+    class Meta:
+        model = SeoCategory
 
 
 class NameWithPriorityInput(graphene.InputObjectType):
