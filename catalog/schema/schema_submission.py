@@ -2,7 +2,7 @@ from catalog.models import *
 from django.contrib.auth import get_user_model
 from .schema_listing import ListingType
 from .schema_base import check_csrf, ImageInput, LinkInput, PriceInput, UploadInput,\
-    PriceGrapheneType, save_image_data, save_pdf_data, create_presigned_url, send_submission_approved_email, \
+    PriceGrapheneType, save_image_data_via_model, save_pdf_data, create_presigned_url, send_submission_approved_email, \
     send_submission_rejected_email, send_moderator_notification_email
 
 import graphene
@@ -113,7 +113,7 @@ class CreateSubmission(graphene.Mutation):
         new_listing.save()
         listing_cover = ListingCoverImage(listing=new_listing)
         listing_cover.save(skip_callback=True)
-        save_image_data(listing_cover, cover_image.data, cover_image.name)
+        save_image_data_via_model(listing_cover, cover_image.data, cover_image.name)
         listing_cover.alttext = cover_image.alttext
         listing_cover.save(skip_callback=True)
 

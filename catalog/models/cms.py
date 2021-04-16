@@ -32,7 +32,7 @@ class EditorialSettings(models.Model):
 
 class Article(models.Model):
     title = models.CharField(max_length=125)
-    seo_title = models.CharField(max_length=125, blank=True)
+    seo_title = models.CharField(default="", max_length=125, blank=True)
     slug = models.SlugField(unique=True, blank=True)
     preview_text = models.TextField(max_length=200)
     body = models.TextField(default="")
@@ -71,6 +71,7 @@ class ArticleByline(models.Model):
     user_priority = models.IntegerField(default=0)
     article_priority = models.IntegerField(default=0)
     is_confirmed = models.BooleanField(default=False)
+    requester = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="article_byline_requester", blank=True)
 
     class Meta:
         db_table = TABLE_PREFIX + 'article_byline'

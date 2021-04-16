@@ -1,11 +1,11 @@
 import graphene
 from django.contrib.auth import get_user_model
 from graphene_django.types import DjangoObjectType
-from catalog.models.base import PriceType
+from catalog.models.base import PriceType, article_image_path_from_model
 from catalog.models.cms import *
 from .schema_base import BaseImageTypeMixin, check_csrf, login_required, IdentityType, FormatType, TagType, \
     DistributionTypeGrapheneType, GenreType, LanguageType, CountryType, PriceGrapheneType, ContentRatingType, \
-    NameWithPriorityInput, UserInput, ImageInput, PriceInput, save_image_data, send_byline_email
+    NameWithPriorityInput, UserInput, ImageInput, PriceInput, save_image_data_via_model, save_image_data, send_byline_email
 from catalog.constants import capitalize_string, get_date_from_string
 from graphql import GraphQLError
 
@@ -234,7 +234,7 @@ class UpdateArticle(graphene.Mutation):
         preview_text = kwargs.get('preview_text')
         body = kwargs.get('body')
         related_publish_date = kwargs.get('related_publish_date')
-        creators = kwargs.get('creators')
+        authors = kwargs.get('authors')
         content_rating = kwargs.get('content_rating')
         length = kwargs.get('length')
         language = kwargs.get('language')
@@ -269,7 +269,7 @@ class UpdateArticle(graphene.Mutation):
         if preview_text is not None:
             target_article.preview_text = preview_text
 
-        # Description #
+        # Body #
 
         if body is not None:
             target_article.body = body
@@ -301,9 +301,10 @@ class UpdateArticle(graphene.Mutation):
                 current_cover.save(skip_callback=True)
 
             if featured_image.data != '':
-                save_image_data(current_cover, featured_image.data, featured_image.name)
+                save_image_data_via_model(current_cover, featured_image.data, featured_image.name)
 
             current_cover.alttext = featured_image.alttext
+            current_cover.caption = featured_image.caption
             current_cover.save(skip_callback=True)
 
         # Publication Date #
@@ -316,11 +317,11 @@ class UpdateArticle(graphene.Mutation):
 
         # Creators #
 
-        if creators is not None:
+        if authors is not None:
 
             creator_input_valid = False
 
-            for creator in creators:
+            for creator in authors:
                 if get_user_model().objects.filter(username=creator.username).exists():
                     creator_input_valid = True
 
@@ -329,14 +330,14 @@ class UpdateArticle(graphene.Mutation):
 
                 for existing_creator_byline in existing_creator_bylines:
                     delete_existing_byline = True
-                    for creator in creators:
+                    for creator in authors:
                         if get_user_model().objects.filter(username=creator.username).exists() and \
                                 existing_creator_byline.user.username == creator.username:
                             delete_existing_byline = False
                     if delete_existing_byline:
                         existing_creator_byline.delete()
 
-                for creator in creators:
+                for creator in authors:
                     if get_user_model().objects.filter(username=creator.username).exists():
                         stored_user = get_user_model().objects.get(username=creator.username)
                         if ArticleByline.objects.filter(article=target_article, user=stored_user).exists():
@@ -513,6 +514,72 @@ class UpdateArticle(graphene.Mutation):
         return UpdateArticle(article=target_article)
 
 
+class UploadArticleImage(graphene.Mutation):
+    image = graphene.String()
+
+    class Arguments:
+        id = graphene.String(required=True)
+        image = ImageInput(required=True)
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, **kwargs):
+
+        id = kwargs.get('id')
+        image = kwargs.get('image')
+
+        if Article.objects.filter(id=id).exists() is False:
+            raise GraphQLError("Target article does not exist! Please refresh or try again later.")
+
+        target_article = Article.objects.get(id=id)
+
+        if ArticleByline.objects.filter(article=target_article, user=info.context.user).exists() is False:
+            raise GraphQLError("You are not authorized to update this article.")
+
+        if image is not None:
+
+            if image.data != '':
+
+                image_path = article_image_path_from_model(target_article, image.name)
+                image_save = save_image_data(image_path, image.data)
+
+        return UploadArticleImage(image=image_save)
+
+
+class SaveArticleBody(graphene.Mutation):
+    article = graphene.Field(ArticleType)
+
+    class Arguments:
+        id = graphene.String(required=True)
+        body = graphene.String(required=True)
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, **kwargs):
+
+        id = kwargs.get('id')
+        body = kwargs.get('body')
+
+        if Article.objects.filter(id=id).exists() is False:
+            raise GraphQLError("Target article does not exist! Please refresh or try again later.")
+
+        target_article = Article.objects.get(id=id)
+
+        if ArticleByline.objects.filter(article=target_article, user=info.context.user).exists() is False:
+            raise GraphQLError("You are not authorized to update this article.")
+
+        if body is not None:
+            target_article.body = body
+
+        target_article.save()
+
+        return SaveArticleBody(article=target_article)
+
+
 class CMSMutation(graphene.ObjectType):
     create_article = CreateArticle.Field()
     update_article = UpdateArticle.Field()
+    upload_article_image = UploadArticleImage.Field()
+    save_article_body = SaveArticleBody.Field()

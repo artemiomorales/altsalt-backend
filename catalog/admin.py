@@ -277,9 +277,53 @@ class ArticleBylineInline(SingleInline):
     pass
 
 
+class ArticleFormatInline(SingleInline):
+    model = ArticleFormat
+    pass
+
+
+class ArticleDistributionTypeInline(SingleInline):
+    model = ArticleDistributionType
+    pass
+
+
+class ArticleGenreInline(SingleInline):
+    model = ArticleGenre
+    pass
+
+
+class ArticleLanguageInline(SingleInline):
+    model = ArticleLanguage
+    pass
+
+
+class ArticleCountryRepresentedInline(SingleInline):
+    model = ArticleCountryRepresented
+    pass
+
+
+class ArticleIdentityRepresentedInline(SingleInline):
+    model = ArticleIdentityRepresented
+    pass
+
+
+class ArticleTagInline(SingleInline):
+    model = ArticleTag
+    pass
+
+
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    inlines = [ArticleBylineInline, ArticleFeaturedImageInline]
+    inlines = [ArticleBylineInline,
+               ArticleFeaturedImageInline,
+               ArticleFormatInline,
+               ArticleDistributionTypeInline,
+               ArticleGenreInline,
+               ArticleLanguageInline,
+               ArticleCountryRepresentedInline,
+               ArticleIdentityRepresentedInline,
+               ArticleTagInline
+               ]
     pass
 
 

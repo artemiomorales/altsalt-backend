@@ -470,6 +470,10 @@ def article_cover_image_path(instance, filename):
     return content_path('article', instance.article.id, 'cover', instance.article.id, filename)
 
 
+def article_image_path_from_model(article, filename):
+    return content_path('article', article.id, 'image', article.id, filename)
+
+
 def media_upload_path(instance, filename):
     date = datetime.datetime.now()
     return (catalog_media_path(instance.user_id) + "/uploads/{0}-{1}").format(date.strftime("%f"), filename)

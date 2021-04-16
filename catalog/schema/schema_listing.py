@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 
 import graphene
 from graphene_django.types import DjangoObjectType
-from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
+from .schema_base import check_csrf, save_image_data_via_model, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
     NameWithPriorityInput, UserInput, send_byline_email, save_pdf_data, ImageInput, PriceInput, ThreadType, \
     UploadInput, PriceGrapheneType, send_listing_public_email, TagType, FormatType, \
     GenreType, DistributionTypeGrapheneType, LengthType, LanguageType, ContentRatingType, SeoCategoryType
@@ -358,7 +358,6 @@ class ListingQuery(graphene.ObjectType):
 
 class PreviewImageInput(ImageInput):
     id = graphene.Int()
-    caption = graphene.String()
     index = graphene.Int()
     delete = graphene.Boolean()
 
@@ -385,7 +384,7 @@ class CreateListing(graphene.Mutation):
 
         listing_cover = ListingCoverImage(listing=new_listing)
         listing_cover.save(skip_callback=True)
-        save_image_data(listing_cover, cover_image.data, cover_image.name)
+        save_image_data_via_model(listing_cover, cover_image.data, cover_image.name)
         listing_cover.alttext = cover_image.alttext
         listing_cover.save(skip_callback=True)
 
@@ -497,7 +496,7 @@ class UpdateListing(graphene.Mutation):
                 current_cover.save(skip_callback=True)
 
             if cover_image.data != '':
-                save_image_data(current_cover, cover_image.data, cover_image.name)
+                save_image_data_via_model(current_cover, cover_image.data, cover_image.name)
 
             current_cover.alttext = cover_image.alttext
             current_cover.save(skip_callback=True)
@@ -526,7 +525,7 @@ class UpdateListing(graphene.Mutation):
                         current_preview.save(skip_callback=True)
 
                     if preview_image.data != '':
-                        save_image_data(current_preview, preview_image.data, preview_image.name)
+                        save_image_data_via_model(current_preview, preview_image.data, preview_image.name)
 
                     current_preview.alttext = preview_image.alttext
                     current_preview.caption = preview_image.caption

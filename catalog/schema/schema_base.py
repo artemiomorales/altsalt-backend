@@ -41,6 +41,10 @@ from sendgrid.helpers.mail import *
 from ratelimit.core import is_ratelimited
 
 
+# Storage
+from catalog.backends import CatalogImageStorage
+
+
 from os.path import join, dirname
 from dotenv import load_dotenv
 
@@ -118,6 +122,7 @@ class ImageInput(graphene.InputObjectType):
     name = graphene.String(required=True)
     data = graphene.String(required=True)
     alttext = graphene.String(required=True)
+    caption = graphene.String()
 
 
 class PriceInput(graphene.InputObjectType):
@@ -431,7 +436,7 @@ def save_pdf_data(model_instance, model_attribute, file_data, file_name):
     model_instance.save()
 
 
-def save_image_data(model_instance, image_data, image_name):
+def save_image_data_via_model(model_instance, image_data, image_name):
     prefix, imgstr = image_data.split(';base64,')
     mime_type = prefix.split('/')[-1]
 
@@ -451,6 +456,24 @@ def save_image_data(model_instance, image_data, image_name):
         content=upload_data,
         save=False)
     model_instance.save(skip_callback=False)
+
+
+def save_image_data(image_path, image_data):
+    prefix, imgstr = image_data.split(';base64,')
+    mime_type = prefix.split('/')[-1]
+
+    if 'jpeg' not in mime_type and 'png' not in mime_type:
+        raise TypeError('Images must be in JPEG or PNG format')
+
+    opened_image = ImageUtils.open(BytesIO(base64.b64decode(imgstr + "===")))
+
+    # Save an original image
+    image_buffer = get_image_buffer(opened_image, mime_type)
+    upload_data = InMemoryUploadedFile(image_buffer, None, image_path, 'text/plain', len(image_buffer), None,
+                                       mime_type)
+
+    storage = CatalogImageStorage()
+    return storage.save(image_path, upload_data)
 
 
 def create_presigned_url(object_name, expiration=3600):

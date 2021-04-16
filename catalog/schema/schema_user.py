@@ -11,7 +11,7 @@ import re
 import graphene
 from graphene_django.types import DjangoObjectType, ObjectType
 from graphql_jwt.decorators import login_required, token_auth
-from .schema_base import check_csrf, save_image_data, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
+from .schema_base import check_csrf, save_image_data_via_model, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
     NameWithPriorityInput, UserInput, send_membership_email, ratelimit, NotificationType, send_welcome_email
 from .schema_cms import ArticleBylineType
 from .schema_listing import ListingCreatorBylineType, ListingCollaboratorBylineType
@@ -416,7 +416,7 @@ class UpdateUser(graphene.Mutation):
                 current_image = UserProfileImage(user=target_user)
                 current_image.save(skip_callback=True)
 
-            save_image_data(current_image, profile_image, profile_image_name)
+            save_image_data_via_model(current_image, profile_image, profile_image_name)
 
         if display_name is not None:
             target_user.display_name = display_name

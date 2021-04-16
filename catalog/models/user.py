@@ -51,7 +51,8 @@ class User(AbstractUser):
     article_bylines = models.ManyToManyField(
         "Article",
         through='ArticleByline',
-        related_name="articleBylines"
+        related_name="articleBylines",
+        through_fields=('user', 'article')
     )
 
     members = models.ManyToManyField(
