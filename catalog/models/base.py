@@ -13,6 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 
 # Image Handling
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES
+
 from catalog.tasks import generate_thumbnails
 import threading
 from django.db.models import DEFERRED
@@ -250,17 +251,35 @@ class Thread(models.Model):
         if self.originator is not None:
             username = self.originator.username
 
-        from catalog.models.listing import ListingThread
-
-        if ListingThread.objects.filter(thread=self).exists():
-            listing_thread = ListingThread.objects.get(thread=self)
-            return "{0} - {1}".format(listing_thread.listing.title, username)
+        if ContentThread.objects.filter(thread=self).exists():
+            content_thread = ContentThread.objects.get(thread=self)
+            return "{0} - {1}".format(content_thread.content_object.title, username)
 
         return self.id
 
     class Meta:
         db_table = TABLE_PREFIX + 'thread'
         ordering = ['timestamp']
+
+
+class ContentThread(models.Model):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    thread = models.ForeignKey("Thread", on_delete=models.CASCADE)
+    timestamp = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        model = self.content_type.model_class()
+        from catalog.models.listing import Listing
+        from catalog.models.cms import Article
+
+        if model is Listing or model is Article:
+            return "{0} - {1} - {2} - {3}".format(self.content_type.name, self.content_object.title, self.thread.originator, self.id)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'content_thread'
+        ordering = ['-timestamp']
 
 
 class Comment(models.Model):
@@ -305,11 +324,10 @@ class Notification(models.Model):
     is_read = models.BooleanField(default=False)
 
     def get_type(self):
-        from catalog.models.listing import ListingThread
         notification = Notification.objects.get(id=self.id)
         model = notification.content_type.model_class()
 
-        if model is ListingThread:
+        if model is ContentThread:
             return 'comment'
 
         if model is Comment:
@@ -321,31 +339,29 @@ class Notification(models.Model):
         return None
 
     def get_simple_message(self):
-        from catalog.models.listing import ListingThread
         model = self.content_type.model_class()
 
-        if model is ListingThread:
-            return '{0} resonated on your listing {1}'.format(self.notifier.display_name,
-                                                                     self.content_object.listing.title)
+        if model is ContentThread:
+            return '{0} resonated on {1}'.format(self.notifier.display_name,
+                                                              self.content_object.object_id.title)
         if model is Comment:
-            listing_title = ''
-            if ListingThread.objects.filter(thread=self.content_object.thread).exists():
-                listing_thread = ListingThread.objects.get(thread=self.content_object.thread)
-                listing_title = listing_thread.listing.title
+            content_title = ''
+            if ContentThread.objects.filter(thread=self.content_object.thread).exists():
+                content_thread = ContentThread.objects.get(thread=self.content_object.thread)
+                content_title = content_thread.content_object.title
             return '{0} replied on a thread you\'re a part of on {1}'.format(self.notifier.display_name,
-                                                                             listing_title)
+                                                                             content_title)
         if model is CommentReaction:
-            listing_title = ''
-            if ListingThread.objects.filter(thread=self.content_object.comment.thread).exists():
-                listing_thread = ListingThread.objects.get(thread=self.content_object.comment.thread)
-                listing_title = listing_thread.listing.title
+            content_title = ''
+            if ContentThread.objects.filter(thread=self.content_object.comment.thread).exists():
+                listing_thread = ContentThread.objects.get(thread=self.content_object.comment.thread)
+                content_title = listing_thread.content_object.title
             return '{0} reacted to your resonance on {1}'.format(self.notifier.display_name,
-                                                                listing_title)
+                                                                content_title)
 
         return None
 
     def get_message(self):
-        from catalog.models.listing import ListingThread
         model = self.content_type.model_class()
 
         def get_thread_string(thread):
@@ -354,11 +370,12 @@ class Notification(models.Model):
 
             return ''
 
-        if model is ListingThread:
-            return '{0} resonated on your listing {1}: “{2}”'.format(self.notifier.display_name,
-                                                                     self.content_object.listing.title,
+        if model is ContentThread:
+            content_thread = self.content_object
+            return '{0} resonated on {1}: “{2}”'.format(self.notifier.display_name,
+                                                                     content_thread.content_object.title,
                                                                      get_thread_string(
-                                                                         self.content_object.thread))
+                                                                         content_thread.thread))
         if model is Comment:
             return '{0} replied on a thread you\'re a part of: "{1}”'.format(self.notifier.display_name,
                                                                              get_thread_string(
@@ -370,26 +387,35 @@ class Notification(models.Model):
         return None
 
     def get_url_components(self):
-        from catalog.models.listing import ListingThread
         notification = Notification.objects.get(id=self.id)
         model = notification.content_type.model_class()
 
-        if model is ListingThread:
-            return {'listing': notification.content_object.listing,
-                    'thread': notification.content_object.thread,
+        if model is ContentThread:
+            import logging
+            logging.error(notification.content_object.content_type.model_class())
+            content_thread = notification.content_object
+            return {'id': content_thread.object_id,
+                    'slug': slugify(content_thread.content_object.title),
+                    'type': content_thread.content_object._meta.model_name,
+                    'thread': content_thread.thread,
                     'comment': None
                     }
+
         if model is Comment and \
-                ListingThread.objects.filter(thread=notification.content_object.thread).exists():
-            listing_thread = ListingThread.objects.get(thread=notification.content_object.thread)
-            return {'listing': listing_thread.listing,
+                ContentThread.objects.filter(thread=notification.content_object.thread).exists():
+            content_thread = ContentThread.objects.get(thread=notification.content_object.thread)
+            return {'id': content_thread.object_id,
+                    'slug': slugify(content_thread.content_object.title),
+                    'type': content_thread.content_object._meta.model_name,
                     'thread': notification.content_object.thread,
                     'comment': notification.content_object
                     }
         if model is CommentReaction and \
-                ListingThread.objects.filter(thread=notification.content_object.comment.thread).exists():
-            listing_thread = ListingThread.objects.get(thread=notification.content_object.comment.thread)
-            return {'listing': listing_thread.listing,
+                ContentThread.objects.filter(thread=notification.content_object.comment.thread).exists():
+            content_thread = ContentThread.objects.get(thread=notification.content_object.comment.thread)
+            return {'id': content_thread.object_id,
+                    'slug': slugify(content_thread.content_object.title),
+                    'type': content_thread.content_object._meta.model_name,
                     'thread': notification.content_object.comment.thread,
                     'comment': notification.content_object.comment
                     }
@@ -420,6 +446,7 @@ def sanitize_filename(filename):
             sanitized_filename = sanitized_filename.replace(responsive_string, "00")
 
     return sanitized_filename
+
 
 def profile_image_path(instance, filename):
     date = datetime.datetime.now()

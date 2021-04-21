@@ -1,18 +1,13 @@
-import os
 from .base import \
     TABLE_PREFIX, listing_cover_image_path, listing_preview_image_path,\
-    listing_upload_path, NameSlug, CustomImageAlttext, Link, Country, Identity, \
-    CustomSaveMixin, Format, DistributionType, Length, Genre, Language, Tag, \
-    PriceType, ContentRating, SeoCategory, Price
+    listing_upload_path, CustomImageAlttext, Link, Country, Identity, \
+    CustomSaveMixin, Format, DistributionType, Genre, Language, Tag
 from .user import User
 
 from django.db import models
-from django.template.defaultfilters import slugify
 from catalog.backends import CatalogImageStorage, ThumbnailImageStorage
 from django.utils import timezone
 from catalog.constants import DEFAULT_FILE_UPLOAD_NAME
-
-import datetime
 
 
 class Listing(models.Model):
@@ -284,17 +279,3 @@ class ListingPreviewImage(CustomImageAlttext):
         ordering = ['index']
 
 
-class ListingThread(models.Model):
-    listing = models.ForeignKey(Listing, on_delete=models.CASCADE)
-    thread = models.ForeignKey("Thread", on_delete=models.CASCADE)
-    timestamp = models.DateTimeField(default=timezone.now)
-
-    def __str__(self):
-        return "{0} - {1} - {2}".format(self.listing.title, self.thread.originator, self.id)
-
-    class Meta:
-        db_table = TABLE_PREFIX + 'listing_thread'
-        ordering = ['-timestamp']
-        constraints = [
-            models.UniqueConstraint(fields=['listing', 'thread'], name='listing_thread_link')
-        ]

@@ -1,7 +1,8 @@
 from django.db.models.signals import pre_delete, post_delete
 from django.dispatch import receiver
 from catalog.models import ListingCoverImage, ListingPreviewImage, ListingUpload,\
-    Submission, Thread, Comment, CommentReaction, Notification, ListingThread
+    Submission, Thread, Comment, CommentReaction, Notification
+from catalog.models.base import ContentThread
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, RESPONSIVE_SIZES, DEFAULT_FILE_UPLOAD_NAME
 from catalog.backends import CatalogImageStorage
 from django.contrib.contenttypes.models import ContentType
@@ -86,8 +87,8 @@ def on_comment_reaction_delete(sender, **kwargs):
         pass
 
 
-@receiver(post_delete, sender=ListingThread)
-def on_listing_thread_delete(sender, **kwargs):
+@receiver(post_delete, sender=ContentThread)
+def on_content_thread_delete(sender, **kwargs):
     try:
         instance = kwargs.get('instance')
         content_type = ContentType.objects.get_for_model(instance)

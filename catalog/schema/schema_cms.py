@@ -1,7 +1,7 @@
 import graphene
 from django.contrib.auth import get_user_model
 from graphene_django.types import DjangoObjectType
-from catalog.models.base import PriceType, article_image_path_from_model
+from catalog.models.base import PriceType, article_image_path_from_model, ContentThread
 from catalog.models.cms import *
 from .schema_base import BaseImageTypeMixin, check_csrf, login_required, IdentityType, FormatType, TagType, \
     DistributionTypeGrapheneType, GenreType, LanguageType, CountryType, PriceGrapheneType, ContentRatingType, \
@@ -105,10 +105,11 @@ class ArticleIdentityRepresentedType(DjangoObjectType):
 class ArticleType(DjangoObjectType):
     class Meta:
         model = Article
-        fields = ('id', 'title', 'slug', 'preview_text', 'featured_image', 'body', 'post_script',
+        fields = ('id', 'title', 'preview_text', 'featured_image', 'body', 'post_script',
                   'is_published', 'is_announcement', 'is_featured', 'is_full_bleed', 'price', 'is_confirmed',
                   'seo_title', 'content_rating', 'related_publish_date', 'length', 'is_excerpt')
 
+    slug = graphene.String()
     bylines = graphene.List(ArticleBylineType)
     featured_image = graphene.Field(ArticleFeaturedImageType)
     format_set = graphene.List(ArticleFormatType)
@@ -119,6 +120,11 @@ class ArticleType(DjangoObjectType):
     identities_represented = graphene.List(ArticleIdentityRepresentedType)
     tag_set = graphene.List(ArticleTagType)
     price = graphene.Field(PriceGrapheneType)
+    moderator_authentication = graphene.Boolean()
+    thread_set = graphene.List('catalog.schema.schema_comments.ContentThreadType')
+
+    def resolve_slug(self, info):
+        return slugify(self.title)
 
     def resolve_bylines(self, info):
         return ArticleByline.objects.filter(article_id=self.id)
@@ -150,14 +156,44 @@ class ArticleType(DjangoObjectType):
     def resolve_tag_set(self, info):
         return ArticleTag.objects.filter(article_id=self.id)
 
+    def resolve_thread_set(self, info):
+        return ContentThread.objects.filter(object_id=self.id)
+
+    def resolve_moderator_authentication(self, info):
+        if info.context.user.is_authenticated is True and info.context.user.is_moderator is True:
+            return True
+        return False
+
+
+##########
+# SCHEMA #
+##########
 
 class CMSQuery(graphene.ObjectType):
-    article_bundle = graphene.List(ArticleType)
+    featured_articles = graphene.List(ArticleType)
+    article_bundle = graphene.List(ArticleType,
+                                   include_featured=graphene.Boolean(default_value=True),
+                                   exclude_private=graphene.Boolean(default_value=True),
+                                   )
     article = graphene.Field(ArticleType, id=graphene.String())
     editorial_settings = graphene.Field(EditorialSettingsType)
 
-    def resolve_article_bundle(self, info):
-        return Article.objects.filter(is_published=True)
+    def resolve_featured_articles(self, info, **kwargs):
+        return Article.objects.filter(is_featured=True)
+
+    def resolve_article_bundle(self, info, **kwargs):
+        include_featured = kwargs.get('include_featured')
+        exclude_private = kwargs.get('exclude_private')
+
+        if include_featured is True:
+            articles = Article.objects.all()
+        else:
+            articles = Article.objects.filter(is_featured=False)
+
+        if exclude_private is True:
+            articles = articles.filter(is_published=True)
+
+        return articles
 
     def resolve_article(self, info, **kwargs):
         id = kwargs.get('id')
@@ -184,7 +220,7 @@ class CreateArticle(graphene.Mutation):
         # if info.context.user.is_verified is False and info.context.user.is_moderator is False:
         #     raise GraphQLError("You are not authorized to perform this action")
 
-        new_article = Article(title="Untitled", slug="untitled")
+        new_article = Article(title="Untitled")
         new_article.save()
 
         creator_byline = ArticleByline(user=info.context.user, article=new_article, is_confirmed=True)

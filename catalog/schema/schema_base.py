@@ -1,7 +1,7 @@
 import graphene
 from catalog.models.base import Country, Identity, Thread, Comment, ReactionType, CommentReaction, Notification, Tag, \
-    Format, Genre, DistributionType, Length, Language, ContentRating, SeoCategory
-from catalog.models.listing import Price, ListingThread
+    Format, Genre, DistributionType, Length, Language, ContentRating, SeoCategory, ContentThread
+from catalog.models.base import Price
 from catalog.models.user import NotificationSettings, NotificationSettingsAuthorizedUpdate
 from catalog.utils import GenerateRandomString
 from django.contrib.auth.hashers import make_password
@@ -209,7 +209,9 @@ class UserInput(graphene.InputObjectType):
 
 
 class URLComponentsType(ObjectType):
-    listing = graphene.Field('catalog.schema.schema_listing.ListingType')
+    id = graphene.ID()
+    slug = graphene.String()
+    type = graphene.String()
     thread = graphene.Field('catalog.schema.schema_base.ThreadType')
     comment = graphene.Field('catalog.schema.schema_base.CommentType')
 

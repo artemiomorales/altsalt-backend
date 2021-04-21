@@ -3,9 +3,9 @@ from django.db import models
 from django.utils import timezone
 from catalog.backends import CatalogImageStorage, ThumbnailImageStorage
 from catalog.constants import DEFAULT_FILE_UPLOAD_NAME
-from .listing import Listing, Price
+from .listing import Listing
 from .user import User
-from .base import submission_upload_path
+from .base import submission_upload_path, Price
 
 
 class Submission(models.Model):

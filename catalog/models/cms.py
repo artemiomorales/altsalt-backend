@@ -33,7 +33,6 @@ class EditorialSettings(models.Model):
 class Article(models.Model):
     title = models.CharField(max_length=125)
     seo_title = models.CharField(default="", max_length=125, blank=True)
-    slug = models.SlugField(unique=True, blank=True)
     preview_text = models.TextField(max_length=200)
     body = models.TextField(default="")
     post_script = models.TextField(default="", blank=True)
@@ -51,14 +50,6 @@ class Article(models.Model):
 
     def __str__(self):
         return self.title
-
-    def save(self, *args, **kwargs):
-        if not self.id:
-            # Newly created object, so set slug
-            self.seo_title = self.title
-            self.slug = slugify(self.title)
-
-        super(Article, self).save(*args, **kwargs)
 
     class Meta:
         ordering = ['-publish_date']

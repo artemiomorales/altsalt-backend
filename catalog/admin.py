@@ -1,12 +1,7 @@
-from django import forms
 from django.contrib import admin
-from django.contrib.auth import (
-    authenticate, get_user_model, password_validation,
-)
-from django.utils.translation import gettext, gettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from django.contrib.auth.admin import UserAdmin
-from django.contrib.auth.forms import UserCreationForm
 
 from catalog.models.user import *
 from catalog.models.base import *
@@ -416,8 +411,8 @@ class ThreadAdmin(admin.ModelAdmin):
     pass
 
 
-@admin.register(ListingThread)
-class ListingThreadAdmin(admin.ModelAdmin):
+@admin.register(ContentThread)
+class ContentThreadAdmin(admin.ModelAdmin):
     pass
 
 

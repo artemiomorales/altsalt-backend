@@ -1,4 +1,5 @@
 from catalog.models import *
+from catalog.models.base import PriceType
 from django.contrib.auth import get_user_model
 from .schema_listing import ListingType
 from .schema_base import check_csrf, ImageInput, LinkInput, PriceInput, UploadInput,\
@@ -9,7 +10,7 @@ import graphene
 from graphene_django.types import DjangoObjectType
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
-
+import datetime
 
 class SubmissionAvailabilityLinkType(DjangoObjectType):
     class Meta:
@@ -141,11 +142,8 @@ class CreateSubmission(graphene.Mutation):
                 new_link.save()
 
         if price is not None:
-            import logging
-            logging.error(price.price_type)
             if price.price_type == 'free' or price.price_type == 'paid':
                 new_price_type = PriceType.objects.get(slug=price.price_type)
-                logging.error(new_price_type)
                 new_price = Price(price_type=new_price_type, amount=price.amount, details=price.details)
                 new_price.save()
                 new_submission.price = new_price

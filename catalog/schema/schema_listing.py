@@ -1,4 +1,5 @@
 from catalog.models import *
+from catalog.models.base import PriceType, ContentThread
 from django.contrib.auth import get_user_model
 
 import graphene
@@ -140,18 +141,8 @@ class ListingIdentityRepresentedType(DjangoObjectType):
         return Identity.objects.get(id=self.identity_id)
 
 
-class ListingThreadType(DjangoObjectType):
-    class Meta:
-        model = ListingThread
-        exclude = ('thread',)
-
-    item = graphene.Field(ThreadType)
-
-    def resolve_item(self, info):
-        return Thread.objects.get(id=self.thread_id)
-
-
 class ListingType(DjangoObjectType):
+
     class Meta:
         model = Listing
         fields = ('id', 'title', 'short_name', 'description', 'preview_images',
@@ -180,7 +171,7 @@ class ListingType(DjangoObjectType):
     date_added = graphene.String()
     submission_approved = graphene.Boolean()
     moderator_authentication = graphene.Boolean()
-    thread_set = graphene.List(ListingThreadType)
+    thread_set = graphene.List('catalog.schema.schema_comments.ContentThreadType')
 
     def resolve_slug(self, info):
         return slugify(self.title)
@@ -251,7 +242,7 @@ class ListingType(DjangoObjectType):
         return False
 
     def resolve_thread_set(self, info):
-        return ListingThread.objects.filter(listing_id=self.id)
+        return ContentThread.objects.filter(object_id=self.id)
 
 
 ##########
@@ -886,136 +877,9 @@ class DeleteListing(graphene.Mutation):
         return True
 
 
-class CreateListingThread(graphene.Mutation):
-    listing = graphene.Field(ListingType)
-
-    class Arguments:
-        listing = graphene.String(required=True)
-        body = graphene.String(required=True)
-
-    @classmethod
-    @check_csrf
-    @login_required
-    def mutate(cls, self, info, **kwargs):
-
-        listing = kwargs.get('listing')
-        body = kwargs.get('body')
-
-        if Listing.objects.filter(id=listing).exists() is False:
-            raise GraphQLError("Target listing does not exist! Please refresh or try again later.")
-
-        target_listing = Listing.objects.get(id=listing)
-
-        # if ListingThread.objects.filter(listing=target_listing).exists():
-        #     listing_threads = ListingThread.objects.filter(listing=target_listing)
-        #     for listing_thread in listing_threads:
-        #         if listing_thread.thread.originator == info.context.user:
-        #             raise GraphQLError("You've already resonated on this listing")
-
-        if body.strip() == '':
-            raise GraphQLError("Comment body must not be empty")
-
-        new_thread = Thread(originator=info.context.user)
-        new_thread.save()
-
-        new_listing_thread = ListingThread(listing=target_listing, thread=new_thread)
-        new_listing_thread.save()
-
-        new_comment = Comment(thread=new_thread, commenter=info.context.user, body=body, is_root=True)
-        new_comment.save()
-
-        # Create notifications
-
-        creator_bylines = ListingCreatorByline.objects.filter(listing=target_listing)
-        for creator_byline in creator_bylines:
-            if info.context.user != creator_byline.user:
-                notification = Notification(content_object=new_listing_thread, notifier=info.context.user,
-                                            recipient=creator_byline.user)
-                notification.save()
-
-        collaborator_bylines = ListingCollaboratorByline.objects.filter(listing=target_listing)
-        for collaborator_byline in collaborator_bylines:
-            if info.context.user != collaborator_byline.user:
-                notification = Notification(content_object=new_listing_thread, notifier=info.context.user,
-                                            recipient=collaborator_byline.user)
-                notification.save()
-
-        return CreateListingThread(listing=target_listing)
-
-
-class CreateListingThreadReply(graphene.Mutation):
-    listing = graphene.Field(ListingType)
-
-    class Arguments:
-        listing = graphene.String(required=True)
-        thread = graphene.String(required=True)
-        body = graphene.String()
-
-    @classmethod
-    @check_csrf
-    @login_required
-    def mutate(cls, self, info, **kwargs):
-
-        listing = kwargs.get('listing')
-        thread = kwargs.get('thread')
-        body = kwargs.get('body')
-
-        if Listing.objects.filter(id=listing).exists() is False:
-            raise GraphQLError("Target listing does not exist! Please refresh or try again later")
-
-        if Thread.objects.filter(id=thread).exists() is False:
-            raise GraphQLError("Target thread does not exist! Please refresh or try again later")
-
-        target_listing = Listing.objects.get(id=listing)
-        target_thread = Thread.objects.get(id=thread)
-
-        can_reply = False
-
-        if target_thread.originator == info.context.user:
-            can_reply = True
-
-        if can_reply is False:
-            creator_bylines = ListingCreatorByline.objects.filter(listing=target_listing)
-            for creator_byline in creator_bylines:
-                if creator_byline.user == info.context.user:
-                    can_reply = True
-                    break
-
-        if can_reply is False:
-            collaborator_bylines = ListingCollaboratorByline.objects.filter(listing=target_listing)
-            for collaborator_byline in collaborator_bylines:
-                if collaborator_byline.user == info.context.user:
-                    can_reply = True
-                    break
-
-        if can_reply is False:
-            raise GraphQLError("Only original posters, creators, and collaborators may reply to threads")
-
-        if body.strip() == '':
-            raise GraphQLError("Comment body must not be empty")
-
-        new_comment = Comment(thread=target_thread, commenter=info.context.user, body=body, is_root=False)
-        new_comment.save()
-
-        # Create notifications
-        thread_comments = Comment.objects.filter(thread=target_thread)
-        thread_subscribers = []
-        for thread_comment in thread_comments:
-            if info.context.user != thread_comment.commenter and thread_comment.commenter not in thread_subscribers:
-                thread_subscribers.append(thread_comment.commenter)
-
-        for subscriber in thread_subscribers:
-            notification = Notification(content_object=new_comment, notifier=info.context.user,
-                                        recipient=subscriber)
-            notification.save()
-
-        return CreateListingThreadReply(listing=target_listing)
-
 
 class ListingMutation(graphene.ObjectType):
     create_listing = CreateListing.Field()
     update_listing = UpdateListing.Field()
     delete_listing = DeleteListing.Field()
     update_listing_approval = UpdateListingApproval.Field()
-    create_listing_thread = CreateListingThread.Field()
-    create_listing_thread_reply = CreateListingThreadReply.Field()
