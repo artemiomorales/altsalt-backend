@@ -1,11 +1,12 @@
 from django.db.models.signals import pre_delete, post_delete
 from django.dispatch import receiver
 from catalog.models import ListingCoverImage, ListingPreviewImage, ListingUpload,\
-    Submission, Thread, Comment, CommentReaction, Notification
+    Submission, Thread, Comment, CommentReaction, Notification, Article, Listing
 from catalog.models.base import ContentThread
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, RESPONSIVE_SIZES, DEFAULT_FILE_UPLOAD_NAME
 from catalog.backends import CatalogImageStorage
 from django.contrib.contenttypes.models import ContentType
+
 
 @receiver(pre_delete, sender=ListingCoverImage)
 @receiver(pre_delete, sender=ListingPreviewImage)
@@ -93,9 +94,27 @@ def on_content_thread_delete(sender, **kwargs):
         instance = kwargs.get('instance')
         content_type = ContentType.objects.get_for_model(instance)
 
+        if hasattr(instance, 'thread'):
+            kwargs['instance'].thread.delete()
+
         if Notification.objects.filter(content_type=content_type, object_id=instance.id).exists():
             notification = Notification.objects.get(content_type=content_type, object_id=instance.id)
             notification.delete()
+
+    except:
+        pass
+
+
+@receiver(post_delete, sender=Article)
+@receiver(post_delete, sender=Listing)
+def on_user_content_delete(sender, **kwargs):
+    try:
+        instance = kwargs.get('instance')
+        content_type = ContentType.objects.get_for_model(instance)
+
+        if ContentThread.objects.filter(content_type=content_type, object_id=instance.id).exists():
+            content_thread = ContentThread.objects.get(content_type=content_type, object_id=instance.id)
+            content_thread.delete()
 
     except:
         pass

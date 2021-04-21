@@ -614,8 +614,32 @@ class SaveArticleBody(graphene.Mutation):
         return SaveArticleBody(article=target_article)
 
 
+class DeleteArticle(graphene.Mutation):
+    success = graphene.Boolean()
+
+    class Arguments:
+        id = graphene.String(required=True)
+
+    @classmethod
+    @check_csrf
+    @login_required
+    def mutate(cls, self, info, id):
+
+        if Article.objects.filter(id=id).exists() is False:
+            raise GraphQLError("Target listing does not exist! Please refresh or try again later.")
+
+        target_article = Article.objects.get(id=id)
+
+        if ArticleByline.objects.filter(article=target_article, user=info.context.user).exists() is False:
+            raise GraphQLError("You are not authorized to update this listing.")
+
+        target_article.delete()
+        return True
+
+
 class CMSMutation(graphene.ObjectType):
     create_article = CreateArticle.Field()
     update_article = UpdateArticle.Field()
     upload_article_image = UploadArticleImage.Field()
     save_article_body = SaveArticleBody.Field()
+    delete_article = DeleteArticle.Field()

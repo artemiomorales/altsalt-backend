@@ -14,3 +14,4 @@ class CatalogConfig(AppConfig):
         from catalog.signals import on_comment_delete
         from catalog.signals import on_comment_reaction_delete
         from catalog.signals import on_content_thread_delete
+        from catalog.signals import on_user_content_delete

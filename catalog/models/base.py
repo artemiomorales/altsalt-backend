@@ -253,9 +253,10 @@ class Thread(models.Model):
 
         if ContentThread.objects.filter(thread=self).exists():
             content_thread = ContentThread.objects.get(thread=self)
-            return "{0} - {1}".format(content_thread.content_object.title, username)
+            if hasattr(content_thread.content_object, 'title'):
+                return "{0} - {1}".format(content_thread.content_object.title, username)
 
-        return self.id
+        return "{0}".format(self.id)
 
     class Meta:
         db_table = TABLE_PREFIX + 'thread'
@@ -275,7 +276,10 @@ class ContentThread(models.Model):
         from catalog.models.cms import Article
 
         if model is Listing or model is Article:
-            return "{0} - {1} - {2} - {3}".format(self.content_type.name, self.content_object.title, self.thread.originator, self.id)
+            if hasattr(self.content_object, 'title'):
+                return "{0} - {1} - {2} - {3}".format(self.content_type.name, self.content_object.title, self.thread.originator, self.id)
+
+        return "{0}".format(self.id)
 
     class Meta:
         db_table = TABLE_PREFIX + 'content_thread'
