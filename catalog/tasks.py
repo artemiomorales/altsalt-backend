@@ -238,3 +238,15 @@ def send_digest_email(target_emails, is_test):
             response = sg.client.mail.send.post(request_body=email.get())
 
     return True
+
+
+def migrate_to_generic_threads():
+    from catalog.models.base import ContentThread
+    from django.contrib.contenttypes.models import ContentType
+
+    content_threads = ContentThread.objects.all()
+    listing_model_type = ContentType.objects.get(app_label='catalog', model='listing')
+
+    for content_thread in content_threads:
+        content_thread.content_type = listing_model_type
+        content_thread.save()
