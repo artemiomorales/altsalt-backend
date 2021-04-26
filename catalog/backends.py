@@ -76,6 +76,7 @@ class ThumbnailImageStorage(CatalogImageStorage):
         #
         if content.content_type_extra is not None and isinstance(content.content_type_extra, str):
             mime_type = content.content_type_extra.split('/')[-1]
+            params['ContentType'] = 'image/{0}'.format(content.content_type_extra)
         else:
             mime_type = content.content_type.split('/')[-1]
 
@@ -90,7 +91,6 @@ class ThumbnailImageStorage(CatalogImageStorage):
         opened_image = ImageUtils.open(initial_buffer)
         opened_image.thumbnail((self.target_width, self.target_height))
         image_buffer = get_image_buffer(opened_image, mime_type)
-        params['ContentType'] = 'image/{0}'.format(content.content_type_extra)
 
         if (self.gzip and
                 params['ContentType'] in self.gzip_content_types and

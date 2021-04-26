@@ -250,3 +250,118 @@ def migrate_to_generic_threads():
     for content_thread in content_threads:
         content_thread.content_type = listing_model_type
         content_thread.save()
+
+
+def update_image_content_types(dry_run=True):
+
+    import logging
+    from catalog.models import Listing
+    from catalog.models import ListingCoverImage, ListingPreviewImage
+    from catalog.models.user import User, UserProfileImage
+    from catalog.models.base import catalog_media_path, profile_image_path
+    import pathlib
+
+    import os
+    from os.path import join, dirname
+    from dotenv import load_dotenv
+
+    dotenv_path = join(dirname(__file__), '.env')
+    load_dotenv(dotenv_path)
+
+    storage = CatalogImageStorage()
+    s3 = boto3.client('s3')
+    bucket_name = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+    listings = Listing.objects.all()
+
+    for listing in listings:
+
+        logging.error("LISTING ID")
+        logging.error(listing.id)
+        logging.error("")
+
+        response = s3.list_objects_v2(
+            Bucket=os.environ.get('AWS_STORAGE_BUCKET_NAME'),
+            Prefix=catalog_media_path('listing', listing.id)
+        )
+
+        covers = ListingCoverImage.objects.filter(listing_id=listing.id)
+        previews = ListingPreviewImage.objects.filter(listing_id=listing.id)
+
+        cover_image_names = get_image_names(covers)
+        preview_image_names = get_image_names(previews)
+
+        valid_names = cover_image_names + preview_image_names
+
+        if "Contents" in response:
+            for item in response['Contents']:
+                if item['Key'] in valid_names:
+                    if dry_run:
+                        logging.error(item['Key'])
+                        file_extension = pathlib.Path(item['Key']).suffix
+                        logging.error(file_extension)
+
+                        if file_extension == '.png':
+                            logging.error("We got a png")
+                        elif file_extension == '.jpg' or file_extension == '.jpeg':
+                            logging.error("We got a jpg")
+                    else:
+                        logging.error(item['Key'])
+                        file_extension = pathlib.Path(item['Key']).suffix
+                        logging.error(file_extension)
+
+                        if file_extension == '.png':
+                            s3.copy_object(ACL='public-read', CopySource={'Bucket': bucket_name, 'Key': item['Key']},
+                                           Bucket=bucket_name, Key=item['Key'], MetadataDirective="REPLACE",
+                                           ContentType='image/png')
+                        elif file_extension == '.jpg' or file_extension == '.jpeg':
+                            s3.copy_object(ACL='public-read', CopySource={'Bucket': bucket_name, 'Key': item['Key']},
+                                           Bucket=bucket_name, Key=item['Key'], MetadataDirective="REPLACE",
+                                           ContentType='image/jpeg')
+
+        if dry_run:
+            logging.error('-------------------------')
+
+    users = User.objects.all()
+
+    for user in users:
+        logging.error("USERNAME")
+        logging.error(user.username)
+        logging.error("")
+
+        response = s3.list_objects_v2(
+            Bucket=os.environ.get('AWS_STORAGE_BUCKET_NAME'),
+            Prefix=catalog_media_path('user', user.id)
+        )
+
+        profile_images = UserProfileImage.objects.filter(user_id=user.id)
+        profile_image_names = get_image_names(profile_images)
+
+        if "Contents" in response:
+            for item in response['Contents']:
+                if item['Key'] in profile_image_names:
+                    if dry_run:
+                        logging.error(item['Key'])
+                        file_extension = pathlib.Path(item['Key']).suffix
+                        logging.error(file_extension)
+
+                        if file_extension == '.png':
+                            logging.error("We got a png")
+                        elif file_extension == '.jpg' or file_extension == '.jpeg':
+                            logging.error("We got a jpg")
+                    else:
+                        logging.error(item['Key'])
+                        file_extension = pathlib.Path(item['Key']).suffix
+                        logging.error(file_extension)
+
+                        if file_extension == '.png':
+                            s3.copy_object(ACL='public-read', CopySource={'Bucket': bucket_name, 'Key': item['Key']},
+                                           Bucket=bucket_name, Key=item['Key'], MetadataDirective="REPLACE",
+                                           ContentType='image/png')
+                        elif file_extension == '.jpg' or file_extension == '.jpeg':
+                            s3.copy_object(ACL='public-read', CopySource={'Bucket': bucket_name, 'Key': item['Key']},
+                                           Bucket=bucket_name, Key=item['Key'], MetadataDirective="REPLACE",
+                                           ContentType='image/jpeg')
+
+        if dry_run:
+            logging.error('-------------------------')
