@@ -90,6 +90,7 @@ class ThumbnailImageStorage(CatalogImageStorage):
         opened_image = ImageUtils.open(initial_buffer)
         opened_image.thumbnail((self.target_width, self.target_height))
         image_buffer = get_image_buffer(opened_image, mime_type)
+        params['ContentType'] = 'image/{0}'.format(content.content_type_extra)
 
         if (self.gzip and
                 params['ContentType'] in self.gzip_content_types and
@@ -105,6 +106,7 @@ class ThumbnailImageStorage(CatalogImageStorage):
             self._entries[encoded_name] = og_obj
 
         image_buffer.seek(0, os.SEEK_SET)
+
         og_obj.upload_fileobj(image_buffer, ExtraArgs=params)
 
         return cleaned_name
