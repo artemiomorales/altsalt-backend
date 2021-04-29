@@ -55,8 +55,7 @@ from catalog.tasks import send_digest_email
 from os.path import join, dirname
 from dotenv import load_dotenv
 
-from io import StringIO
-from html.parser import HTMLParser
+from catalog.utils import strip_tags
 
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -65,25 +64,6 @@ load_dotenv(dotenv_path)
 #########
 # TYPES #
 #########
-
-class MLStripper(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.reset()
-        self.strict = False
-        self.convert_charrefs= True
-        self.text = StringIO()
-    def handle_data(self, d):
-        self.text.write(d)
-    def get_data(self):
-        return self.text.getvalue()
-
-
-def strip_tags(html):
-    s = MLStripper()
-    s.feed(html)
-    return s.get_data()
-
 
 class OrganizationMemberType(DjangoObjectType):
     class Meta:

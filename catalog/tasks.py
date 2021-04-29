@@ -18,6 +18,8 @@ from catalog.utils import GenerateRandomString
 from django.contrib.auth.hashers import make_password
 import datetime
 
+from catalog.utils import strip_tags
+
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
@@ -202,8 +204,8 @@ def send_digest_email(target_emails, is_test):
         if notifications.count() > 0:
             notification_string = ''
             for notification in notifications:
-                message = notification.get_simple_message()
-                notification_string += "• {0}<br>".format(message)
+                message = notification.get_message()
+                notification_string += "• {0}<br>".format(strip_tags(message))
 
             token = GenerateRandomString()
             notification_settings_authorized_update = NotificationSettingsAuthorizedUpdate(user=user,
@@ -220,7 +222,7 @@ def send_digest_email(target_emails, is_test):
                 to_confirmation_email = To(user.email)
             email = Mail(from_confirmation_email, to_confirmation_email)
             email.dynamic_template_data = {
-                "subject": "New resonance on your listing(s)",
+                "subject": "New resonance on your work(s)",
                 "username": user.display_name,
                 "count": notifications.count(),
                 "body": notification_string,
