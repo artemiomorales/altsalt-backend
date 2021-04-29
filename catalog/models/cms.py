@@ -34,7 +34,7 @@ class Article(models.Model):
     title = models.CharField(max_length=125)
     seo_title = models.CharField(default="", max_length=125, blank=True)
     preview_text = models.TextField(max_length=200)
-    body = models.TextField(default="")
+    body = models.TextField(default="", blank=True)
     post_script = models.TextField(default="", blank=True)
     creation_date = models.DateField(default=utils.timezone.now)
     publish_date = models.DateField(default=utils.timezone.now)

@@ -55,11 +55,11 @@ class ThumbnailImageStorage(CatalogImageStorage):
     target_width = None
     target_height = None
 
-    def __init__(self, target_width, target_height, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__()
 
-        self.target_width = target_width
-        self.target_height = target_height
+        self.target_width = kwargs.get('target_width')
+        self.target_height = kwargs.get('target_height')
 
     def _save(self, name, content):
 
@@ -74,11 +74,14 @@ class ThumbnailImageStorage(CatalogImageStorage):
         # properly. So we store the image format inside of 'content_type_extra' and read it from that
         # attribute with this if / else statement.
         #
+        import logging
+        logging.error(content)
         if content.content_type_extra is not None and isinstance(content.content_type_extra, str):
             mime_type = content.content_type_extra.split('/')[-1]
             params['ContentType'] = 'image/{0}'.format(content.content_type_extra)
         else:
             mime_type = content.content_type.split('/')[-1]
+            params['ContentType'] = 'image/{0}'.format(content.content_type)
 
         # Open image
         initial_buffer = io.BufferedRandom(io.BytesIO())
@@ -89,7 +92,7 @@ class ThumbnailImageStorage(CatalogImageStorage):
             initial_buffer = BytesIO(content.read())
 
         opened_image = ImageUtils.open(initial_buffer)
-        opened_image.thumbnail((self.target_width, self.target_height))
+        opened_image.thumbnail((1588, 2382))
         image_buffer = get_image_buffer(opened_image, mime_type)
 
         if (self.gzip and

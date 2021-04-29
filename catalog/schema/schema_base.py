@@ -42,7 +42,7 @@ from ratelimit.core import is_ratelimited
 
 
 # Storage
-from catalog.backends import CatalogImageStorage
+from catalog.backends import ThumbnailImageStorage
 
 
 from os.path import join, dirname
@@ -464,6 +464,12 @@ def save_image_data(image_path, image_data):
     prefix, imgstr = image_data.split(';base64,')
     mime_type = prefix.split('/')[-1]
 
+    # Make sure we don't have spaces or special characters in the filename
+    base_file_name = os.path.basename(image_path)
+    filename, extension = os.path.splitext(base_file_name)
+    cleaned_filename = "{0}{1}".format(slugify(filename), extension)
+    cleaned_path = image_path.replace(base_file_name, cleaned_filename)
+
     if 'jpeg' not in mime_type and 'png' not in mime_type:
         raise TypeError('Images must be in JPEG or PNG format')
 
@@ -474,8 +480,8 @@ def save_image_data(image_path, image_data):
     upload_data = InMemoryUploadedFile(image_buffer, None, image_path, 'text/plain', len(image_buffer), None,
                                        mime_type)
 
-    storage = CatalogImageStorage()
-    return storage.save(image_path, upload_data)
+    storage = ThumbnailImageStorage()
+    return storage.save(cleaned_path, upload_data)
 
 
 def create_presigned_url(object_name, expiration=3600):
