@@ -73,9 +73,7 @@ class ThumbnailImageStorage(CatalogImageStorage):
         # in the 'content_type' attribute; but we still need to know the image format in order to save
         # properly. So we store the image format inside of 'content_type_extra' and read it from that
         # attribute with this if / else statement.
-        #
-        import logging
-        logging.error(content)
+
         if content.content_type_extra is not None and isinstance(content.content_type_extra, str):
             mime_type = content.content_type_extra.split('/')[-1]
             params['ContentType'] = 'image/{0}'.format(content.content_type_extra)
