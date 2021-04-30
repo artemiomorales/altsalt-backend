@@ -118,6 +118,11 @@ class BaseImageTypeMixin:
         return ''
 
 
+class NameSlugType(graphene.ObjectType):
+    name = graphene.String()
+    slug = graphene.String()
+
+
 class ImageInput(graphene.InputObjectType):
     name = graphene.String(required=True)
     data = graphene.String(required=True)

@@ -1,5 +1,6 @@
 from catalog.models import *
 from catalog.models.base import PriceType, ContentThread
+from catalog.models.user import UserCountry, UserIdentity
 from django.contrib.auth import get_user_model
 
 import graphene
@@ -7,7 +8,9 @@ from graphene_django.types import DjangoObjectType
 from .schema_base import check_csrf, save_image_data_via_model, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
     NameWithPriorityInput, UserInput, send_byline_email, save_pdf_data, ImageInput, PriceInput, ThreadType, \
     UploadInput, PriceGrapheneType, send_listing_public_email, TagType, FormatType, \
-    GenreType, DistributionTypeGrapheneType, LengthType, LanguageType, ContentRatingType, SeoCategoryType
+    GenreType, DistributionTypeGrapheneType, LengthType, LanguageType, ContentRatingType, SeoCategoryType, \
+    NameSlugType
+
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
 
@@ -172,6 +175,11 @@ class ListingType(DjangoObjectType):
     submission_approved = graphene.Boolean()
     moderator_authentication = graphene.Boolean()
     thread_set = graphene.List('catalog.schema.schema_comments.ContentThreadType')
+    confirmed_creators = graphene.List('catalog.schema.schema_user.UserType')
+    confirmed_collaborators = graphene.List('catalog.schema.schema_user.UserType')
+    pending_creators = graphene.List('catalog.schema.schema_user.UserType')
+    pending_collaborators = graphene.List('catalog.schema.schema_user.UserType')
+    creator_background = graphene.List(NameSlugType)
 
     def resolve_slug(self, info):
         return slugify(self.title)
@@ -244,6 +252,97 @@ class ListingType(DjangoObjectType):
     def resolve_thread_set(self, info):
         return ContentThread.objects.filter(object_id=self.id)
 
+    def resolve_creator_background(self, info):
+        users = []
+        backgrounds = []
+
+        creatorBylines = ListingCreatorByline.objects.filter(listing_id=self.id).order_by('listing_priority')
+        for creatorByline in creatorBylines:
+            users.extend(get_user_model().objects.filter(id=creatorByline.user.id))
+
+        collaboratorBylines = ListingCollaboratorByline.objects.filter(listing_id=self.id).order_by('listing_priority')
+        for collaboratorByline in collaboratorBylines:
+            users.extend(get_user_model().objects.filter(id=collaboratorByline.user.id))
+
+        for user in users:
+
+            user_countries = UserCountry.objects.filter(user_id=user.id)
+            for user_country in user_countries:
+                backgrounds.append({'name': user_country.country.name, 'slug': user_country.country.slug})
+            user_identities = UserIdentity.objects.filter(user_id=user.id)
+            for user_identity in user_identities:
+                backgrounds.append({'name': user_identity.identity.name, 'slug': user_identity.identity.slug})
+
+        return backgrounds
+
+    def resolve_confirmed_creators(self, info):
+        users = []
+
+        creatorBylines = ListingCreatorByline.objects.filter(listing_id=self.id).order_by('listing_priority')
+        for creatorByline in creatorBylines:
+            if creatorByline.is_confirmed:
+                users.append(creatorByline.user)
+
+        if len(users) > 0:
+            return users
+
+        return None
+
+    def resolve_confirmed_collaborators(self, info):
+        users = []
+
+        collaboratorBylines = ListingCollaboratorByline.objects.filter(listing_id=self.id).order_by('listing_priority')
+        for collaboratorByline in collaboratorBylines:
+            if collaboratorByline.is_confirmed:
+                users.append(collaboratorByline.user)
+
+        if len(users) > 0:
+            return users
+
+        return None
+
+    def resolve_pending_creators(self, info):
+        is_authorized = False
+        if info.context.user.is_authenticated and \
+           (ListingCreatorByline.objects.filter(user=info.context.user).exists() or \
+           ListingCollaboratorByline.objects.filter(user=info.context.user).exists()):
+                is_authorized = True
+
+        if not is_authorized:
+            return None
+
+        users = []
+        creatorBylines = ListingCreatorByline.objects.filter(listing_id=self.id).order_by('listing_priority')
+        for creatorByline in creatorBylines:
+            if not creatorByline.is_confirmed:
+                users.append(creatorByline.user)
+
+        if len(users) > 0:
+            return users
+
+        return None
+
+    def resolve_pending_collaborators(self, info):
+        is_authorized = False
+        if info.context.user.is_authenticated and \
+           (ListingCreatorByline.objects.filter(user=info.context.user).exists() or \
+           ListingCollaboratorByline.objects.filter(user=info.context.user).exists()):
+                is_authorized = True
+
+        if not is_authorized:
+            return None
+
+        users = []
+
+        collaboratorBylines = ListingCreatorByline.objects.filter(listing_id=self.id).order_by('listing_priority')
+        for collaboratorByline in collaboratorBylines:
+            if not collaboratorByline.is_confirmed:
+                users.append(collaboratorByline.user)
+
+        if len(users) > 0:
+            return users
+
+        return None
 
 ##########
 # SCHEMA #
