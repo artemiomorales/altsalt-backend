@@ -273,7 +273,12 @@ class ListingType(DjangoObjectType):
             for user_identity in user_identities:
                 backgrounds.append({'name': user_identity.identity.name, 'slug': user_identity.identity.slug})
 
-        return backgrounds
+        remove_duplicates = []
+        for i in backgrounds:
+            if i not in remove_duplicates:
+                remove_duplicates.append(i)
+
+        return remove_duplicates
 
     def resolve_confirmed_creators(self, info):
         users = []
