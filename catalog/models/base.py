@@ -382,8 +382,7 @@ class Notification(models.Model):
                                                                          content_thread.thread))
         if model is Comment:
             return '{0} replied on a thread you\'re a part of: "{1}”'.format(self.notifier.display_name,
-                                                                             get_thread_string(
-                                                                                 self.content_object.thread))
+                                                                             self.content_object.comment.body)
         if model is CommentReaction:
             return '{0} reacted 🙏 to your resonance "{1}"'.format(self.notifier.display_name,
                                                                 self.content_object.comment.body)
