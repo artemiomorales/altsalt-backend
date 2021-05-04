@@ -32,6 +32,7 @@ class EditorialSettings(models.Model):
 
 class Article(models.Model):
     title = models.CharField(max_length=125)
+    subheading = models.CharField(max_length=125, default="", blank=True)
     seo_title = models.CharField(default="", max_length=125, blank=True)
     preview_text = models.TextField(max_length=200)
     body = models.TextField(default="", blank=True)

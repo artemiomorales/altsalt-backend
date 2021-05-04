@@ -105,7 +105,7 @@ class ArticleIdentityRepresentedType(DjangoObjectType):
 class ArticleType(DjangoObjectType):
     class Meta:
         model = Article
-        fields = ('id', 'title', 'preview_text', 'featured_image', 'body', 'post_script',
+        fields = ('id', 'title', 'subheading', 'preview_text', 'featured_image', 'body', 'post_script',
                   'is_published', 'is_announcement', 'is_featured', 'is_full_bleed', 'price', 'is_confirmed',
                   'seo_title', 'content_rating', 'related_publish_date', 'length', 'is_excerpt')
 
