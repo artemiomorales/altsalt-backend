@@ -169,7 +169,7 @@ def generate_thumbnails(target_model, target_id, mime_type, filename, extension)
                 storage.save(responsive_name, responsive_buffer)
 
 
-def send_digest_email(target_emails, is_test):
+def send_digest_email(target_emails, subject, is_test):
     from catalog.models.base import Notification
     from catalog.models.user import NotificationSettings, NotificationSettingsAuthorizedUpdate
     from graphql import GraphQLError
@@ -216,13 +216,17 @@ def send_digest_email(target_emails, is_test):
                 os.environ.get('BASE_URL'), user.id, notification_settings_authorized_update.id, token)
             unsubscribe_url = "{0}&frequency={1}".format(email_preferences_url, NotificationSettings.Frequency.OFF)
 
+            email_subject = "New notifications on your work(s)"
+            if subject is not None and subject != '':
+                email_subject = subject
+
             if is_test:
                 to_confirmation_email = To('"artemio@altsalt.com')
             else:
                 to_confirmation_email = To(user.email)
             email = Mail(from_confirmation_email, to_confirmation_email)
             email.dynamic_template_data = {
-                "subject": "New resonance on your work(s)",
+                "subject": email_subject,
                 "username": user.display_name,
                 "count": notifications.count(),
                 "body": notification_string,

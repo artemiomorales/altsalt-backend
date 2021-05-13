@@ -1397,6 +1397,7 @@ class SendDigestEmail(graphene.Mutation):
 
     class Arguments:
         emails = graphene.List(graphene.String)
+        subject = graphene.String()
         is_test = graphene.Boolean(required=True)
 
     @classmethod
@@ -1408,9 +1409,10 @@ class SendDigestEmail(graphene.Mutation):
             raise GraphQLError("You are not authorized to perform this action")
 
         emails = kwargs.get('emails')
+        subject = kwargs.get('subject')
         is_test = kwargs.get('is_test')
 
-        return send_digest_email(emails, is_test)
+        return send_digest_email(emails, subject, is_test)
 
 
 #######################
