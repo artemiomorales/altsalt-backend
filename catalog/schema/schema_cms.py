@@ -5,7 +5,8 @@ from catalog.models.base import PriceType, article_image_path_from_model, Conten
 from catalog.models.cms import *
 from .schema_base import BaseImageTypeMixin, check_csrf, login_required, IdentityType, FormatType, TagType, \
     DistributionTypeGrapheneType, GenreType, LanguageType, CountryType, PriceGrapheneType, ContentRatingType, \
-    NameWithPriorityInput, UserInput, ImageInput, PriceInput, save_image_data_via_model, save_image_data, send_byline_email
+    NameWithPriorityInput, UserInput, ImageInput, PriceInput, save_image_data_via_model, save_image_data, send_byline_email, \
+    TextChoicesType
 from catalog.constants import capitalize_string, get_date_from_string
 from graphql import GraphQLError
 
@@ -122,6 +123,7 @@ class ArticleType(DjangoObjectType):
     price = graphene.Field(PriceGrapheneType)
     moderator_authentication = graphene.Boolean()
     thread_set = graphene.List('catalog.schema.schema_comments.ContentThreadType')
+    publish_status = graphene.Field(TextChoicesType)
 
     def resolve_slug(self, info):
         return slugify(self.title)
@@ -164,6 +166,10 @@ class ArticleType(DjangoObjectType):
             return True
         return False
 
+    def resolve_publish_status(self, info):
+        return {'value': PublishStatus(self.publish_status).value, 'label': PublishStatus(self.publish_status).label}
+
+
 
 ##########
 # SCHEMA #
@@ -172,8 +178,9 @@ class ArticleType(DjangoObjectType):
 class CMSQuery(graphene.ObjectType):
     featured_articles = graphene.List(ArticleType)
     article_bundle = graphene.List(ArticleType,
-                                   include_featured=graphene.Boolean(default_value=True),
-                                   exclude_private=graphene.Boolean(default_value=True),
+                                   exclude_featured=graphene.Boolean(default_value=False),
+                                   exclude_unlisted=graphene.Boolean(default_value=True),
+                                   exclude_drafts=graphene.Boolean(default_value=True),
                                    )
     article = graphene.Field(ArticleType, id=graphene.String())
     editorial_settings = graphene.Field(EditorialSettingsType)
@@ -182,16 +189,20 @@ class CMSQuery(graphene.ObjectType):
         return Article.objects.filter(is_featured=True)
 
     def resolve_article_bundle(self, info, **kwargs):
-        include_featured = kwargs.get('include_featured')
-        exclude_private = kwargs.get('exclude_private')
+        exclude_featured = kwargs.get('exclude_featured')
+        exclude_unlisted = kwargs.get('exclude_unlisted')
+        exclude_drafts = kwargs.get('exclude_drafts')
 
-        if include_featured is True:
+        if not exclude_featured:
             articles = Article.objects.all()
         else:
             articles = Article.objects.filter(is_featured=False)
 
-        if exclude_private is True:
-            articles = articles.filter(is_published=True)
+        if exclude_unlisted is True:
+            articles = articles.exclude(publish_status=PublishStatus.UNLISTED)
+
+        if exclude_drafts is True:
+            articles = articles.exclude(publish_status=PublishStatus.DRAFT)
 
         return articles
 
@@ -238,7 +249,6 @@ class UpdateArticle(graphene.Mutation):
         seo_title = graphene.String()
         preview_text = graphene.String()
         body = graphene.String()
-        is_published = graphene.Boolean()
         is_full_bleed = graphene.Boolean()
         is_excerpt = graphene.Boolean()
         featured_image = ImageInput()
@@ -254,6 +264,7 @@ class UpdateArticle(graphene.Mutation):
         identities_represented = graphene.List(NameWithPriorityInput)
         tag = graphene.List(NameWithPriorityInput)
         price = PriceInput()
+        publish_status = graphene.String()
 
     @classmethod
     @check_csrf
@@ -263,7 +274,6 @@ class UpdateArticle(graphene.Mutation):
         id = kwargs.get('id')
         title = kwargs.get('title')
         seo_title = kwargs.get('seo_title')
-        is_published = kwargs.get('is_published')
         is_full_bleed = kwargs.get('is_full_bleed')
         is_excerpt = kwargs.get('is_excerpt')
         featured_image = kwargs.get('featured_image')
@@ -281,6 +291,11 @@ class UpdateArticle(graphene.Mutation):
         identities_represented = kwargs.get('identities_represented')
         tag = kwargs.get('tag')
         price = kwargs.get('price')
+        publish_status = kwargs.get('publish_status')
+
+        import logging
+        logging.error("working")
+        logging.error(publish_status)
 
         if Article.objects.filter(id=id).exists() is False:
             raise GraphQLError("Target article does not exist! Please refresh or try again later.")
@@ -310,10 +325,10 @@ class UpdateArticle(graphene.Mutation):
         if body is not None:
             target_article.body = body
 
-        # Is Published #
+        # Publish Status #
 
-        if is_published is not None:
-            target_article.is_published = is_published
+        if publish_status is not None:
+            target_article.publish_status = PublishStatus(publish_status)
 
         # Is Full Bleed #
 

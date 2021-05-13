@@ -1,6 +1,6 @@
 import graphene
 from catalog.models.base import Country, Identity, Thread, Comment, ReactionType, CommentReaction, Notification, Tag, \
-    Format, Genre, DistributionType, Length, Language, ContentRating, SeoCategory, ContentThread
+    Format, Genre, DistributionType, Length, Language, ContentRating, SeoCategory, ContentThread, PublishStatus
 from catalog.models.base import Price
 from catalog.models.user import NotificationSettings, NotificationSettingsAuthorizedUpdate
 from catalog.utils import GenerateRandomString
@@ -147,6 +147,11 @@ class UploadInput(graphene.InputObjectType):
 class PriceGrapheneType(DjangoObjectType):
     class Meta:
         model = Price
+
+
+class TextChoicesType(graphene.ObjectType):
+    value = graphene.String()
+    label = graphene.String()
 
 
 class CountryType(DjangoObjectType):
@@ -377,9 +382,22 @@ class SetCommentReaction(graphene.Mutation):
 
 class BaseQuery(graphene.ObjectType):
     reaction_types = graphene.List(ReactionGrapheneType)
+    all_publish_statuses = graphene.List(TextChoicesType)
 
     def resolve_reaction_types(self, info):
         return ReactionType.objects.all()
+
+    def resolve_all_publish_statuses(self, info):
+        publish_statuses = []
+        import logging
+        logging.error(PublishStatus.choices)
+        for publish_status in PublishStatus.choices:
+
+            publish_statuses.append({
+                'value': publish_status[0],
+                'label': publish_status[1]
+            })
+        return publish_statuses
 
 
 class BaseMutation(graphene.ObjectType):

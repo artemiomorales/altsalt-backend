@@ -10,6 +10,7 @@ from catalog.backends import CatalogImageStorage
 from django.utils import timezone
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.utils.translation import gettext_lazy as _
 
 # Image Handling
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES
@@ -144,6 +145,12 @@ class Price(models.Model):
 
     class Meta:
         db_table = TABLE_PREFIX + 'price'
+
+
+class PublishStatus(models.TextChoices):
+    DRAFT = 'D', _('Draft')
+    UNLISTED = 'U', _('Unlisted')
+    PUBLIC = 'P', _('Public')
 
 
 class CustomSaveMixin(models.Model):

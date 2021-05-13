@@ -2,9 +2,10 @@ from django.db import models
 
 from .base import TABLE_PREFIX, CustomImageAlttext, article_cover_image_path, \
     Identity, Country, Format, DistributionType, Length, Genre, Language, Tag, \
-    Price, ContentRating
+    Price, ContentRating, PublishStatus
 from .user import User
 from django.template.defaultfilters import slugify
+
 
 from catalog.backends import ThumbnailImageStorage
 
@@ -48,6 +49,12 @@ class Article(models.Model):
     price = models.ForeignKey("Price", null=True, blank=True, on_delete=models.SET_NULL)
     content_rating = models.ForeignKey("ContentRating", null=True, blank=True, on_delete=models.PROTECT)
     related_publish_date = models.DateField(null=True, blank=True)
+
+    publish_status = models.CharField(
+        max_length=2,
+        choices=PublishStatus.choices,
+        default=PublishStatus.PUBLIC,
+    )
 
     def __str__(self):
         return self.title
