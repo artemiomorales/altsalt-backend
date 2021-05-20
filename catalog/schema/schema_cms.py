@@ -124,6 +124,8 @@ class ArticleType(DjangoObjectType):
     moderator_authentication = graphene.Boolean()
     thread_set = graphene.List('catalog.schema.schema_comments.ContentThreadType')
     publish_status = graphene.Field(TextChoicesType)
+    featured_image_full_bleed_fit = graphene.Field(TextChoicesType)
+    featured_image_full_bleed_alignment = graphene.Field(TextChoicesType)
 
     def resolve_slug(self, info):
         return slugify(self.title)
@@ -168,6 +170,14 @@ class ArticleType(DjangoObjectType):
 
     def resolve_publish_status(self, info):
         return {'value': PublishStatus(self.publish_status).value, 'label': PublishStatus(self.publish_status).label}
+
+    def resolve_featured_image_full_bleed_fit(self, info):
+        return {'value': ObjectFit(self.featured_image_full_bleed_fit).value,
+                'label': ObjectFit(self.featured_image_full_bleed_fit).label}
+
+    def resolve_featured_image_full_bleed_alignment(self, info):
+        return {'value': Alignment(self.featured_image_full_bleed_alignment).value,
+                'label': Alignment(self.featured_image_full_bleed_alignment).label}
 
 
 
@@ -265,6 +275,8 @@ class UpdateArticle(graphene.Mutation):
         tag = graphene.List(NameWithPriorityInput)
         price = PriceInput()
         publish_status = graphene.String()
+        featured_image_full_bleed_fit = graphene.String()
+        featured_image_full_bleed_alignment = graphene.String()
 
     @classmethod
     @check_csrf
@@ -292,10 +304,8 @@ class UpdateArticle(graphene.Mutation):
         tag = kwargs.get('tag')
         price = kwargs.get('price')
         publish_status = kwargs.get('publish_status')
-
-        import logging
-        logging.error("working")
-        logging.error(publish_status)
+        featured_image_full_bleed_fit = kwargs.get('featured_image_full_bleed_fit')
+        featured_image_full_bleed_alignment = kwargs.get('featured_image_full_bleed_alignment')
 
         if Article.objects.filter(id=id).exists() is False:
             raise GraphQLError("Target article does not exist! Please refresh or try again later.")
@@ -334,6 +344,16 @@ class UpdateArticle(graphene.Mutation):
 
         if is_full_bleed is not None:
             target_article.is_full_bleed = is_full_bleed
+
+        # Featured Image Full Bleed Fit #
+
+        if featured_image_full_bleed_fit is not None:
+            target_article.featured_image_full_bleed_fit = ObjectFit(featured_image_full_bleed_fit)
+
+        # Featured Image Full Bleed Alignment #
+
+        if featured_image_full_bleed_alignment is not None:
+            target_article.featured_image_full_bleed_alignment = Alignment(featured_image_full_bleed_alignment)
 
         # Is Excerpt #
 

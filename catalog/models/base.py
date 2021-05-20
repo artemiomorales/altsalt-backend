@@ -153,6 +153,17 @@ class PublishStatus(models.TextChoices):
     PUBLIC = 'P', _('Public')
 
 
+class ObjectFit(models.TextChoices):
+    COVER = 'Cover'
+    CONTAIN = 'Contain'
+
+
+class Alignment(models.TextChoices):
+    LEFT = 'L', _('Left')
+    CENTER = 'C', _('Center')
+    RIGHT = 'R', _('Right')
+
+
 class CustomSaveMixin(models.Model):
     _loaded_values = None
 

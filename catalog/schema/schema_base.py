@@ -1,6 +1,7 @@
 import graphene
 from catalog.models.base import Country, Identity, Thread, Comment, ReactionType, CommentReaction, Notification, Tag, \
-    Format, Genre, DistributionType, Length, Language, ContentRating, SeoCategory, ContentThread, PublishStatus
+    Format, Genre, DistributionType, Length, Language, ContentRating, SeoCategory, ContentThread, PublishStatus,\
+    Alignment, ObjectFit
 from catalog.models.base import Price
 from catalog.models.user import NotificationSettings, NotificationSettingsAuthorizedUpdate
 from catalog.utils import GenerateRandomString
@@ -383,14 +384,15 @@ class SetCommentReaction(graphene.Mutation):
 class BaseQuery(graphene.ObjectType):
     reaction_types = graphene.List(ReactionGrapheneType)
     all_publish_statuses = graphene.List(TextChoicesType)
+    all_alignments = graphene.List(TextChoicesType)
+    all_object_fits = graphene.List(TextChoicesType)
 
     def resolve_reaction_types(self, info):
         return ReactionType.objects.all()
 
     def resolve_all_publish_statuses(self, info):
         publish_statuses = []
-        import logging
-        logging.error(PublishStatus.choices)
+
         for publish_status in PublishStatus.choices:
 
             publish_statuses.append({
@@ -398,6 +400,26 @@ class BaseQuery(graphene.ObjectType):
                 'label': publish_status[1]
             })
         return publish_statuses
+
+    def resolve_all_alignments(self, info):
+        alignments = []
+
+        for alignment in Alignment.choices:
+            alignments.append({
+                'value': alignment[0],
+                'label': alignment[1]
+            })
+        return alignments
+
+    def resolve_all_object_fits(self, info):
+        object_fits = []
+
+        for object_fit in ObjectFit.choices:
+            object_fits.append({
+                'value': object_fit[0],
+                'label': object_fit[1]
+            })
+        return object_fits
 
 
 class BaseMutation(graphene.ObjectType):

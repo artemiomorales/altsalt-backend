@@ -2,7 +2,7 @@ from django.db import models
 
 from .base import TABLE_PREFIX, CustomImageAlttext, article_cover_image_path, \
     Identity, Country, Format, DistributionType, Length, Genre, Language, Tag, \
-    Price, ContentRating, PublishStatus
+    Price, ContentRating, PublishStatus, Alignment, ObjectFit
 from .user import User
 from django.template.defaultfilters import slugify
 
@@ -54,6 +54,18 @@ class Article(models.Model):
         max_length=2,
         choices=PublishStatus.choices,
         default=PublishStatus.DRAFT,
+    )
+
+    featured_image_full_bleed_fit = models.CharField(
+        max_length=7,
+        choices=ObjectFit.choices,
+        default=ObjectFit.COVER,
+    )
+
+    featured_image_full_bleed_alignment = models.CharField(
+        max_length=2,
+        choices=Alignment.choices,
+        default=Alignment.CENTER,
     )
 
     def __str__(self):
