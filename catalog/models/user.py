@@ -24,7 +24,7 @@ class User(AbstractUser):
     is_organization = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
     is_moderator = models.BooleanField(default=False)
-    is_verified = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=True)
     country = models.ManyToManyField(
         "Country",
         through='UserCountry'
