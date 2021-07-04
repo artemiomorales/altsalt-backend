@@ -8,7 +8,7 @@ from catalog.models.base import *
 from catalog.models.listing import *
 from catalog.models.cms import *
 from catalog.models.submission import *
-
+from catalog.models.collection import *
 
 from django_reverse_admin import ReverseModelAdmin
 
@@ -307,6 +307,36 @@ class ArticleTagInline(SingleInline):
     pass
 
 
+class CollectionBylineInline(SingleInline):
+    model = CollectionByline
+    pass
+
+
+class CollectionCoverImageInline(SingleInline):
+    model = CollectionCoverImage
+    pass
+
+
+class CollectionArticleInline(SingleInline):
+    model = CollectionArticle
+    pass
+
+
+class CollectionListingInline(SingleInline):
+    model = CollectionListing
+    pass
+
+
+class CollectionAdditionalResourcesInline(SingleInline):
+    model = CollectionAdditionalResources
+    pass
+
+
+class CollectionDedicationImageInline(SingleInline):
+    model = CollectionDedicationImage
+    pass
+
+
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
     inlines = [ArticleBylineInline,
@@ -318,6 +348,18 @@ class ArticleAdmin(admin.ModelAdmin):
                ArticleCountryRepresentedInline,
                ArticleIdentityRepresentedInline,
                ArticleTagInline
+               ]
+    pass
+
+
+@admin.register(Collection)
+class CollectionAdmin(admin.ModelAdmin):
+    inlines = [CollectionBylineInline,
+               CollectionCoverImageInline,
+               CollectionArticleInline,
+               CollectionListingInline,
+               CollectionAdditionalResourcesInline,
+               CollectionDedicationImageInline,
                ]
     pass
 

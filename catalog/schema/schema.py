@@ -5,9 +5,10 @@ from .schema_user import UserQuery, UserMutation
 from .schema_cms import CMSQuery, CMSMutation
 from .schema_submission import SubmissionQuery, SubmissionMutation
 from .schema_comments import CommentsMutation
+from .schema_collection import CollectionQuery
 
 
-class Query(BaseQuery, ListingQuery, UserQuery, CMSQuery, SubmissionQuery, graphene.ObjectType):
+class Query(BaseQuery, ListingQuery, UserQuery, CMSQuery, SubmissionQuery, CollectionQuery, graphene.ObjectType):
     pass
 
 
