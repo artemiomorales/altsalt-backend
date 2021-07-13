@@ -9,6 +9,7 @@ from .schema_base import BaseImageTypeMixin, check_csrf, login_required, Identit
     TextChoicesType
 from catalog.constants import capitalize_string, get_date_from_string
 from graphql import GraphQLError
+from django.contrib.contenttypes.models import ContentType
 
 
 class ArticleBylineType(DjangoObjectType):
@@ -161,7 +162,7 @@ class ArticleType(DjangoObjectType):
         return ArticleTag.objects.filter(article_id=self.id)
 
     def resolve_thread_set(self, info):
-        return ContentThread.objects.filter(object_id=self.id)
+        return ContentThread.objects.filter(object_id=self.id, content_type=ContentType.objects.get_for_model(Article))
 
     def resolve_moderator_authentication(self, info):
         if info.context.user.is_authenticated is True and info.context.user.is_moderator is True:

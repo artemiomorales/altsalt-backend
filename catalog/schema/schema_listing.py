@@ -18,6 +18,7 @@ import datetime
 
 from catalog.constants import get_date_from_string, capitalize_string, DEFAULT_FILE_UPLOAD_NAME
 from django.utils import timezone
+from django.contrib.contenttypes.models import ContentType
 
 
 class ListingUploadType(DjangoObjectType):
@@ -250,7 +251,7 @@ class ListingType(DjangoObjectType):
         return False
 
     def resolve_thread_set(self, info):
-        return ContentThread.objects.filter(object_id=self.id)
+        return ContentThread.objects.filter(object_id=self.id, content_type=ContentType.objects.get_for_model(Listing))
 
     def resolve_creator_background(self, info):
         users = []
