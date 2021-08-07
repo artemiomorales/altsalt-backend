@@ -1,7 +1,7 @@
 from .base import \
     TABLE_PREFIX, listing_cover_image_path, listing_preview_image_path,\
     listing_upload_path, CustomImageAlttext, Link, Country, Identity, \
-    CustomSaveMixin, Format, DistributionType, Genre, Language, Tag
+    CustomSaveMixin, Format, DistributionType, Genre, Language, Tag, PublishStatus
 from .user import User
 
 from django.db import models
@@ -57,6 +57,12 @@ class Listing(models.Model):
     content_rating = models.ForeignKey("ContentRating", null=True, blank=True, on_delete=models.PROTECT)
     seo_category = models.ForeignKey("SeoCategory", null=True, blank=True, on_delete=models.SET_NULL)
 
+    publish_status = models.CharField(
+        max_length=2,
+        choices=PublishStatus.choices,
+        default=PublishStatus.PUBLIC,
+    )
+
     def __str__(self):
         return self.title
 
@@ -70,6 +76,7 @@ class ListingUpload(CustomSaveMixin):
     allow_downloads = models.BooleanField(default=False)
     is_preview = models.BooleanField(default=False)
     is_html = models.BooleanField(default=False)
+    html_location = models.CharField(default="", max_length=150, blank=True)
 
     def save(self, *args, **kwargs):
         super(ListingUpload, self).save(*args, **kwargs)

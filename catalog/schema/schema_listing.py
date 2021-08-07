@@ -9,7 +9,7 @@ from .schema_base import check_csrf, save_image_data_via_model, BaseImageTypeMix
     NameWithPriorityInput, UserInput, send_byline_email, save_pdf_data, ImageInput, PriceInput, ThreadType, \
     UploadInput, PriceGrapheneType, send_listing_public_email, TagType, FormatType, \
     GenreType, DistributionTypeGrapheneType, LengthType, LanguageType, ContentRatingType, SeoCategoryType, \
-    NameSlugType
+    NameSlugType, TextChoicesType
 
 from graphql_jwt.decorators import login_required
 from graphql import GraphQLError
@@ -152,7 +152,7 @@ class ListingType(DjangoObjectType):
         fields = ('id', 'title', 'short_name', 'description', 'preview_images',
                   'length', 'price', 'content_rating', 'seo_category',
                   'is_published', 'is_approved', 'publication_date', 'date_added', 'is_editable',
-                  'show_custom_author', 'custom_author', 'is_html')
+                  'show_custom_author', 'custom_author', 'is_html', 'html_location')
 
     slug = graphene.String()
     cover_image = graphene.Field(ListingCoverImageType)
@@ -181,6 +181,7 @@ class ListingType(DjangoObjectType):
     pending_creators = graphene.List('catalog.schema.schema_user.UserType')
     pending_collaborators = graphene.List('catalog.schema.schema_user.UserType')
     creator_background = graphene.List(NameSlugType)
+    publish_status = graphene.Field(TextChoicesType)
 
     def resolve_slug(self, info):
         return slugify(self.title)
@@ -350,6 +351,10 @@ class ListingType(DjangoObjectType):
 
         return None
 
+    def resolve_publish_status(self, info):
+        return {'value': PublishStatus(self.publish_status).value, 'label': PublishStatus(self.publish_status).label}
+
+
 ##########
 # SCHEMA #
 ##########
@@ -498,7 +503,6 @@ class UpdateListing(graphene.Mutation):
         title = graphene.String()
         short_name = graphene.String()
         description = graphene.String()
-        is_published = graphene.Boolean()
         cover_image = ImageInput()
         preview_images = graphene.List(PreviewImageInput)
         upload = UploadInput()
@@ -519,6 +523,7 @@ class UpdateListing(graphene.Mutation):
         identities_represented = graphene.List(NameWithPriorityInput)
         tag = graphene.List(NameWithPriorityInput)
         price = PriceInput()
+        publish_status = graphene.String()
 
 
     @classmethod
@@ -529,7 +534,6 @@ class UpdateListing(graphene.Mutation):
         id = kwargs.get('id')
         title = kwargs.get('title')
         short_name = kwargs.get('short_name')
-        is_published = kwargs.get('is_published')
         cover_image = kwargs.get('cover_image')
         description = kwargs.get('description')
         preview_images = kwargs.get('preview_images')
@@ -551,6 +555,7 @@ class UpdateListing(graphene.Mutation):
         identities_represented = kwargs.get('identities_represented')
         tag = kwargs.get('tag')
         price = kwargs.get('price')
+        publish_status = kwargs.get('publish_status')
 
         if Listing.objects.filter(id=id).exists() is False:
             raise GraphQLError("Target listing does not exist! Please refresh or try again later.")
@@ -575,10 +580,10 @@ class UpdateListing(graphene.Mutation):
         if description is not None:
             target_listing.description = description
 
-        # Is Published #
+        # Publish Status #
 
-        if is_published is not None:
-            target_listing.is_published = is_published
+        if publish_status is not None:
+            target_listing.publish_status = PublishStatus(publish_status)
 
         # Cover Image #
 

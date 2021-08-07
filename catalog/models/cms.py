@@ -40,7 +40,6 @@ class Article(models.Model):
     post_script = models.TextField(default="", blank=True)
     creation_date = models.DateField(default=utils.timezone.now)
     publish_date = models.DateField(default=utils.timezone.now)
-    is_published = models.BooleanField(default=False)
     is_announcement = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)
     is_full_bleed = models.BooleanField(default=False)
