@@ -60,7 +60,7 @@ class Listing(models.Model):
     publish_status = models.CharField(
         max_length=2,
         choices=PublishStatus.choices,
-        default=PublishStatus.PUBLIC,
+        default=PublishStatus.DRAFT,
     )
 
     def __str__(self):
