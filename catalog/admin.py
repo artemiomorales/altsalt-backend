@@ -306,37 +306,6 @@ class ArticleTagInline(SingleInline):
     model = ArticleTag
     pass
 
-
-class CollectionBylineInline(SingleInline):
-    model = CollectionByline
-    pass
-
-
-class CollectionCoverImageInline(SingleInline):
-    model = CollectionCoverImage
-    pass
-
-
-class CollectionArticleInline(SingleInline):
-    model = CollectionArticle
-    pass
-
-
-class CollectionListingInline(SingleInline):
-    model = CollectionListing
-    pass
-
-
-class CollectionAdditionalResourcesInline(SingleInline):
-    model = CollectionAdditionalResources
-    pass
-
-
-class CollectionDedicationImageInline(SingleInline):
-    model = CollectionDedicationImage
-    pass
-
-
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
     inlines = [ArticleBylineInline,
@@ -352,15 +321,68 @@ class ArticleAdmin(admin.ModelAdmin):
     pass
 
 
+################
+#  COLLECTION  #
+################
+
+
+class CollectionBylineInline(SingleInline):
+    model = CollectionByline
+    pass
+
+
+class CollectionCoverImageInline(SingleInline):
+    model = CollectionCoverImage
+    pass
+
+
+class CollectionIntroImageInline(SingleInline):
+    model = CollectionIntroImage
+    pass
+
+
+class CollectionDedicationImageInline(SingleInline):
+    model = CollectionDedicationImage
+    pass
+
+
+class CollectionPageSectionInline(SingleInline):
+    model = CollectionPageSection
+    pass
+
+
+class PageSectionInline(SingleInline):
+    model = PageSection
+    pass
+
+
 @admin.register(Collection)
-class CollectionAdmin(admin.ModelAdmin):
+class CollectionAdmin(ReverseModelAdmin):
+    inline_type = 'tabular'
+    inline_reverse = ['page_section', ]
     inlines = [CollectionBylineInline,
                CollectionCoverImageInline,
-               CollectionArticleInline,
-               CollectionListingInline,
-               CollectionAdditionalResourcesInline,
+               CollectionIntroImageInline,
+               CollectionPageSectionInline,
                CollectionDedicationImageInline,
                ]
+    pass
+
+
+class PageSectionEntryInline(SingleInline):
+    model = PageSectionEntry
+    pass
+
+
+
+@admin.register(PageSection)
+class PageSectionAdmin(admin.ModelAdmin):
+    inlines = [PageSectionEntryInline]
+    pass
+
+
+@admin.register(PageSectionEntry)
+class PageSectionEntryAdmin(admin.ModelAdmin):
     pass
 
 

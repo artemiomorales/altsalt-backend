@@ -1,7 +1,7 @@
 from django.db.models.signals import pre_delete, post_delete
 from django.dispatch import receiver
 from catalog.models import ListingCoverImage, ListingPreviewImage, ListingUpload,\
-    Submission, Thread, Comment, CommentReaction, Notification, Article, Listing
+    Submission, Thread, Comment, CommentReaction, Notification, Article, Listing, PageSectionEntry
 from catalog.models.base import ContentThread
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, RESPONSIVE_SIZES, DEFAULT_FILE_UPLOAD_NAME
 from catalog.backends import CatalogImageStorage
@@ -115,6 +115,10 @@ def on_user_content_delete(sender, **kwargs):
         if ContentThread.objects.filter(content_type=content_type, object_id=instance.id).exists():
             content_thread = ContentThread.objects.get(content_type=content_type, object_id=instance.id)
             content_thread.delete()
+
+        if PageSectionEntry.objects.filter(content_type=content_type, object_id=instance.id).exists():
+            page_section_entry = PageSectionEntry.objects.get(content_type=content_type, object_id=instance.id)
+            page_section_entry.delete()
 
     except:
         pass

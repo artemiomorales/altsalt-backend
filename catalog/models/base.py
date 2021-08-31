@@ -518,6 +518,10 @@ def collection_cover_image_path(instance, filename):
     return content_path('collection', instance.collection.id, 'cover', instance.collection.id, filename)
 
 
+def collection_intro_image_path(instance, filename):
+    return content_path('collection', instance.collection.id, 'intro', instance.collection.id, filename)
+
+
 def collection_dedication_image_path(instance, filename):
     return content_path('collection', instance.collection.id, 'dedication', instance.collection.id, filename)
 
