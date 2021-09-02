@@ -5,6 +5,7 @@ from django.contrib.auth.admin import UserAdmin
 
 from catalog.models.user import *
 from catalog.models.base import *
+from catalog.models.art import *
 from catalog.models.listing import *
 from catalog.models.cms import *
 from catalog.models.submission import *
@@ -267,6 +268,11 @@ class SubmissionAdmin(ReverseModelAdmin):
     pass
 
 
+#############
+#  ARTICLE  #
+#############
+
+
 class ArticleBylineInline(SingleInline):
     model = ArticleByline
     pass
@@ -319,6 +325,54 @@ class ArticleAdmin(admin.ModelAdmin):
                ArticleTagInline
                ]
     pass
+
+
+#########
+#  ART  #
+#########
+
+
+class ArtBylineInline(SingleInline):
+    model = ArtByline
+    pass
+
+
+class ArtUploadInline(SingleInline):
+    model = ArtUpload
+    pass
+
+
+class ArtGenreInline(SingleInline):
+    model = ArtGenre
+    pass
+
+
+class ArtCountryRepresentedInline(SingleInline):
+    model = ArtCountryRepresented
+    pass
+
+
+class ArtIdentityRepresentedInline(SingleInline):
+    model = ArtIdentityRepresented
+    pass
+
+
+class ArtTagInline(SingleInline):
+    model = ArtTag
+    pass
+
+
+@admin.register(Art)
+class ArtAdmin(admin.ModelAdmin):
+    inlines = [ArtBylineInline,
+               ArtUploadInline,
+               ArtGenreInline,
+               ArtCountryRepresentedInline,
+               ArtIdentityRepresentedInline,
+               ArtTagInline
+               ]
+    pass
+
 
 
 ################

@@ -10,6 +10,7 @@ from .schema_base import BaseImageTypeMixin, check_csrf, login_required, Identit
 from catalog.constants import capitalize_string, get_date_from_string
 from graphql import GraphQLError
 from django.contrib.contenttypes.models import ContentType
+from django.template.defaultfilters import slugify
 
 
 class ArticleBylineType(DjangoObjectType):

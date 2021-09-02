@@ -4,7 +4,7 @@ from .base import TABLE_PREFIX, CustomImageAlttext, article_cover_image_path, \
     Identity, Country, Format, DistributionType, Length, Genre, Language, Tag, \
     Price, ContentRating, PublishStatus, Alignment, ObjectFit
 from .user import User
-from django.template.defaultfilters import slugify
+
 
 
 from catalog.backends import ThumbnailImageStorage

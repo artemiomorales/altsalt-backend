@@ -3,6 +3,7 @@ from catalog.models.base import PriceType, ContentThread
 from catalog.models.user import UserCountry, UserIdentity
 from django.contrib.auth import get_user_model
 
+
 import graphene
 from graphene_django.types import DjangoObjectType
 from .schema_base import check_csrf, save_image_data_via_model, BaseImageTypeMixin, CountryType, IdentityType, LinkInput, \
@@ -19,7 +20,7 @@ import datetime
 from catalog.constants import get_date_from_string, capitalize_string, DEFAULT_FILE_UPLOAD_NAME
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
-
+from django.template.defaultfilters import slugify
 
 class ListingUploadType(DjangoObjectType):
     file = graphene.String()

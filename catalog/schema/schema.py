@@ -1,5 +1,6 @@
 import graphene
 from .schema_base import BaseQuery, BaseMutation
+from .schema_art import ArtQuery
 from .schema_listing import ListingQuery, ListingMutation
 from .schema_user import UserQuery, UserMutation
 from .schema_cms import CMSQuery, CMSMutation
@@ -8,7 +9,8 @@ from .schema_comments import CommentsMutation
 from .schema_collection import CollectionQuery
 
 
-class Query(BaseQuery, ListingQuery, UserQuery, CMSQuery, SubmissionQuery, CollectionQuery, graphene.ObjectType):
+class Query(BaseQuery, ArtQuery, ListingQuery, UserQuery, CMSQuery,
+            SubmissionQuery, CollectionQuery, graphene.ObjectType):
     pass
 
 

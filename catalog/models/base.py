@@ -496,6 +496,10 @@ def content_path(content_type, content_id, media_label, media_id, filename):
     return save_string
 
 
+def art_upload_path(instance, filename):
+    return content_path('art', instance.art.id, 'upload', instance.id, filename)
+
+
 def listing_cover_image_path(instance, filename):
     return content_path('listing', instance.listing.id, 'cover', instance.id, filename)
 
