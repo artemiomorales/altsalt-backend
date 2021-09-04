@@ -5,7 +5,8 @@ from django.template.defaultfilters import slugify
 from .schema_base import BaseImageTypeMixin
 from django.db import models
 from catalog.schema.schema_user import UserType
-
+from catalog.schema.schema_movie import VideoType
+from catalog.schema.schema_art import ArtUploadType
 
 
 class CollectionBylineType(DjangoObjectType):
@@ -86,6 +87,8 @@ class PageSectionEntryType(DjangoObjectType):
     has_upload = graphene.Boolean()
     download_url = graphene.String()
     authors = graphene.List(UserType)
+    video = graphene.Field(VideoType)
+    art_uploads = graphene.List(ArtUploadType)
 
     def resolve_content_id(self, info):
         return self.get_content_id()
@@ -113,6 +116,12 @@ class PageSectionEntryType(DjangoObjectType):
 
     def resolve_authors(self, info):
         return self.get_authors()
+
+    def resolve_video(self, info):
+        return self.get_video()
+
+    def resolve_art_uploads(self, info):
+        return self.get_art_uploads()
 
 
 class PageSectionType(DjangoObjectType):

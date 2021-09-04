@@ -500,6 +500,10 @@ def art_upload_path(instance, filename):
     return content_path('art', instance.art.id, 'upload', instance.id, filename)
 
 
+def movie_upload_path(instance, filename):
+    return content_path('movie', instance.movie.id, 'upload', instance.id, filename)
+
+
 def listing_cover_image_path(instance, filename):
     return content_path('listing', instance.listing.id, 'cover', instance.id, filename)
 

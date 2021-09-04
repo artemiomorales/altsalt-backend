@@ -1,5 +1,6 @@
 from .user import User
 from .art import *
+from .movie import *
 from .listing import *
 from .cms import *
 from .submission import *

@@ -1,6 +1,7 @@
 import graphene
 from .schema_base import BaseQuery, BaseMutation
 from .schema_art import ArtQuery
+from .schema_movie import MovieQuery
 from .schema_listing import ListingQuery, ListingMutation
 from .schema_user import UserQuery, UserMutation
 from .schema_cms import CMSQuery, CMSMutation
@@ -9,7 +10,7 @@ from .schema_comments import CommentsMutation
 from .schema_collection import CollectionQuery
 
 
-class Query(BaseQuery, ArtQuery, ListingQuery, UserQuery, CMSQuery,
+class Query(BaseQuery, ArtQuery, MovieQuery, ListingQuery, UserQuery, CMSQuery,
             SubmissionQuery, CollectionQuery, graphene.ObjectType):
     pass
 

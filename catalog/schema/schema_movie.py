@@ -1,5 +1,5 @@
 import graphene
-from catalog.models.art import *
+from catalog.models.movie import *
 from django.contrib.auth import get_user_model
 from catalog.models.base import ContentThread
 from graphene_django.types import DjangoObjectType
@@ -11,19 +11,19 @@ from django.template.defaultfilters import slugify
 from catalog.models.user import UserCountry, UserIdentity
 
 
-class ArtBylineType(DjangoObjectType):
+class MovieBylineType(DjangoObjectType):
     class Meta:
-        model = ArtByline
+        model = MovieByline
 
 
-class ArtUploadType(DjangoObjectType, BaseImageTypeMixin):
+class MovieCoverImageType(DjangoObjectType, BaseImageTypeMixin):
     class Meta:
-        model = ArtUpload
+        model = MovieCoverImage
 
 
-class ArtTagType(DjangoObjectType):
+class MovieTagType(DjangoObjectType):
     class Meta:
-        model = ArtTag
+        model = MovieTag
         exclude = ('tag',)
 
     item = graphene.Field(TagType)
@@ -32,9 +32,9 @@ class ArtTagType(DjangoObjectType):
         return Tag.objects.get(id=self.tag_id)
 
 
-class ArtGenreType(DjangoObjectType):
+class MovieGenreType(DjangoObjectType):
     class Meta:
-        model = ArtGenre
+        model = MovieGenre
         exclude = ('genre',)
 
     item = graphene.Field(GenreType)
@@ -43,9 +43,9 @@ class ArtGenreType(DjangoObjectType):
         return Genre.objects.get(id=self.genre_id)
 
 
-class ArtCountryRepresentedType(DjangoObjectType):
+class MovieCountryRepresentedType(DjangoObjectType):
     class Meta:
-        model = ArtCountryRepresented
+        model = MovieCountryRepresented
         exclude = ('country',)
 
     item = graphene.Field(CountryType)
@@ -54,9 +54,9 @@ class ArtCountryRepresentedType(DjangoObjectType):
         return Country.objects.get(id=self.country_id)
 
 
-class ArtIdentityRepresentedType(DjangoObjectType):
+class MovieIdentityRepresentedType(DjangoObjectType):
     class Meta:
-        model = ArtIdentityRepresented
+        model = MovieIdentityRepresented
         exclude = ('identity',)
 
     item = graphene.Field(IdentityType)
@@ -65,17 +65,28 @@ class ArtIdentityRepresentedType(DjangoObjectType):
         return Identity.objects.get(id=self.identity_id)
 
 
-class ArtType(DjangoObjectType):
+# Generic type for extracting video information when needed
+class VideoType(graphene.ObjectType):
+    id = graphene.String()
+    src_1080 = graphene.String()
+    src_720 = graphene.String()
+    src_360 = graphene.String()
+    width = graphene.Int()
+    height = graphene.Int()
+    cover_image = graphene.Field(MovieCoverImageType)
+
+class MovieType(DjangoObjectType):
     class Meta:
-        model = Art
-        fields = ('id', 'title', 'description', 'is_featured', 'seo_title', 'content_rating')
+        model = Movie
+        fields = ('id', 'title', 'description', 'is_featured', 'seo_title', 'content_rating',
+                  'src_1080', 'src_720', 'src_360', 'width', 'height', 'playtime')
 
     slug = graphene.String()
-    uploads = graphene.List(ArtUploadType)
-    genre_set = graphene.List(ArtGenreType)
-    countries_represented = graphene.List(ArtCountryRepresentedType)
-    identities_represented = graphene.List(ArtIdentityRepresentedType)
-    tag_set = graphene.List(ArtTagType)
+    cover_image = graphene.Field(MovieCoverImageType)
+    genre_set = graphene.List(MovieGenreType)
+    countries_represented = graphene.List(MovieCountryRepresentedType)
+    identities_represented = graphene.List(MovieIdentityRepresentedType)
+    tag_set = graphene.List(MovieTagType)
     moderator_authentication = graphene.Boolean()
     thread_set = graphene.List('catalog.schema.schema_comments.ContentThreadType')
     publish_status = graphene.Field(TextChoicesType)
@@ -87,26 +98,26 @@ class ArtType(DjangoObjectType):
     def resolve_slug(self, info):
         return slugify(self.title)
 
-    def resolve_uploads(self, info):
-        if ArtUpload.objects.filter(art=self).exists():
-            return ArtUpload.objects.filter(art=self)
+    def resolve_cover_image(self, info):
+        if MovieCoverImage.objects.filter(movie=self).exists():
+            return MovieCoverImage.objects.get(movie=self)
         else:
             return None
 
     def resolve_genre_set(self, info):
-        return ArtGenre.objects.filter(art_id=self.id)
+        return MovieGenre.objects.filter(movie_id=self.id)
 
     def resolve_countries_represented(self, info):
-        return ArtCountryRepresented.objects.filter(art_id=self.id)
+        return MovieCountryRepresented.objects.filter(movie_id=self.id)
 
     def resolve_identities_represented(self, info):
-        return ArtIdentityRepresented.objects.filter(art_id=self.id)
+        return MovieIdentityRepresented.objects.filter(movie_id=self.id)
 
     def resolve_tag_set(self, info):
-        return ArtTag.objects.filter(art_id=self.id)
+        return MovieTag.objects.filter(movie_id=self.id)
 
     def resolve_thread_set(self, info):
-        return ContentThread.objects.filter(object_id=self.id, content_type=ContentType.objects.get_for_model(Art))
+        return ContentThread.objects.filter(object_id=self.id, content_type=ContentType.objects.get_for_model(Movie))
 
     def resolve_moderator_authentication(self, info):
         if info.context.user.is_authenticated is True and info.context.user.is_moderator is True:
@@ -120,7 +131,7 @@ class ArtType(DjangoObjectType):
         users = []
         backgrounds = []
 
-        creatorBylines = ArtByline.objects.filter(art_id=self.id).order_by('art_priority')
+        creatorBylines = MovieByline.objects.filter(movie_id=self.id).order_by('movie_priority')
         for creatorByline in creatorBylines:
             users.extend(get_user_model().objects.filter(id=creatorByline.user.id))
 
@@ -143,7 +154,7 @@ class ArtType(DjangoObjectType):
     def resolve_confirmed_creators(self, info):
         users = []
 
-        creatorBylines = ArtByline.objects.filter(art_id=self.id).order_by('art_priority')
+        creatorBylines = MovieByline.objects.filter(movie_id=self.id).order_by('movie_priority')
         for creatorByline in creatorBylines:
             if creatorByline.is_confirmed:
                 users.append(creatorByline.user)
@@ -156,15 +167,15 @@ class ArtType(DjangoObjectType):
     def resolve_pending_creators(self, info):
         is_authorized = False
         if info.context.user.is_authenticated and \
-           (ArtByline.objects.filter(user=info.context.user).exists() or \
-           ArtByline.objects.filter(user=info.context.user).exists()):
+           (MovieByline.objects.filter(user=info.context.user).exists() or \
+           MovieByline.objects.filter(user=info.context.user).exists()):
                 is_authorized = True
 
         if not is_authorized:
             return None
 
         users = []
-        creatorBylines = ArtByline.objects.filter(art_id=self.id).order_by('art_priority')
+        creatorBylines = MovieByline.objects.filter(movie_id=self.id).order_by('movie_priority')
         for creatorByline in creatorBylines:
             if not creatorByline.is_confirmed:
                 users.append(creatorByline.user)
@@ -180,40 +191,40 @@ class ArtType(DjangoObjectType):
 # SCHEMA #
 ##########
 
-class ArtQuery(graphene.ObjectType):
-    featured_art = graphene.List(ArtType)
-    art_bundle = graphene.List(ArtType,
+class MovieQuery(graphene.ObjectType):
+    featured_movie = graphene.List(MovieType)
+    movie_bundle = graphene.List(MovieType,
                                    exclude_featured=graphene.Boolean(default_value=False),
                                    exclude_unlisted=graphene.Boolean(default_value=True),
                                    exclude_drafts=graphene.Boolean(default_value=True),
                                    )
-    art = graphene.Field(ArtType, id=graphene.String())
+    movie = graphene.Field(MovieType, id=graphene.String())
 
-    def resolve_featured_art(self, info, **kwargs):
-        return Art.objects.filter(is_featured=True)
+    def resolve_featured_movie(self, info, **kwargs):
+        return Movie.objects.filter(is_featured=True)
 
-    def resolve_art_bundle(self, info, **kwargs):
+    def resolve_movie_bundle(self, info, **kwargs):
         exclude_featured = kwargs.get('exclude_featured')
         exclude_unlisted = kwargs.get('exclude_unlisted')
         exclude_drafts = kwargs.get('exclude_drafts')
 
         if not exclude_featured:
-            art = Art.objects.all()
+            movie = Movie.objects.all()
         else:
-            art = Art.objects.filter(is_featured=False)
+            movie = Movie.objects.filter(is_featured=False)
 
         if exclude_unlisted is True:
-            art = art.exclude(publish_status=PublishStatus.UNLISTED)
+            movie = movie.exclude(publish_status=PublishStatus.UNLISTED)
 
         if exclude_drafts is True:
-            art = art.exclude(publish_status=PublishStatus.DRAFT)
+            movie = movie.exclude(publish_status=PublishStatus.DRAFT)
 
-        return art
+        return movie
 
-    def resolve_art(self, info, **kwargs):
+    def resolve_movie(self, info, **kwargs):
         id = kwargs.get('id')
 
         if id is not None:
-            return Art.objects.get(id=int(id))
+            return Movie.objects.get(id=int(id))
 
         return None

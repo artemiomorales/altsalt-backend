@@ -5,6 +5,8 @@ from .user import User
 from django.db import models
 from catalog.backends import ThumbnailImageStorage
 from catalog.models.cms import Article, ArticleFeaturedImage, ArticleByline
+from catalog.models.art import Art, ArtUpload, ArtByline
+from catalog.models.movie import Movie, MovieCoverImage, MovieByline
 from catalog.models.listing import Listing, ListingCoverImage, ListingAvailabilityLink, ListingUpload,\
     ListingCreatorByline, ListingCollaboratorByline
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -101,7 +103,7 @@ class PageSectionEntry(CustomSaveMixin):
     def is_valid_content(self, skip_exception=False):
         model = self.content_type.model_class()
 
-        if model is Listing or model is Article:
+        if model is Listing or model is Article or model is Art or model is Movie:
             return True
         else:
             if not skip_exception:
@@ -117,6 +119,12 @@ class PageSectionEntry(CustomSaveMixin):
         if model is Article:
             return 'article'
 
+        if model is Art:
+            return 'art'
+
+        if model is Movie:
+            return 'movie'
+
         raise Exception("Invalid content type specified for page section entry on collection")
 
     def get_title(self):
@@ -130,13 +138,20 @@ class PageSectionEntry(CustomSaveMixin):
             model = self.content_type.model_class()
 
             if model is Listing:
-                if ListingCoverImage.objects.filter(listing_id=self.content_object.id):
+                if ListingCoverImage.objects.filter(listing_id=self.content_object.id).exists():
                     return ListingCoverImage.objects.get(listing_id=self.content_object.id)
             elif model is Article:
-                if ArticleFeaturedImage.objects.filter(article_id=self.content_object.id):
+                if ArticleFeaturedImage.objects.filter(article_id=self.content_object.id).exists():
                     return ArticleFeaturedImage.objects.get(article_id=self.content_object.id)
+            elif model is Art:
+                if ArtUpload.objects.filter(art_id=self.content_object.id).exists():
+                    return ArtUpload.objects.filter(art_id=self.content_object.id).first()
+            elif model is Movie:
+                if MovieCoverImage.objects.filter(movie_id=self.content_object.id).exists():
+                    return MovieCoverImage.objects.get(movie_id=self.content_object.id)
 
             return None
+
 
     def get_availability(self):
 
@@ -152,7 +167,8 @@ class PageSectionEntry(CustomSaveMixin):
                         'name': link.name,
                         'url': link.url
                     })
-                return link_array
+
+            return link_array
 
     def get_has_upload(self):
         model = self.content_type.model_class()
@@ -179,13 +195,11 @@ class PageSectionEntry(CustomSaveMixin):
             model = self.content_type.model_class()
 
             authors = []
-            import logging
-            logging.error("we are here")
+
             if model is Listing:
                 if ListingCreatorByline.objects.filter(listing_id=self.content_object.id).exists():
                     creator_bylines = ListingCreatorByline.objects.filter(listing_id=self.content_object.id, is_confirmed=True)\
                         .order_by('listing_priority')
-                    logging.error(creator_bylines)
                     for byline in creator_bylines:
                         authors.append(byline.user)
                 if ListingCollaboratorByline.objects.filter(listing_id=self.content_object.id).exists():
@@ -202,6 +216,55 @@ class PageSectionEntry(CustomSaveMixin):
                     for byline in creator_bylines:
                         authors.append(byline.user)
                 return authors
+
+            if model is Art:
+                if ArtByline.objects.filter(art_id=self.content_object.id).exists():
+                    creator_bylines = ArtByline.objects.filter(art_id=self.content_object.id, is_confirmed=True)\
+                        .order_by('art_priority')
+                    for byline in creator_bylines:
+                        authors.append(byline.user)
+                return authors
+
+            if model is Movie:
+                if MovieByline.objects.filter(movie_id=self.content_object.id).exists():
+                    creator_bylines = MovieByline.objects.filter(movie_id=self.content_object.id, is_confirmed=True)\
+                        .order_by('movie_priority')
+                    for byline in creator_bylines:
+                        authors.append(byline.user)
+                return authors
+
+    def get_video(self):
+        if self.is_valid_content():
+            model = self.content_type.model_class()
+
+            if model is Movie and Movie.objects.filter(id=self.content_object.id).exists():
+                movie_object = Movie.objects.get(id=self.content_object.id)
+
+                cover_image = None
+                if MovieCoverImage.objects.filter(movie_id=self.content_object.id).exists():
+                    cover_image = MovieCoverImage.objects.get(movie_id=self.content_object.id)
+                return {
+                    'id': movie_object.id,
+                    'src_1080': movie_object.src_1080,
+                    'src_720': movie_object.src_720,
+                    'src_360': movie_object.src_360,
+                    'width': movie_object.width,
+                    'height': movie_object.height,
+                    'cover_image': cover_image
+                }
+
+            return None
+
+    def get_art_uploads(self):
+        if self.is_valid_content():
+            model = self.content_type.model_class()
+
+            if model is Art and Art.objects.filter(id=self.content_object.id).exists():
+                if ArtUpload.objects.filter(art_id=self.content_object.id).exists():
+                    return ArtUpload.objects.filter(art_id=self.content_object.id)
+
+            return None
+
 
     def save(self, skip_callback=False, *args, **kwargs):
 

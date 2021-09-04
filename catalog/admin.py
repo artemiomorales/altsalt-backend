@@ -6,6 +6,7 @@ from django.contrib.auth.admin import UserAdmin
 from catalog.models.user import *
 from catalog.models.base import *
 from catalog.models.art import *
+from catalog.models.movie import *
 from catalog.models.listing import *
 from catalog.models.cms import *
 from catalog.models.submission import *
@@ -373,6 +374,52 @@ class ArtAdmin(admin.ModelAdmin):
                ]
     pass
 
+
+###########
+#  MOVIE  #
+###########
+
+
+class MovieBylineInline(SingleInline):
+    model = MovieByline
+    pass
+
+
+class MovieCoverImageInline(SingleInline):
+    model = MovieCoverImage
+    pass
+
+
+class MovieGenreInline(SingleInline):
+    model = MovieGenre
+    pass
+
+
+class MovieCountryRepresentedInline(SingleInline):
+    model = MovieCountryRepresented
+    pass
+
+
+class MovieIdentityRepresentedInline(SingleInline):
+    model = MovieIdentityRepresented
+    pass
+
+
+class MovieTagInline(SingleInline):
+    model = MovieTag
+    pass
+
+
+@admin.register(Movie)
+class MovieAdmin(admin.ModelAdmin):
+    inlines = [MovieBylineInline,
+               MovieCoverImageInline,
+               MovieGenreInline,
+               MovieCountryRepresentedInline,
+               MovieIdentityRepresentedInline,
+               MovieTagInline
+               ]
+    pass
 
 
 ################
