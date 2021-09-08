@@ -470,10 +470,14 @@ class CollectionAdmin(ReverseModelAdmin):
     pass
 
 
+class PullQuoteInline(SingleInline):
+    model = PullQuote
+    pass
+
+
 class PageSectionEntryInline(SingleInline):
     model = PageSectionEntry
     pass
-
 
 
 @admin.register(PageSection)
@@ -484,6 +488,11 @@ class PageSectionAdmin(admin.ModelAdmin):
 
 @admin.register(PageSectionEntry)
 class PageSectionEntryAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(PullQuote)
+class PullQuoteAdmin(admin.ModelAdmin):
     pass
 
 

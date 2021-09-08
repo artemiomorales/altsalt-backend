@@ -20,7 +20,7 @@ class Collection(models.Model):
     title3 = models.CharField(default="", max_length=100, blank=True)
     introduction = models.TextField(default="", blank=True)
     intro_font_color = models.CharField(default="", max_length=100, blank=True)
-    intro_background_color = models.CharField(default="", max_length=100, blank=True)
+    intro_background_color = models.CharField(default="", max_length=500, blank=True)
     dedication = models.TextField(default="", blank=True)
     page_section = models.ManyToManyField(
         "PageSection",
@@ -32,6 +32,7 @@ class Collection(models.Model):
         choices=PublishStatus.choices,
         default=PublishStatus.DRAFT,
     )
+    sibling_collection = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT)
 
     def __str__(self):
         return "{0} {1} {2}".format(self.title1, self.title2, self.title3)
@@ -41,7 +42,7 @@ class Collection(models.Model):
 
 
 class CollectionPageSection(models.Model):
-    collection = models.ForeignKey("Collection", on_delete=models.CASCADE, related_name="collection")
+    collection = models.ForeignKey("Collection", on_delete=models.CASCADE)
     page_section = models.ForeignKey("PageSection", on_delete=models.CASCADE)
     priority = models.IntegerField(default=0)
     hide_header = models.BooleanField(default=False)
@@ -103,7 +104,7 @@ class PageSectionEntry(CustomSaveMixin):
     def is_valid_content(self, skip_exception=False):
         model = self.content_type.model_class()
 
-        if model is Listing or model is Article or model is Art or model is Movie:
+        if model is Listing or model is Article or model is Art or model is Movie or model is PullQuote:
             return True
         else:
             if not skip_exception:
@@ -124,6 +125,9 @@ class PageSectionEntry(CustomSaveMixin):
 
         if model is Movie:
             return 'movie'
+
+        if model is PullQuote:
+            return 'pullQuote'
 
         raise Exception("Invalid content type specified for page section entry on collection")
 
@@ -277,6 +281,7 @@ class PageSectionEntry(CustomSaveMixin):
         return "Invalid content"
 
     class Meta:
+        ordering = ['-priority']
         db_table = TABLE_PREFIX + 'page_section_entry'
 
 
@@ -341,3 +346,13 @@ class CollectionByline(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['user', 'collection'], name='user_collection_link')
         ]
+
+
+class PullQuote(models.Model):
+    title = models.CharField(default="", max_length=100, blank=False)
+
+    def __str__(self):
+        return "{0}".format(self.title)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'pull_quote'

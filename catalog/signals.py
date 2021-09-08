@@ -2,7 +2,7 @@ from django.db.models.signals import pre_delete, post_delete
 from django.dispatch import receiver
 from catalog.models import Art, ArtUpload, ListingCoverImage, ListingPreviewImage, ListingUpload,\
     Submission, Thread, Comment, CommentReaction, Notification, Article, Listing,\
-    PageSectionEntry, Movie, MovieCoverImage
+    PageSectionEntry, Movie, MovieCoverImage, PullQuote
 from catalog.models.base import ContentThread
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, RESPONSIVE_SIZES, DEFAULT_FILE_UPLOAD_NAME
 from catalog.backends import CatalogImageStorage
@@ -112,6 +112,7 @@ def on_content_thread_delete(sender, **kwargs):
 @receiver(post_delete, sender=Listing)
 @receiver(post_delete, sender=Movie)
 @receiver(post_delete, sender=Art)
+@receiver(post_delete, sender=PullQuote)
 def on_user_content_delete(sender, **kwargs):
     try:
         instance = kwargs.get('instance')

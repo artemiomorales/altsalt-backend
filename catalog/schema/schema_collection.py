@@ -152,6 +152,7 @@ class CollectionType(DjangoObjectType):
     intro_image = graphene.Field(CollectionIntroImageType)
     dedication_image = graphene.Field(CollectionDedicationImageType)
     page_section_set = graphene.List(CollectionPageSectionType)
+    contributors = graphene.List(UserType)
 
     def resolve_slug(self, info):
         return slugify(self.__str__())
@@ -179,6 +180,22 @@ class CollectionType(DjangoObjectType):
 
     def resolve_bylines(self, info, **kwargs):
         return CollectionByline.objects.filter(collection_id=self.id)
+
+    def resolve_contributors(self, info):
+        users = []
+        page_sections = CollectionPageSection.objects.filter(collection_id=self.id)
+        for page_section in page_sections:
+            if PageSectionEntry.objects.filter(page_section_id=page_section.id).exists():
+                entries = PageSectionEntry.objects.filter(page_section_id=page_section.id)
+                for entry in entries:
+                    authors = entry.get_authors()
+                    if authors is not None:
+                        users.extend(authors)
+
+        remove_duplicates = list(set(users))
+        remove_duplicates.sort(key=lambda x: x.username)
+
+        return remove_duplicates
 
 
     class Meta:
