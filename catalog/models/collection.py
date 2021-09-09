@@ -49,7 +49,7 @@ class CollectionPageSection(models.Model):
 
     class Meta:
         db_table = TABLE_PREFIX + 'collection_page_section'
-        ordering = ['-priority']
+        ordering = ['priority']
         constraints = [
             models.UniqueConstraint(fields=['collection', 'page_section'], name='collection_page_section_link')
         ]
@@ -281,7 +281,7 @@ class PageSectionEntry(CustomSaveMixin):
         return "Invalid content"
 
     class Meta:
-        ordering = ['-priority']
+        ordering = ['priority']
         db_table = TABLE_PREFIX + 'page_section_entry'
 
 
