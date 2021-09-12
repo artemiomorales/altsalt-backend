@@ -32,14 +32,17 @@ def on_image_delete(sender, **kwargs):
         storage.delete(default_image_name)
 
     for thumbnail_size in DEFAULT_THUMBNAIL_SIZES:
-        thumbnail_name = getattr(instance, thumbnail_size['attribute']).name
+        try:
+            thumbnail_name = getattr(instance, thumbnail_size['attribute']).name
 
-        if thumbnail_name is not None and thumbnail_name != '':
-            storage.delete(thumbnail_name)
+            if thumbnail_name is not None and thumbnail_name != '':
+                storage.delete(thumbnail_name)
 
-            for responsive_size in RESPONSIVE_SIZES:
-                responsive_name = thumbnail_name.replace('-1x', "-{0}x".format(responsive_size))
-                storage.delete(responsive_name)
+                for responsive_size in RESPONSIVE_SIZES:
+                    responsive_name = thumbnail_name.replace('-1x', "-{0}x".format(responsive_size))
+                    storage.delete(responsive_name)
+        except:
+            pass
 
 
 @receiver(pre_delete, sender=ListingUpload)
