@@ -251,7 +251,11 @@ class PageSectionEntry(CustomSaveMixin):
                     entries = PlaylistEntry.objects.filter(playlist_id=self.content_object.id)
                     for entry in entries:
                         authors.extend(entry.get_authors())
-                return authors
+
+                remove_duplicates = list(set(authors))
+                remove_duplicates.sort(key=lambda x: x.username)
+
+                return remove_duplicates
 
     def get_video(self):
         if self.is_valid_content():
