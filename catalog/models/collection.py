@@ -7,6 +7,7 @@ from catalog.backends import ThumbnailImageStorage
 from catalog.models.cms import Article, ArticleFeaturedImage, ArticleByline
 from catalog.models.art import Art, ArtUpload, ArtByline
 from catalog.models.movie import Movie, MovieCoverImage, MovieByline
+from catalog.models.playlist import Playlist, PlaylistCoverImage, PlaylistEntry
 from catalog.models.listing import Listing, ListingCoverImage, ListingAvailabilityLink, ListingUpload,\
     ListingCreatorByline, ListingCollaboratorByline
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -104,7 +105,8 @@ class PageSectionEntry(CustomSaveMixin):
     def is_valid_content(self, skip_exception=False):
         model = self.content_type.model_class()
 
-        if model is Listing or model is Article or model is Art or model is Movie or model is PullQuote:
+        if model is Listing or model is Article or model is Art or model is Movie \
+            or model is PullQuote or model is Playlist:
             return True
         else:
             if not skip_exception:
@@ -128,6 +130,9 @@ class PageSectionEntry(CustomSaveMixin):
 
         if model is PullQuote:
             return 'pullQuote'
+
+        if model is Playlist:
+            return 'playlist'
 
         raise Exception("Invalid content type specified for page section entry on collection")
 
@@ -153,6 +158,9 @@ class PageSectionEntry(CustomSaveMixin):
             elif model is Movie:
                 if MovieCoverImage.objects.filter(movie_id=self.content_object.id).exists():
                     return MovieCoverImage.objects.get(movie_id=self.content_object.id)
+            elif model is Playlist:
+                if PlaylistCoverImage.objects.filter(playlist_id=self.content_object.id).exists():
+                    return PlaylistCoverImage.objects.get(playlist_id=self.content_object.id)
 
             return None
 
@@ -235,6 +243,14 @@ class PageSectionEntry(CustomSaveMixin):
                         .order_by('movie_priority')
                     for byline in creator_bylines:
                         authors.append(byline.user)
+                return authors
+
+            if model is Playlist:
+                authors = []
+                if PlaylistEntry.objects.filter(playlist_id=self.content_object.id).exists():
+                    entries = PlaylistEntry.objects.filter(playlist_id=self.content_object.id)
+                    for entry in entries:
+                        authors.extend(entry.get_authors())
                 return authors
 
     def get_video(self):

@@ -11,6 +11,7 @@ from catalog.models.listing import *
 from catalog.models.cms import *
 from catalog.models.submission import *
 from catalog.models.collection import *
+from catalog.models.playlist import *
 
 from django_reverse_admin import ReverseModelAdmin
 
@@ -419,6 +420,27 @@ class MovieAdmin(admin.ModelAdmin):
                MovieIdentityRepresentedInline,
                MovieTagInline
                ]
+    pass
+
+
+##############
+#  PLAYLIST  #
+##############
+
+
+class PlaylistEntryInline(SingleInline):
+    model = PlaylistEntry
+    pass
+
+
+class PlaylistCoverImageInline(SingleInline):
+    model = PlaylistCoverImage
+    pass
+
+
+@admin.register(Playlist)
+class PlaylistAdmin(admin.ModelAdmin):
+    inlines = [PlaylistEntryInline, PlaylistCoverImageInline]
     pass
 
 

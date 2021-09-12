@@ -522,6 +522,10 @@ def submission_upload_path(instance, filename):
     return "{0}/submission-{1}/{2}".format(listing_path, instance.id, filename)
 
 
+def playlist_cover_image_path(instance, filename):
+    return content_path('playlist', instance.playlist.id, 'cover', instance.playlist.id, filename)
+
+
 def collection_cover_image_path(instance, filename):
     return content_path('collection', instance.collection.id, 'cover', instance.collection.id, filename)
 

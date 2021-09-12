@@ -8,10 +8,11 @@ from .schema_cms import CMSQuery, CMSMutation
 from .schema_submission import SubmissionQuery, SubmissionMutation
 from .schema_comments import CommentsMutation
 from .schema_collection import CollectionQuery
+from .schema_playlist import PlaylistQuery
 
 
 class Query(BaseQuery, ArtQuery, MovieQuery, ListingQuery, UserQuery, CMSQuery,
-            SubmissionQuery, CollectionQuery, graphene.ObjectType):
+            SubmissionQuery, CollectionQuery, PlaylistQuery, graphene.ObjectType):
     pass
 
 

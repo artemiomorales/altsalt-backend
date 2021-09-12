@@ -2,7 +2,8 @@ from django.db.models.signals import pre_delete, post_delete
 from django.dispatch import receiver
 from catalog.models import Art, ArtUpload, ListingCoverImage, ListingPreviewImage, ListingUpload,\
     Submission, Thread, Comment, CommentReaction, Notification, Article, Listing,\
-    PageSectionEntry, Movie, MovieCoverImage, PullQuote
+    PageSectionEntry, Movie, MovieCoverImage, PullQuote, PlaylistEntry, PlaylistCoverImage,\
+    CollectionCoverImage, CollectionDedicationImage, CollectionIntroImage
 from catalog.models.base import ContentThread
 from catalog.constants import DEFAULT_IMAGE_SIZE_NAME, DEFAULT_THUMBNAIL_SIZES, RESPONSIVE_SIZES, DEFAULT_FILE_UPLOAD_NAME
 from catalog.backends import CatalogImageStorage
@@ -13,6 +14,11 @@ from django.contrib.contenttypes.models import ContentType
 @receiver(pre_delete, sender=MovieCoverImage)
 @receiver(pre_delete, sender=ListingCoverImage)
 @receiver(pre_delete, sender=ListingPreviewImage)
+@receiver(pre_delete, sender=ListingPreviewImage)
+@receiver(pre_delete, sender=PlaylistCoverImage)
+@receiver(pre_delete, sender=CollectionCoverImage)
+@receiver(pre_delete, sender=CollectionIntroImage)
+@receiver(pre_delete, sender=CollectionDedicationImage)
 def on_image_delete(sender, **kwargs):
 
     instance = kwargs.get('instance')
@@ -125,6 +131,10 @@ def on_user_content_delete(sender, **kwargs):
         if PageSectionEntry.objects.filter(content_type=content_type, object_id=instance.id).exists():
             page_section_entry = PageSectionEntry.objects.get(content_type=content_type, object_id=instance.id)
             page_section_entry.delete()
+
+        if PlaylistEntry.objects.filter(content_type=content_type, object_id=instance.id).exists():
+            playlist_entry = PlaylistEntry.objects.get(content_type=content_type, object_id=instance.id)
+            playlist_entry.delete()
 
     except:
         pass

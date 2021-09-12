@@ -119,6 +119,42 @@ class BaseImageTypeMixin:
         return ''
 
 
+class DjangoImageFieldType(graphene.ObjectType):
+    url = graphene.String()
+    width = graphene.Int()
+    height = graphene.Int()
+
+    def resolve_url(self, info):
+        return self.url
+
+    def resolve_width(self, info):
+        return self.width
+
+    def resolve_height(self, info):
+        return self.height
+
+
+class GenericImageType(graphene.ObjectType):
+    id = graphene.ID()
+    alttext = graphene.String()
+    original = graphene.Field(DjangoImageFieldType)
+
+    def resolve_id(self, info):
+        return self.id
+
+    def resolve_alttext(self, info):
+        return self.alttext
+
+    def resolve_original(self, info):
+        return self.original
+
+
+class LinkType(graphene.ObjectType):
+    id = graphene.ID()
+    name = graphene.String()
+    url = graphene.String()
+
+
 class NameSlugType(graphene.ObjectType):
     name = graphene.String()
     slug = graphene.String()

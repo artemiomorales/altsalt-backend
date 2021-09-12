@@ -6,3 +6,4 @@ from .cms import *
 from .submission import *
 from .collection import *
 from .base import Thread, Comment, Notification, CommentReaction
+from .playlist import *
