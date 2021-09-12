@@ -93,7 +93,7 @@ class PlaylistEntry(CustomSaveMixin):
 
         if model is Listing:
             if ListingFormat.objects.filter(listing_id=self.content_object.id).exists():
-                return ListingFormat.objects.filter(listing_id=self.content_object.id).first()
+                return ListingFormat.objects.filter(listing_id=self.content_object.id).first().format.name.lower()
             return ''
 
         if model is Article:
