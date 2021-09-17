@@ -3,7 +3,6 @@ from .base import \
 from catalog.backends import ThumbnailImageStorage
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.utils.translation import gettext_lazy as _
 from catalog.models.cms import Article, ArticleFeaturedImage, ArticleByline
 from catalog.models.art import Art, ArtUpload, ArtByline
 from catalog.models.movie import Movie, MovieCoverImage, MovieByline

@@ -12,6 +12,7 @@ from catalog.models.cms import *
 from catalog.models.submission import *
 from catalog.models.collection import *
 from catalog.models.playlist import *
+from catalog.models.project import *
 
 from django_reverse_admin import ReverseModelAdmin
 
@@ -515,6 +516,22 @@ class PageSectionEntryAdmin(admin.ModelAdmin):
 
 @admin.register(PullQuote)
 class PullQuoteAdmin(admin.ModelAdmin):
+    pass
+
+
+#############
+#  PROJECT  #
+#############
+
+
+class ProjectCollectionInline(SingleInline):
+    model = ProjectCollection
+    pass
+
+
+@admin.register(Project)
+class ProjectAdmin(admin.ModelAdmin):
+    inlines = [ProjectCollectionInline]
     pass
 
 

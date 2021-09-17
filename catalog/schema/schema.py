@@ -9,10 +9,11 @@ from .schema_submission import SubmissionQuery, SubmissionMutation
 from .schema_comments import CommentsMutation
 from .schema_collection import CollectionQuery
 from .schema_playlist import PlaylistQuery
+from .schema_project import ProjectQuery
 
 
 class Query(BaseQuery, ArtQuery, MovieQuery, ListingQuery, UserQuery, CMSQuery,
-            SubmissionQuery, CollectionQuery, PlaylistQuery, graphene.ObjectType):
+            SubmissionQuery, CollectionQuery, PlaylistQuery, ProjectQuery, graphene.ObjectType):
     pass
 
 
