@@ -20,7 +20,7 @@ class ProjectCollectionType(DjangoObjectType):
 
 
 class ProjectType(DjangoObjectType):
-    # slug = graphene.String()
+    slug = graphene.String()
     # cover_image = graphene.Field(ProjectCoverImageType)
     collections = graphene.List(ProjectCollectionType)
     #
