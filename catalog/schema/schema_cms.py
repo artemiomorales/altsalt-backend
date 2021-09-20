@@ -315,7 +315,8 @@ class UpdateArticle(graphene.Mutation):
         target_article = Article.objects.get(id=id)
 
         if ArticleByline.objects.filter(article=target_article, user=info.context.user).exists() is False:
-            raise GraphQLError("You are not authorized to update this article.")
+            if not info.context.user.is_moderator:
+                raise GraphQLError("You are not authorized to update this article.")
 
         # Title #
 
