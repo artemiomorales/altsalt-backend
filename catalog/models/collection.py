@@ -22,6 +22,7 @@ class Collection(models.Model):
     introduction = models.TextField(default="", blank=True)
     intro_font_color = models.CharField(default="", max_length=100, blank=True)
     intro_background_color = models.CharField(default="", max_length=500, blank=True)
+    preface_background_color = models.CharField(default="", max_length=500, blank=True)
     dedication = models.TextField(default="", blank=True)
     page_section = models.ManyToManyField(
         "PageSection",
