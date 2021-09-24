@@ -11,7 +11,7 @@ from catalog.constants import capitalize_string, get_date_from_string
 from graphql import GraphQLError
 from django.contrib.contenttypes.models import ContentType
 from django.template.defaultfilters import slugify
-
+from django.contrib.auth import get_user_model
 
 class ArticleBylineType(DjangoObjectType):
     class Meta:
@@ -110,7 +110,8 @@ class ArticleType(DjangoObjectType):
         model = Article
         fields = ('id', 'title', 'subheading', 'preview_text', 'featured_image', 'body', 'post_script',
                   'is_announcement', 'is_featured', 'is_full_bleed', 'price', 'is_confirmed',
-                  'seo_title', 'content_rating', 'related_publish_date', 'length', 'is_excerpt')
+                  'seo_title', 'hide_bylines', 'show_custom_author', 'custom_author', 'content_rating',
+                  'related_publish_date', 'length', 'is_excerpt')
 
     slug = graphene.String()
     bylines = graphene.List(ArticleBylineType)

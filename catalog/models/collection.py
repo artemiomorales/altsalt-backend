@@ -2,18 +2,19 @@ from .base import \
     TABLE_PREFIX, PublishStatus, CustomImageAlttext, collection_cover_image_path, \
     collection_intro_image_path, collection_dedication_image_path, CustomSaveMixin
 from .user import User
+import time
 from django.db import models
 from catalog.backends import ThumbnailImageStorage
 from catalog.models.cms import Article, ArticleFeaturedImage, ArticleByline
 from catalog.models.art import Art, ArtUpload, ArtByline
 from catalog.models.movie import Movie, MovieCoverImage, MovieByline
 from catalog.models.playlist import Playlist, PlaylistCoverImage, PlaylistEntry
-from catalog.models.listing import Listing, ListingCoverImage, ListingAvailabilityLink, ListingUpload,\
+from catalog.models.listing import Listing, ListingCoverImage, ListingAvailabilityLink, ListingUpload, \
     ListingCreatorByline, ListingCollaboratorByline
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import gettext_lazy as _
-
+from django.contrib.auth import get_user_model
 
 class Collection(models.Model):
     title1 = models.CharField(default="", max_length=100, blank=True)
@@ -107,7 +108,7 @@ class PageSectionEntry(CustomSaveMixin):
         model = self.content_type.model_class()
 
         if model is Listing or model is Article or model is Art or model is Movie \
-            or model is PullQuote or model is Playlist:
+                or model is PullQuote or model is Playlist:
             return True
         else:
             if not skip_exception:
@@ -165,7 +166,6 @@ class PageSectionEntry(CustomSaveMixin):
 
             return None
 
-
     def get_availability(self):
 
         if self.is_valid_content():
@@ -210,21 +210,41 @@ class PageSectionEntry(CustomSaveMixin):
             authors = []
 
             if model is Listing:
+                if self.content_object.hide_bylines is True and self.content_object.show_custom_author is True and \
+                        self.content_object.custom_author != '':
+                    new_user = get_user_model()(
+                        id=round(time.time() * 1000) * -1,
+                        display_name=self.content_object.custom_author,
+                        username=''
+                    )
+                    authors.append(new_user)
+                    return authors
                 if ListingCreatorByline.objects.filter(listing_id=self.content_object.id).exists():
-                    creator_bylines = ListingCreatorByline.objects.filter(listing_id=self.content_object.id, is_confirmed=True)\
+                    creator_bylines = ListingCreatorByline.objects.filter(listing_id=self.content_object.id,
+                                                                          is_confirmed=True) \
                         .order_by('listing_priority')
                     for byline in creator_bylines:
                         authors.append(byline.user)
                 if ListingCollaboratorByline.objects.filter(listing_id=self.content_object.id).exists():
-                    collaborator_bylines = ListingCollaboratorByline.objects.filter(listing_id=self.content_object.id, is_confirmed=True)\
+                    collaborator_bylines = ListingCollaboratorByline.objects.filter(listing_id=self.content_object.id,
+                                                                                    is_confirmed=True) \
                         .order_by('listing_priority')
                     for byline in collaborator_bylines:
                         authors.append(byline.user)
                 return authors
 
             if model is Article:
+                if self.content_object.hide_bylines is True and self.content_object.show_custom_author is True and \
+                        self.content_object.custom_author != '':
+                    new_user = get_user_model()(
+                        id=round(time.time() * 1000) * -1,
+                        display_name=self.content_object.custom_author,
+                        username=''
+                    )
+                    authors.append(new_user)
+                    return authors
                 if ArticleByline.objects.filter(article_id=self.content_object.id).exists():
-                    creator_bylines = ArticleByline.objects.filter(article_id=self.content_object.id, is_confirmed=True)\
+                    creator_bylines = ArticleByline.objects.filter(article_id=self.content_object.id, is_confirmed=True) \
                         .order_by('article_priority')
                     for byline in creator_bylines:
                         authors.append(byline.user)
@@ -232,7 +252,7 @@ class PageSectionEntry(CustomSaveMixin):
 
             if model is Art:
                 if ArtByline.objects.filter(art_id=self.content_object.id).exists():
-                    creator_bylines = ArtByline.objects.filter(art_id=self.content_object.id, is_confirmed=True)\
+                    creator_bylines = ArtByline.objects.filter(art_id=self.content_object.id, is_confirmed=True) \
                         .order_by('art_priority')
                     for byline in creator_bylines:
                         authors.append(byline.user)
@@ -240,7 +260,7 @@ class PageSectionEntry(CustomSaveMixin):
 
             if model is Movie:
                 if MovieByline.objects.filter(movie_id=self.content_object.id).exists():
-                    creator_bylines = MovieByline.objects.filter(movie_id=self.content_object.id, is_confirmed=True)\
+                    creator_bylines = MovieByline.objects.filter(movie_id=self.content_object.id, is_confirmed=True) \
                         .order_by('movie_priority')
                     for byline in creator_bylines:
                         authors.append(byline.user)
@@ -254,7 +274,6 @@ class PageSectionEntry(CustomSaveMixin):
                         authors.extend(entry.get_authors())
                 remove_duplicates = list(set(authors))
                 remove_duplicates.sort(key=lambda x: x.username)
-
 
                 return remove_duplicates
 
@@ -289,7 +308,6 @@ class PageSectionEntry(CustomSaveMixin):
                     return ArtUpload.objects.filter(art_id=self.content_object.id)
 
             return None
-
 
     def save(self, skip_callback=False, *args, **kwargs):
 
@@ -359,7 +377,8 @@ class CollectionByline(models.Model):
     user_priority = models.IntegerField(default=0)
     collection_priority = models.IntegerField(default=0)
     is_confirmed = models.BooleanField(default=False)
-    requester = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="collection_byline_requester", blank=True)
+    requester = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                  related_name="collection_byline_requester", blank=True)
 
     class Meta:
         db_table = TABLE_PREFIX + 'collection_byline'

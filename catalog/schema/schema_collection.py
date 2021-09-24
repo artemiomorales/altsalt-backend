@@ -147,7 +147,7 @@ class CollectionType(DjangoObjectType):
                         users.extend(authors)
 
         remove_duplicates = list(set(users))
-        remove_duplicates.sort(key=lambda x: x.username)
+        remove_duplicates.sort(key=lambda x: (x.username == "", x.username))
 
         return remove_duplicates
 

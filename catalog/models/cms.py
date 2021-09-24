@@ -5,8 +5,6 @@ from .base import TABLE_PREFIX, CustomImageAlttext, article_cover_image_path, \
     Price, ContentRating, PublishStatus, Alignment, ObjectFit
 from .user import User
 
-
-
 from catalog.backends import ThumbnailImageStorage
 
 from django import utils
@@ -44,6 +42,9 @@ class Article(models.Model):
     is_featured = models.BooleanField(default=False)
     is_full_bleed = models.BooleanField(default=False)
     is_excerpt = models.BooleanField(default=False)
+    hide_bylines = models.BooleanField(default=False)
+    show_custom_author = models.BooleanField(default=False)
+    custom_author = models.CharField(max_length=150, blank=True)
     length = models.ForeignKey("Length", null=True, blank=True, on_delete=models.PROTECT)
     price = models.ForeignKey("Price", null=True, blank=True, on_delete=models.SET_NULL)
     content_rating = models.ForeignKey("ContentRating", null=True, blank=True, on_delete=models.PROTECT)
