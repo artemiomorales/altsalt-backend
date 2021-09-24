@@ -137,10 +137,10 @@ class CollectionType(DjangoObjectType):
 
     def resolve_contributors(self, info):
         users = []
-        page_sections = CollectionPageSection.objects.filter(collection_id=self.id)
-        for page_section in page_sections:
-            if PageSectionEntry.objects.filter(page_section_id=page_section.id).exists():
-                entries = PageSectionEntry.objects.filter(page_section_id=page_section.id)
+        collection_page_sections = CollectionPageSection.objects.filter(collection_id=self.id)
+        for collection_page_section in collection_page_sections:
+            if PageSectionEntry.objects.filter(page_section_id=collection_page_section.page_section_id).exists():
+                entries = PageSectionEntry.objects.filter(page_section_id=collection_page_section.page_section_id)
                 for entry in entries:
                     authors = entry.get_authors()
                     if authors is not None:

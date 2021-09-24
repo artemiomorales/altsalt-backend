@@ -152,7 +152,7 @@ class ListingType(DjangoObjectType):
         model = Listing
         fields = ('id', 'title', 'short_name', 'description', 'preview_images',
                   'length', 'price', 'content_rating', 'seo_category',
-                  'is_published', 'is_approved', 'publication_date', 'date_added', 'is_editable',
+                  'is_published', 'is_approved', 'hide_bylines', 'publication_date', 'date_added', 'is_editable',
                   'show_custom_author', 'custom_author', 'is_html', 'html_location')
 
     slug = graphene.String()

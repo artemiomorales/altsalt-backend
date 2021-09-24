@@ -252,9 +252,9 @@ class PageSectionEntry(CustomSaveMixin):
                     entries = PlaylistEntry.objects.filter(playlist_id=self.content_object.id)
                     for entry in entries:
                         authors.extend(entry.get_authors())
-
                 remove_duplicates = list(set(authors))
                 remove_duplicates.sort(key=lambda x: x.username)
+
 
                 return remove_duplicates
 
