@@ -251,6 +251,15 @@ class PageSectionEntry(CustomSaveMixin):
                 return authors
 
             if model is Art:
+                if self.content_object.hide_bylines is True and self.content_object.show_custom_author is True and \
+                        self.content_object.custom_author != '':
+                    new_user = get_user_model()(
+                        id=round(time.time() * 1000) * -1,
+                        display_name=self.content_object.custom_author,
+                        username=''
+                    )
+                    authors.append(new_user)
+                    return authors
                 if ArtByline.objects.filter(art_id=self.content_object.id).exists():
                     creator_bylines = ArtByline.objects.filter(art_id=self.content_object.id, is_confirmed=True) \
                         .order_by('art_priority')

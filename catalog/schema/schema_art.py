@@ -68,7 +68,8 @@ class ArtIdentityRepresentedType(DjangoObjectType):
 class ArtType(DjangoObjectType):
     class Meta:
         model = Art
-        fields = ('id', 'title', 'description', 'is_featured', 'seo_title', 'content_rating')
+        fields = ('id', 'title', 'description', 'is_featured', 'hide_bylines', 'show_custom_author',
+                  'custom_author', 'seo_title', 'content_rating')
 
     slug = graphene.String()
     uploads = graphene.List(ArtUploadType)

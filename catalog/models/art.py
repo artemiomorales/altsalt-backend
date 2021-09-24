@@ -10,6 +10,9 @@ class Art(models.Model):
     title = models.CharField(max_length=125)
     description = models.TextField(default="", blank=True)
     is_featured = models.BooleanField(default=False)
+    hide_bylines = models.BooleanField(default=False)
+    show_custom_author = models.BooleanField(default=False)
+    custom_author = models.CharField(max_length=150, blank=True)
     content_rating = models.ForeignKey("ContentRating", null=True, blank=True, on_delete=models.PROTECT)
 
     publish_status = models.CharField(
