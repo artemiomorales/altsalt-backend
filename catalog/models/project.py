@@ -1,7 +1,8 @@
 from .base import \
-    TABLE_PREFIX, PublishStatus
+    TABLE_PREFIX, PublishStatus, CustomImageAlttext, project_cover_image_path
 from django.db import models
 from catalog.models.collection import Collection
+from catalog.backends import ThumbnailImageStorage
 
 
 class Project(models.Model):
@@ -21,6 +22,21 @@ class Project(models.Model):
 
     class Meta:
         db_table = TABLE_PREFIX + 'project'
+
+
+class ProjectCoverImage(CustomImageAlttext):
+    project = models.OneToOneField(
+        "Project",
+        on_delete=models.CASCADE,
+        null=True
+    )
+
+    original = models.ImageField(storage=
+                                 ThumbnailImageStorage(target_width=1588, target_height=2382),
+                                 upload_to=project_cover_image_path, null=True, blank=True)
+
+    class Meta:
+        db_table = TABLE_PREFIX + 'project_cover_image'
 
 
 class ProjectCollection(models.Model):

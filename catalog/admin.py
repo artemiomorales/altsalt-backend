@@ -524,14 +524,18 @@ class PullQuoteAdmin(admin.ModelAdmin):
 #############
 
 
+class ProjectCoverImageInline(SingleInline):
+    model = ProjectCoverImage
+    pass
+
+
 class ProjectCollectionInline(SingleInline):
     model = ProjectCollection
     pass
 
-
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    inlines = [ProjectCollectionInline]
+    inlines = [ProjectCoverImageInline, ProjectCollectionInline]
     pass
 
 

@@ -526,6 +526,10 @@ def playlist_cover_image_path(instance, filename):
     return content_path('playlist', instance.playlist.id, 'cover', instance.playlist.id, filename)
 
 
+def project_cover_image_path(instance, filename):
+    return content_path('project', instance.project.id, 'cover', instance.project.id, filename)
+
+
 def collection_cover_image_path(instance, filename):
     return content_path('collection', instance.collection.id, 'cover', instance.collection.id, filename)
 

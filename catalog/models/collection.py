@@ -16,6 +16,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 
+
 class Collection(models.Model):
     title1 = models.CharField(default="", max_length=100, blank=True)
     title2 = models.CharField(default="", max_length=100, blank=True)

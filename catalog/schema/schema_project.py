@@ -7,6 +7,11 @@ from graphene_django.types import DjangoObjectType
 from django.template.defaultfilters import slugify
 
 
+class ProjectCoverImageType(DjangoObjectType, BaseImageTypeMixin):
+    class Meta:
+        model = ProjectCoverImage
+
+
 class ProjectCollectionType(DjangoObjectType):
 
     class Meta:
@@ -21,11 +26,17 @@ class ProjectCollectionType(DjangoObjectType):
 
 class ProjectType(DjangoObjectType):
     slug = graphene.String()
-    # cover_image = graphene.Field(ProjectCoverImageType)
+    cover_image = graphene.Field(ProjectCoverImageType)
     collections = graphene.List(ProjectCollectionType)
-    #
+
     def resolve_slug(self, info):
         return slugify(self.__str__())
+
+    def resolve_cover_image(self, info):
+        if ProjectCoverImage.objects.filter(project=self).exists():
+            return ProjectCoverImage.objects.get(project=self)
+        else:
+            return None
 
     def resolve_collections(self, info):
         return ProjectCollection.objects.filter(project_id=self.id)
