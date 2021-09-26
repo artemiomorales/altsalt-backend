@@ -610,7 +610,8 @@ class UploadArticleImage(graphene.Mutation):
         target_article = Article.objects.get(id=id)
 
         if ArticleByline.objects.filter(article=target_article, user=info.context.user).exists() is False:
-            raise GraphQLError("You are not authorized to update this article.")
+            if not info.context.user.is_moderator:
+                raise GraphQLError("You are not authorized to update this article.")
 
         if image is not None:
 
@@ -643,7 +644,8 @@ class SaveArticleBody(graphene.Mutation):
         target_article = Article.objects.get(id=id)
 
         if ArticleByline.objects.filter(article=target_article, user=info.context.user).exists() is False:
-            raise GraphQLError("You are not authorized to update this article.")
+            if not info.context.user.is_moderator:
+                raise GraphQLError("You are not authorized to update this article.")
 
         if body is not None:
             target_article.body = body
@@ -670,7 +672,8 @@ class DeleteArticle(graphene.Mutation):
         target_article = Article.objects.get(id=id)
 
         if ArticleByline.objects.filter(article=target_article, user=info.context.user).exists() is False:
-            raise GraphQLError("You are not authorized to update this listing.")
+            if not info.context.user.is_moderator:
+                raise GraphQLError("You are not authorized to update this article.")
 
         target_article.delete()
         return True
