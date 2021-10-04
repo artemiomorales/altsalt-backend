@@ -564,7 +564,8 @@ class UpdateListing(graphene.Mutation):
         target_listing = Listing.objects.get(id=id)
 
         if ListingCreatorByline.objects.filter(listing=target_listing, user=info.context.user).exists() is False:
-            raise GraphQLError("You are not authorized to update this listing.")
+            if not info.context.user.is_moderator:
+                raise GraphQLError("You are not authorized to update this article.")
 
         # Title #
 
@@ -978,7 +979,8 @@ class DeleteListing(graphene.Mutation):
         target_listing = Listing.objects.get(id=id)
 
         if ListingCreatorByline.objects.filter(listing=target_listing, user=info.context.user).exists() is False:
-            raise GraphQLError("You are not authorized to update this listing.")
+            if not info.context.user.is_moderator:
+                raise GraphQLError("You are not authorized to update this listing.")
 
         if Submission.objects.filter(listing_id=id):
             related_submission = Submission.objects.get(listing_id=id)
