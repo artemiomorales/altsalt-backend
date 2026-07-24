@@ -2,7 +2,7 @@
 
 Django backend serving the GraphQL API behind AltSalt, a community website for independent creators.
 
-> **Status: decommissioned.** This served AltSalt in production until [DATE], when I migrated the platform to WordPress. See [Why this was retired](#why-this-was-retired). Paired with [`altsalt-frontend`](https://github.com/artemiomorales/altsalt-frontend).
+> **Status: decommissioned.** This served AltSalt in production until Jone 2025, when I migrated the platform to WordPress. See [Why this was retired](#why-this-was-retired). Paired with [`altsalt-frontend`](https://github.com/artemiomorales/altsalt-frontend).
 
 ## What was here
 
