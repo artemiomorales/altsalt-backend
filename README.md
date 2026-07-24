@@ -6,13 +6,9 @@ Django backend serving the GraphQL API behind AltSalt, a community website for i
 
 ## What was here
 
-- **`catalog/`** — core domain models and API layer. [ONE LINE: what the catalog models represent]
+- **`catalog/`** — core domain models and API layer for handling various content types.
 - **`altsalt_backend/`** — project configuration, settings, and routing.
 - **Heroku deployment** — `Procfile`, `runtime.txt`, and `requirements.txt` for a reproducible dyno build.
-
-## Notable engineering
-
-- **GraphQL schema design** — Schema handled publishing and displaying user content.
 
 ## Why this was retired
 
