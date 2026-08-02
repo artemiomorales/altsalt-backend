@@ -35,9 +35,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True if os.environ.get('DEBUG') == 'True' else False
 
-ALLOWED_HOSTS_LIST = os.environ.get('ALLOWED_HOSTS').split(',')
-ALLOWED_HOSTS = ALLOWED_HOSTS_LIST[:-1] if\
-    os.environ.get('ALLOWED_HOSTS') is not None else []
+ALLOWED_HOSTS_STR = os.environ.get('ALLOWED_HOSTS')
+ALLOWED_HOSTS = ALLOWED_HOSTS_STR.split(',')[:-1] if\
+    ALLOWED_HOSTS_STR is not None else []
 
 # Application definition
 
@@ -190,9 +190,9 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # CORS
 CORS_ALLOW_CREDENTIALS = True
-CORS_ORIGIN_WHITELIST_LIST = os.environ.get('CORS_ORIGIN_WHITELIST').split(',')
-CORS_ORIGIN_WHITELIST = CORS_ORIGIN_WHITELIST_LIST[:-1] if\
-    os.environ.get('CORS_ORIGIN_WHITELIST') is not None else []
+CORS_ORIGIN_WHITELIST_STR = os.environ.get('CORS_ORIGIN_WHITELIST')
+CORS_ORIGIN_WHITELIST = CORS_ORIGIN_WHITELIST_STR.split(',')[:-1] if\
+    CORS_ORIGIN_WHITELIST_STR is not None else []
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -207,9 +207,9 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # CSRF
-CSRF_TRUSTED_ORIGINS_LIST = os.environ.get('CSRF_TRUSTED_ORIGINS').split(',')
-CSRF_TRUSTED_ORIGINS = CSRF_TRUSTED_ORIGINS_LIST[:-1] if\
-    os.environ.get('CSRF_TRUSTED_ORIGINS') is not None else []
+CSRF_TRUSTED_ORIGINS_STR = os.environ.get('CSRF_TRUSTED_ORIGINS')
+CSRF_TRUSTED_ORIGINS = CSRF_TRUSTED_ORIGINS_STR.split(',')[:-1] if\
+    CSRF_TRUSTED_ORIGINS_STR is not None else []
 CSRF_COOKIE_SAMESITE = None
 CSRF_COOKIE_SECURE = False if\
     os.environ.get('CSRF_COOKIE_SECURE') == 'False' else True
