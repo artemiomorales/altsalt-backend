@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
-import django_heroku
+import dj_database_url
 from os.path import join, dirname
 from dotenv import load_dotenv
 from datetime import timedelta, datetime
@@ -61,6 +61,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 
     'catalog.middleware.CacheMiddleware',
 
@@ -278,7 +280,14 @@ LOGGING = {
 
 GRAPHENE_PROTECTOR_DEPTH_LIMIT = 15
 
-django_heroku.settings(locals())
+# Configure the database from DATABASE_URL (Render / Neon).
+# Replaces the Heroku-specific django_heroku helper, which pulled in an
+# unpinned psycopg2 (2.9) alongside our psycopg2-binary==2.8.6 pin; 2.9
+# is incompatible with Django 3.0's timezone handling ("database
+# connection isn't set to UTC"). dj_database_url has no psycopg2 dep.
+_db_from_env = dj_database_url.config(conn_max_age=600, ssl_require=True)
+if _db_from_env:
+    DATABASES['default'].update(_db_from_env)
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 17500000
 FILE_UPLOAD_MAX_MEMORY_SIZE = 17500000
