@@ -251,12 +251,7 @@ GRAPHQL_JWT = {
 
 CACHES = {
     'default': {
-        'BACKEND': 'django_bmemcached.memcached.BMemcached',
-        'LOCATION': '127.0.0.1:11211' if os.environ.get('MEMCACHEDCLOUD_SERVERS') == 'None' else os.environ.get('MEMCACHEDCLOUD_SERVERS').split(','),
-        'OPTIONS': {
-            'username': os.environ.get('MEMCACHEDCLOUD_USERNAME'),
-            'password': os.environ.get('MEMCACHEDCLOUD_PASSWORD')
-        }
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     }
 }
 
