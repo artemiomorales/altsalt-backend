@@ -289,5 +289,14 @@ _db_from_env = dj_database_url.config(conn_max_age=600, ssl_require=True)
 if _db_from_env:
     DATABASES['default'].update(_db_from_env)
 
+# Neon routes by SNI, but psycopg2 2.8's bundled libpq predates SNI, so the
+# endpoint ID must be passed explicitly via libpq's `options`. Derive it from
+# the host (works for both direct and -pooler hosts).
+_db_host = DATABASES['default'].get('HOST') or ''
+if _db_host.endswith('.neon.tech'):
+    _endpoint_id = _db_host.split('.')[0].replace('-pooler', '')
+    _db_options = DATABASES['default'].setdefault('OPTIONS', {})
+    _db_options['options'] = 'endpoint=%s' % _endpoint_id
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = 17500000
 FILE_UPLOAD_MAX_MEMORY_SIZE = 17500000
