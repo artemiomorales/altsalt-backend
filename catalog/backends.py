@@ -7,6 +7,8 @@ from os.path import join, dirname
 from dotenv import load_dotenv
 
 import os
+from botocore import UNSIGNED
+from botocore.client import Config
 from storages.backends.s3boto3 import S3Boto3Storage
 import PIL.Image as ImageUtils
 from PIL import ImageFile
@@ -49,6 +51,18 @@ class GraphQLAuthBackend(JSONWebTokenBackend):
 
 class CatalogImageStorage(S3Boto3Storage):
     bucket_name = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+    # The altsalt bucket is public-read; use unsigned (credential-free)
+    # requests so image reads — e.g. computing width/height during GraphQL
+    # resolution — work without valid AWS credentials. (Uploads/writes would
+    # still require real credentials, but this deployment is read-only.)
+    config = Config(signature_version=UNSIGNED)
+
+    def _get_access_keys(self):
+        return None, None
+
+    def _get_security_token(self):
+        return None
 
 
 class ThumbnailImageStorage(CatalogImageStorage):
